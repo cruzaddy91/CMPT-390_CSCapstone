@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+jobs:
+  app-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 115-weightlifting
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: 115-weightlifting/src/frontend/package-lock.json
+
+      - name: Prepare backend env
+        run: cp src/backend/.env.example src/backend/.env
+
+      - name: Prepare frontend env
+        run: cp src/frontend/.env.example src/frontend/.env
+
+      - name: Install backend dependencies
+        run: |
+          python -m venv src/backend/venv
+          src/backend/venv/bin/python -m pip install --upgrade pip
+          src/backend/venv/bin/pip install -r src/backend/requirements.txt
+
+      - name: Install frontend dependencies
+        run: npm ci --prefix src/frontend
+
+      - name: Apply migrations
+        run: src/backend/venv/bin/python src/backend/manage.py migrate
+
+      - name: Django checks
+        run: src/backend/venv/bin/python src/backend/manage.py check
+
+      - name: Migration drift check
+        run: src/backend/venv/bin/python src/backend/manage.py makemigrations --check
+
+      - name: Frontend build
+        run: npm run build --prefix src/frontend
+
+      - name: Smoke test
+        run: ./bin/zw smoke

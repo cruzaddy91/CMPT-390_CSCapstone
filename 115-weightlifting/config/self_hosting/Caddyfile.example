@@ -1,0 +1,11 @@
+your-domain.example {
+    root * /srv/weightlifting/app/115-weightlifting/src/frontend/dist
+    encode gzip zstd
+
+    handle /api/* {
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    file_server
+    try_files {path} /index.html
+}

@@ -1,0 +1,63 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Generic env / secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.secret
+secrets/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+dist/
+build/
+.npm/
+
+# Logs / runtime artifacts
+*.log
+*.pid
+*.pid.lock
+logs/
+var/
+tmp/
+temp/
+coverage/
+.nyc_output/
+
+# Databases / local state
+*.db
+*.sqlite
+*.sqlite3
+
+# App-specific generated content
+115-weightlifting/var/
+115-weightlifting/src/backend/venv/
+115-weightlifting/src/backend/__pycache__/
+115-weightlifting/src/backend/staticfiles/
+115-weightlifting/src/backend/media/
+115-weightlifting/src/frontend/node_modules/
+115-weightlifting/src/frontend/dist/

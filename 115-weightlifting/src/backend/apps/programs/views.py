@@ -1,0 +1,73 @@
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
+from .models import TrainingProgram
+from .serializers import ProgramCreateSerializer, ProgramUpdateSerializer, TrainingProgramSerializer
+
+User = get_user_model()
+
+
+class ProgramListCreate(APIView):
+    """List programs for the current user (as coach or athlete)."""
+
+    def get(self, request):
+        user = request.user
+        # Programs where user is coach or assigned athlete
+        programs = TrainingProgram.objects.filter(
+            coach=user
+        ) | TrainingProgram.objects.filter(athlete=user)
+        programs = programs.select_related('coach', 'athlete').distinct().order_by('-created_at')
+        serializer = TrainingProgramSerializer(programs, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        if request.user.user_type != 'coach':
+            return Response({'detail': 'Only coaches can create programs.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ProgramCreateSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            program = serializer.save()
+            response_serializer = TrainingProgramSerializer(program)
+            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProgramDetail(APIView):
+    """Update an existing structured training program."""
+
+    def patch(self, request, program_id):
+        if request.user.user_type != 'coach':
+            return Response({'detail': 'Only coaches can edit programs.'}, status=status.HTTP_403_FORBIDDEN)
+
+        program = get_object_or_404(TrainingProgram, id=program_id, coach=request.user)
+        serializer = ProgramUpdateSerializer(program, data=request.data, partial=True)
+        if serializer.is_valid():
+            updated_program = serializer.save()
+            return Response(TrainingProgramSerializer(updated_program).data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProgramAssign(APIView):
+    """Reassign an existing program to a different athlete."""
+
+    def patch(self, request, program_id):
+        if request.user.user_type != 'coach':
+            return Response({'detail': 'Only coaches can assign programs.'}, status=status.HTTP_403_FORBIDDEN)
+
+        program = get_object_or_404(TrainingProgram, id=program_id, coach=request.user)
+        athlete_id = request.data.get('athlete_id')
+        if not athlete_id:
+            return Response({'athlete_id': ['This field is required.']}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            athlete = User.objects.get(id=athlete_id, user_type='athlete')
+        except User.DoesNotExist:
+            return Response({'athlete_id': ['Selected athlete does not exist.']}, status=status.HTTP_400_BAD_REQUEST)
+
+        program.athlete = athlete
+        program.save(update_fields=['athlete', 'updated_at'])
+        program.completion_records.all().delete()
+        serializer = TrainingProgramSerializer(program)
+        return Response(serializer.data, status=status.HTTP_200_OK)

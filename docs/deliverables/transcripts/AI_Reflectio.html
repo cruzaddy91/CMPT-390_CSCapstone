@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>AI_Reflectio</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<h1 id="cmpt-385-ai-reflection">CMPT 385 AI Reflection</h1>
+<p><strong>Name:</strong> Addy Cruz</p>
+<hr />
+<h2 id="november-reflection-due-friday-november-14-2025">November
+Reflection (Due Friday, November 14, 2025)</h2>
+<p><em>AI tools can be used in many different ways, from simple code
+completion to full feature generation. Describe your current usage
+pattern, on a spectrum from “barely used AI” to “heavily relied on AI.”
+Provide at least one specific example of how you’re using (or not using)
+AI tools.</em></p>
+<p><strong>Your Response</strong></p>
+<p>I use AI in the middle of that spectrum: I rely on it for
+brainstorming, design choices, and learning new frameworks, but I still
+write and debug most of the code myself and verify everything. For
+example, at the start of the capstone I used an AI assistant to generate
+five distinct architecture options for the weightlifting platform (React
+vs Vue, Django REST vs Node, single backend vs separate analytics
+service, etc.) with pros and cons for each. That gave me a clear set of
+alternatives to compare instead of picking one stack in a vacuum. I
+chose React, Django REST Framework, and a hybrid relational plus event
+log design based on that discussion, but the final decisions were
+mine.</p>
+<hr />
+<p><em>Describe how you plan to use (or have used) AI tools to assist
+with developing your Proof of Concept. What tasks do you plan to
+delegate to AI for example, code generation, debugging, learning new
+frameworks, architecture decisions?</em></p>
+<p><strong>Your Response (bullet list)</strong></p>
+<ul>
+<li><strong>Architecture and design:</strong> Using AI to explore
+architecture options, data model design for example, relational core vs
+event log, TrainingEvent vs AttemptEvent, and deployment
+strategies.</li>
+<li><strong>Learning frameworks:</strong> Asking for explanations and
+examples for Django REST Framework, React, JWT auth, and Chart.js so I
+can implement features myself.</li>
+<li><strong>Code generation:</strong> Using AI for boilerplate for
+example, API endpoint structure, React component skeletons, migration
+patterns, and then editing and integrating the code.</li>
+<li><strong>Debugging:</strong> Describing errors or unexpected behavior
+and using AI suggestions as a starting point; I still trace through the
+code and test fixes myself.</li>
+<li><strong>Documentation and writing:</strong> Drafting proof of
+concept summaries, proposal wording, and report sections, then revising
+for accuracy and style.</li>
+</ul>
+<hr />
+<h2 id="december-reflection-due-friday-december-12-2025">December
+Reflection (Due Friday, December 12, 2025)</h2>
+<p><em>Compare your original plan (from November) to what happened.
+What, if anything, changed?</em></p>
+<p><strong>Your Response</strong></p>
+<p>The plan held up overall. I used AI for architecture options and data
+modeling as intended, and those conversations led directly to the stack
+(React, Django REST, PostgreSQL) and the hybrid data model (relational
+tables for athletes/programs, event log tables for TrainingEvent and
+AttemptEvent). One change: I initially thought I might use AI more for
+full feature generation, but in practice I used it more for design and
+small code snippets. I still did most of the Proof of Concept
+implementation myself (API setup, auth, migrations, charts) and used AI
+to understand patterns and fix specific issues rather than to generate
+whole features.</p>
+<hr />
+<p><em>In what area(s) did AI tools work well? Provide details to
+support your answer.</em></p>
+<p><strong>Your Response</strong></p>
+<p>AI worked well in three areas:</p>
+<ol type="1">
+<li><strong>Architecture and options.</strong> When I asked for five
+ways to structure the system, the AI gave clear options (single backend,
+separate analytics service, server-rendered app, API-first for mobile,
+event-sourced) with pros and cons. That made it easier to choose a
+direction and explain it in the proposal.</li>
+<li><strong>Data model design.</strong> In a follow-up conversation I
+asked how to structure training events vs relational tables and whether
+competition attempts should be stored differently. The AI suggested the
+hybrid approach (relational core plus event log) and separate
+AttemptEvent vs TrainingEvent tables with good reasoning. I adopted that
+design.</li>
+<li><strong>Learning and patterns.</strong> For Django REST, JWT auth,
+React hooks, and Chart.js, asking for explanations and small examples
+was faster than digging through long docs. I could then implement and
+adapt the ideas in my own code.</li>
+</ol>
+<hr />
+<p><em>In what area(s) did AI tools <strong>not</strong> work well?
+Provide details to support your answer.</em></p>
+<p><strong>Your Response</strong></p>
+<p>AI was less reliable in two areas:</p>
+<ol type="1">
+<li><strong>Project-specific and environment details.</strong> Sometimes
+the AI suggested code or config that didn’t match my exact setup for
+example, Django version, React router, or Netlify/Render. I had to
+double-check versions, CORS, and deployment steps myself. For
+capstone-specific choices for example, Sinclair calculator or
+competition timing rules, the AI gave generic answers that I had to
+refine.</li>
+<li><strong>End-to-end correctness.</strong> Generated snippets often
+needed fixes: wrong import paths, outdated API usage, or missing error
+handling. I learned to treat AI output as a draft and always run and
+test the code rather than paste it in and assume it works.</li>
+</ol>
+<hr />
+<p><em>What is the single most important thing you’ve learned so far,
+regarding using AI tools for scoping, planning, and building technical
+projects?</em></p>
+<p><strong>Your Response</strong></p>
+<p>The most important thing I learned is to use AI for options and
+structure, but to own the final decisions and verification. AI is good
+at generating alternatives (architectures, data models, code patterns)
+and explaining tradeoffs. It is not a substitute for reading the docs,
+running the code, and testing. So I use it to speed up design and
+learning, and I always validate the output before committing to it in
+the project.</p>
+<hr />
+<p><em>What is your plan for using AI tools in CMPT 390?</em></p>
+<p><strong>Your Response (can be a bulleted list or a
+table)</strong></p>
+<ul>
+<li>Continue using AI for <strong>architecture and design</strong>
+discussions when tackling new features or refactors.</li>
+<li>Use AI for <strong>learning and snippets</strong> for example, new
+libraries, testing patterns, while still reading official documentation
+for anything critical.</li>
+<li>Use AI to <strong>draft reports and documentation</strong>, then
+revise for accuracy and to match course style for example, no em dashes,
+consistent terminology.</li>
+<li>Keep <strong>short transcripts or notes</strong> of key AI
+conversations (as with the architecture and data modeling discussions)
+so I can reference and cite them in reflections or reports.</li>
+<li><strong>Verify all code and config</strong> myself: run tests, check
+deployment, and never submit generated code without understanding and
+testing it.</li>
+</ul>
+</body>
+</html>
