@@ -13,6 +13,8 @@
 115-weightlifting/src/frontend/node_modules/
 115-weightlifting/src/frontend/dist/
 115-weightlifting/src/**/__pycache__/
+115-weightlifting/scripts/**/__pycache__/
+**/__pycache__/
 
 # Logs, exports, backups
 **/*.log
