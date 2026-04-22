@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // One-exercise card tuned for at-the-gym use on a phone. Collapsed, the row
 // shows status + name + prescription; tapping it expands a compact quick-log
@@ -54,6 +54,21 @@ const AthleteExerciseCard = ({ exercise, result, onSaveResult }) => {
   const [weightInput, setWeightInput] = useState(result?.result || '')
   const [feel, setFeel] = useState(parsed.feel)
   const [noteInput, setNoteInput] = useState(parsed.rest)
+
+  // Re-sync local inputs whenever the server-backed `result` changes while the
+  // card is collapsed. Without this, a refresh or coach-side edit would leave
+  // the card showing the athlete's old typed values instead of the authoritative
+  // state. We skip re-sync while the card is expanded so we don't yank text
+  // out from under the athlete mid-edit.
+  const resultKey = `${result?.completed ? '1' : '0'}|${result?.result || ''}|${result?.athlete_notes || ''}`
+  useEffect(() => {
+    if (isExpanded) return
+    const p = parseNotesForFeel(result?.athlete_notes || '')
+    setWeightInput(result?.result || '')
+    setFeel(p.feel)
+    setNoteInput(p.rest)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultKey])
 
   const handleToggle = () => setIsExpanded((c) => !c)
 

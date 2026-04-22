@@ -9,6 +9,7 @@ import {
   hasMilestoneFired,
   loadFiredMilestones,
   markMilestoneFired,
+  todayLocalDateKey,
 } from '../utils/streaks'
 
 // Minimal in-memory Storage stand-in so the persistence tests don't depend on
@@ -162,5 +163,24 @@ describe('fired-milestone persistence', () => {
     markMilestoneFired(42, 'completion', 1, storage)
     markMilestoneFired(42, 'completion', 1, storage)
     expect(loadFiredMilestones(42, storage).size).toBe(1)
+  })
+})
+
+describe('todayLocalDateKey', () => {
+  it('returns a YYYY-MM-DD key derived from the local date of the given instant', () => {
+    // Pick a representative local noon to dodge timezone edges.
+    const noonLocal = new Date(2026, 3, 22, 12, 0, 0) // April is month index 3
+    expect(todayLocalDateKey(noonLocal)).toBe('2026-04-22')
+  })
+
+  it('pads single-digit months and days', () => {
+    const d = new Date(2026, 0, 5, 10, 0, 0) // January 5
+    expect(todayLocalDateKey(d)).toBe('2026-01-05')
+  })
+
+  it('matches the day the user actually sees even just after local midnight', () => {
+    // One second after local midnight on a given date.
+    const justAfterMidnight = new Date(2026, 3, 22, 0, 0, 1)
+    expect(todayLocalDateKey(justAfterMidnight)).toBe('2026-04-22')
   })
 })

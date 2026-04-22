@@ -31,6 +31,7 @@ import {
   crossedStreakMilestone,
   hasMilestoneFired,
   markMilestoneFired,
+  todayLocalDateKey,
 } from '../utils/streaks'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend)
@@ -51,21 +52,44 @@ const getWeekBucket = (dateString) => {
   return date.toISOString().split('T')[0]
 }
 
-// Default-day selection: match today's weekday name first, else fall back to
-// the earliest day that still has work left. Keeps the athlete on 'what's next'
-// without forcing them to hunt for their day each visit.
-const pickDefaultDayId = (days, entriesByDayId) => {
+// Default-day selection for 'what's next today': match today's weekday name,
+// BUT if today is already fully done, advance to the next day with work left
+// so the athlete doesn't open the app and stare at an all-done page. Falls
+// back to the first incomplete day, then to the first day in the program.
+// Exported for unit-testing; import todayName to freeze 'now' in tests.
+export const _isDayComplete = (day, entriesByDayId) => {
+  const total = day.exercises?.length || 0
+  if (total === 0) return true
+  const entries = entriesByDayId[day.id] || {}
+  const completed = Object.values(entries).filter((e) => e?.completed).length
+  return completed >= total
+}
+
+export const _pickDefaultDayId = (days, entriesByDayId, todayName) => {
   if (!days || days.length === 0) return null
-  const todayName = WEEKDAY_NAMES[new Date().getDay()]
-  const todayMatch = days.find((d) => (d.day || '').trim().toLowerCase() === todayName.toLowerCase())
-  if (todayMatch) return todayMatch.id
-  const firstIncomplete = days.find((d) => {
-    const entries = entriesByDayId[d.id] || {}
-    const completed = Object.values(entries).filter((e) => e?.completed).length
-    return completed < (d.exercises?.length || 0)
-  })
+  const todayIndex = days.findIndex((d) => (d.day || '').trim().toLowerCase() === todayName.toLowerCase())
+
+  if (todayIndex >= 0) {
+    const todayDay = days[todayIndex]
+    if (!_isDayComplete(todayDay, entriesByDayId)) return todayDay.id
+    // Today is done. Walk forward through the week for the next day with
+    // real work left so the athlete sees tomorrow's plan.
+    for (let i = 1; i < days.length; i += 1) {
+      const candidate = days[(todayIndex + i) % days.length]
+      if (!_isDayComplete(candidate, entriesByDayId)) return candidate.id
+    }
+    // Whole week done -- fall through to today as a 'look what you did' view.
+    return todayDay.id
+  }
+
+  // Today isn't in the program (e.g., rest-day not named): find first day
+  // with work left, or just the first day as last resort.
+  const firstIncomplete = days.find((d) => !_isDayComplete(d, entriesByDayId))
   return (firstIncomplete || days[0]).id
 }
+
+const pickDefaultDayId = (days, entriesByDayId) =>
+  _pickDefaultDayId(days, entriesByDayId, WEEKDAY_NAMES[new Date().getDay()])
 
 const AthleteDashboard = () => {
   const [loading, setLoading] = useState(true)
@@ -273,8 +297,9 @@ const AthleteDashboard = () => {
     // though they trained. On the first completed=true of today, auto-POST a
     // minimal workout log so the streak stays true to behavior. No-ops if a
     // log for today already exists, or if we're merely unmarking done.
+    const todayKey = todayLocalDateKey()
     const shouldAutoLogToday = newResult.completed && !workoutLogs.some(
-      (log) => String(log.date).slice(0, 10) === new Date().toISOString().slice(0, 10),
+      (log) => String(log.date).slice(0, 10) === todayKey,
     )
 
     // Queue the PATCH behind any in-flight save so responses can't arrive
@@ -290,10 +315,7 @@ const AthleteDashboard = () => {
           }
           if (shouldAutoLogToday) {
             try {
-              const created = await createWorkoutLog({
-                date: new Date().toISOString().slice(0, 10),
-                notes: '',
-              })
+              const created = await createWorkoutLog({ date: todayKey, notes: '' })
               setWorkoutLogs((prev) => [created, ...prev])
             } catch (e) {
               // Don't fail the save just because the auto-log write failed.
@@ -479,9 +501,9 @@ const AthleteDashboard = () => {
             )}
             {lifetimeCompleted > 0 && (
               <span className="athlete-hero-stat">
-                <span className="athlete-hero-stat-label">Lifetime</span>
+                <span className="athlete-hero-stat-label">Lifts</span>
                 <span className="athlete-hero-stat-value data">{lifetimeCompleted}</span>
-                <span className="athlete-hero-stat-unit">lifts logged</span>
+                <span className="athlete-hero-stat-unit">logged</span>
               </span>
             )}
           </div>

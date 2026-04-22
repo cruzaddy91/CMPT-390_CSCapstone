@@ -70,4 +70,21 @@ describe('AthleteExerciseCard', () => {
     const payload = onSaveResult.mock.calls[0][0]
     expect(payload.completed).toBe(false)
   })
+
+  it('re-syncs local inputs when the result prop changes and the card is collapsed', () => {
+    const { rerender } = render(
+      <AthleteExerciseCard exercise={snatch} result={{}} onSaveResult={() => {}} />,
+    )
+    // Collapsed by default. Rerender with server-authoritative values.
+    rerender(
+      <AthleteExerciseCard
+        exercise={snatch}
+        result={{ completed: true, result: '117kg', athlete_notes: 'felt: solid' }}
+        onSaveResult={() => {}}
+      />,
+    )
+    // Collapsed summary should now show the new server value, not stale blank.
+    expect(screen.getByText('117kg')).toBeTruthy()
+    expect(screen.getByText(/felt Solid/i)).toBeTruthy()
+  })
 })
