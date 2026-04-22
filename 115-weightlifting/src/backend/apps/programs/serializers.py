@@ -44,7 +44,16 @@ def normalize_program_data(value):
                     'name': str(exercise.get('name', '')),
                     'sets': str(exercise.get('sets', '')),
                     'reps': str(exercise.get('reps', '')),
+                    # Legacy combined intensity kept for backwards-compat with
+                    # older frontends / consumers; new clients should prefer
+                    # the explicit percent_1rm / rpe / weight fields below.
                     'intensity': str(exercise.get('intensity', '')),
+                    'percent_1rm': str(exercise.get('percent_1rm', '')),
+                    'rpe': str(exercise.get('rpe', '')),
+                    'weight': str(exercise.get('weight', '')),
+                    'tempo': str(exercise.get('tempo', '')),
+                    'rest': str(exercise.get('rest', '')),
+                    'week': str(exercise.get('week', '')),
                     'notes': str(exercise.get('notes', '')),
                 }
             )

@@ -2,14 +2,15 @@ import { describe, expect, it } from 'vitest'
 import * as XLSX from 'xlsx'
 
 import {
+  INSTRUCTIONS_SHEET,
   PROGRAM_TEMPLATE_COLUMNS,
   PROGRAM_TEMPLATE_SHEET,
   buildTemplateWorkbook,
   parseProgramFile,
 } from '../utils/programTemplate'
 
-const makeFileFromRows = (rows, sheetName = PROGRAM_TEMPLATE_SHEET) => {
-  const worksheet = XLSX.utils.json_to_sheet(rows, { header: PROGRAM_TEMPLATE_COLUMNS })
+const makeFileFromAoA = (aoa, sheetName = PROGRAM_TEMPLATE_SHEET) => {
+  const worksheet = XLSX.utils.aoa_to_sheet(aoa)
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
   const buffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
@@ -18,57 +19,90 @@ const makeFileFromRows = (rows, sheetName = PROGRAM_TEMPLATE_SHEET) => {
   })
 }
 
+const HEADER_ROW = ['Week', 'Day', 'Exercise', 'Sets', 'Reps', '% 1RM', 'RPE', 'Weight', 'Tempo', 'Rest', 'Notes']
+
 describe('programTemplate', () => {
-  it('builds a template workbook with the canonical schema', () => {
-    const workbook = buildTemplateWorkbook()
-    expect(workbook.SheetNames).toContain(PROGRAM_TEMPLATE_SHEET)
-    const sheet = workbook.Sheets[PROGRAM_TEMPLATE_SHEET]
-    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' })
-    expect(rows.length).toBeGreaterThan(0)
-    const firstRow = rows[0]
-    for (const column of PROGRAM_TEMPLATE_COLUMNS) {
-      expect(Object.prototype.hasOwnProperty.call(firstRow, column)).toBe(true)
-    }
+  it('exposes 11 canonical columns in the expanded schema', () => {
+    expect(PROGRAM_TEMPLATE_COLUMNS).toEqual([
+      'week', 'day', 'exercise', 'sets', 'reps',
+      'percent_1rm', 'rpe', 'weight', 'tempo', 'rest', 'notes',
+    ])
   })
 
-  it('parses a round-trip workbook back to program_data shape', async () => {
+  it('builds a template workbook with Instructions + Program sheets and frozen header', () => {
+    const workbook = buildTemplateWorkbook()
+    expect(workbook.SheetNames).toContain(INSTRUCTIONS_SHEET)
+    expect(workbook.SheetNames).toContain(PROGRAM_TEMPLATE_SHEET)
+
+    const programSheet = workbook.Sheets[PROGRAM_TEMPLATE_SHEET]
+    // Frozen header: the !views descriptor drives the Excel freeze-pane UI.
+    expect(programSheet['!views']).toBeTruthy()
+    expect(programSheet['!views'][0]).toMatchObject({ state: 'frozen', ySplit: 1 })
+    // Header row labels match the schema order.
+    const firstRowLabels = HEADER_ROW.map((_, c) => programSheet[XLSX.utils.encode_cell({ r: 0, c })]?.v)
+    expect(firstRowLabels).toEqual(HEADER_ROW)
+  })
+
+  it('parses a round-trip workbook back to program_data shape with all fields', async () => {
     const rows = [
-      { day: 'Monday', exercise: 'Snatch', sets: 5, reps: 2, intensity: '75%', notes: 'Fast' },
-      { day: 'Monday', exercise: 'Back Squat', sets: 4, reps: 5, intensity: '80%', notes: '' },
-      { day: 'Tuesday', exercise: 'Clean & Jerk', sets: 5, reps: '1+1', intensity: '80%', notes: '' },
+      HEADER_ROW,
+      [1, 'Monday', 'Snatch', 5, 2, '75%', '', '', '', '2min', 'Fast'],
+      [1, 'Monday', 'Back Squat', 4, 5, '80%', '', '', '3-1-X-1', '3min', ''],
+      [1, 'Tuesday', 'Clean & Jerk', 5, '1+1', '78%', '', '', '', '2-3min', ''],
     ]
-    const file = makeFileFromRows(rows)
+    const file = makeFileFromAoA(rows)
     const result = await parseProgramFile(file)
 
     expect(result.days.map((d) => d.day)).toEqual(['Monday', 'Tuesday'])
     expect(result.days[0].exercises).toHaveLength(2)
     expect(result.days[0].exercises[0]).toMatchObject({
-      name: 'Snatch', sets: '5', reps: '2', intensity: '75%', notes: 'Fast',
+      name: 'Snatch', sets: '5', reps: '2', percent_1rm: '75%', rest: '2min',
+      intensity: '75%', week: '1',
     })
+    expect(result.days[0].exercises[1].tempo).toBe('3-1-X-1')
     expect(result.days[1].exercises[0].name).toBe('Clean & Jerk')
   })
 
-  it('handles case-insensitive headers and ignores blank rows', async () => {
+  it('derives intensity from RPE or Weight when percent_1rm is blank', async () => {
     const rows = [
-      { Day: 'Wednesday', Exercise: 'Deadlift', Sets: 3, Reps: 5, Intensity: '70%', Notes: '' },
-      { Day: '', Exercise: '', Sets: '', Reps: '', Intensity: '', Notes: '' },
-      { Day: 'Thursday', Exercise: '', Sets: '', Reps: '', Intensity: '', Notes: '' },
+      HEADER_ROW,
+      [1, 'Monday', 'Power Snatch', 5, 2, '', 7, '', '', '90s', 'Speed'],
+      [1, 'Tuesday', 'Deadlift', 3, 5, '', '', '180kg', '', '3min', ''],
     ]
-    const worksheet = XLSX.utils.json_to_sheet(rows)
-    const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, PROGRAM_TEMPLATE_SHEET)
-    const buffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
-    const file = new File([buffer], 'prog.xlsx')
+    const file = makeFileFromAoA(rows)
+    const result = await parseProgramFile(file)
+    expect(result.days[0].exercises[0].intensity).toBe('7')
+    expect(result.days[0].exercises[0].rpe).toBe('7')
+    expect(result.days[1].exercises[0].intensity).toBe('180kg')
+    expect(result.days[1].exercises[0].weight).toBe('180kg')
+  })
 
+  it('handles case-insensitive headers and alternate percent column names', async () => {
+    const rows = [
+      ['week', 'Day', 'EXERCISE', 'sets', 'reps', '% 1RM', 'rpe', 'weight', 'tempo', 'rest', 'Notes'],
+      ['', 'Wednesday', 'Deadlift', 3, 5, '70%', '', '', '', '', ''],
+      ['', '', '', '', '', '', '', '', '', '', ''],
+      ['', 'Thursday', '', '', '', '', '', '', '', '', ''],
+    ]
+    const file = makeFileFromAoA(rows)
     const result = await parseProgramFile(file)
     expect(result.days).toHaveLength(1)
     expect(result.days[0].day).toBe('Wednesday')
-    expect(result.days[0].exercises[0].name).toBe('Deadlift')
+    expect(result.days[0].exercises[0].percent_1rm).toBe('70%')
   })
 
-  it('falls back to the first sheet when no "Program" sheet exists', async () => {
-    const rows = [{ day: 'Friday', exercise: 'Push Press', sets: 4, reps: 5, intensity: '70%', notes: '' }]
-    const file = makeFileFromRows(rows, 'MyWeek')
+  it('ignores the Instructions sheet on upload', async () => {
+    const workbook = XLSX.utils.book_new()
+    const instructions = XLSX.utils.aoa_to_sheet([['Do not parse me'], ['Still ignored']])
+    const program = XLSX.utils.aoa_to_sheet([
+      HEADER_ROW,
+      [1, 'Friday', 'Push Press', 4, 5, '70%', '', '', '', '', ''],
+    ])
+    XLSX.utils.book_append_sheet(workbook, instructions, INSTRUCTIONS_SHEET)
+    XLSX.utils.book_append_sheet(workbook, program, PROGRAM_TEMPLATE_SHEET)
+    const buffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
+    const file = new File([buffer], 'prog.xlsx')
+
     const result = await parseProgramFile(file)
     expect(result.days[0].day).toBe('Friday')
     expect(result.days[0].exercises[0].name).toBe('Push Press')
@@ -76,7 +110,7 @@ describe('programTemplate', () => {
 
   it('throws a readable error on an empty workbook', async () => {
     const workbook = XLSX.utils.book_new()
-    const empty = XLSX.utils.json_to_sheet([])
+    const empty = XLSX.utils.aoa_to_sheet([])
     XLSX.utils.book_append_sheet(workbook, empty, PROGRAM_TEMPLATE_SHEET)
     const buffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
     const file = new File([buffer], 'empty.xlsx')

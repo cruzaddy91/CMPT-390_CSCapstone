@@ -3,11 +3,16 @@ import { useMemo, useRef } from 'react'
 // Columns match the xlsx template schema 1:1 so what coaches see here is what
 // they'd see in Excel. Each row = one exercise on one day.
 const COLUMNS = [
-  { key: 'day', label: 'Day', width: '10rem' },
+  { key: 'week', label: 'Week', width: '4rem' },
+  { key: 'day', label: 'Day', width: '9rem' },
   { key: 'name', label: 'Exercise', width: '14rem' },
-  { key: 'sets', label: 'Sets', width: '5rem' },
+  { key: 'sets', label: 'Sets', width: '4rem' },
   { key: 'reps', label: 'Reps', width: '6rem' },
-  { key: 'intensity', label: 'Intensity', width: '7rem' },
+  { key: 'percent_1rm', label: '% 1RM', width: '5rem' },
+  { key: 'rpe', label: 'RPE', width: '4rem' },
+  { key: 'weight', label: 'Weight', width: '6rem' },
+  { key: 'tempo', label: 'Tempo', width: '6rem' },
+  { key: 'rest', label: 'Rest', width: '5rem' },
   { key: 'notes', label: 'Notes', width: '16rem' },
 ]
 
@@ -18,15 +23,23 @@ const programDataToRows = (programData) => {
   const rows = []
   programData.days.forEach((day) => {
     if (!day.exercises || day.exercises.length === 0) {
-      rows.push({ day: day.day, name: '', sets: '', reps: '', intensity: '', notes: '' })
+      rows.push({
+        week: '', day: day.day, name: '', sets: '', reps: '',
+        percent_1rm: '', rpe: '', weight: '', tempo: '', rest: '', notes: '',
+      })
     } else {
       day.exercises.forEach((exercise) => {
         rows.push({
+          week: exercise.week || '',
           day: day.day,
           name: exercise.name || '',
           sets: exercise.sets || '',
           reps: exercise.reps || '',
-          intensity: exercise.intensity || '',
+          percent_1rm: exercise.percent_1rm || '',
+          rpe: exercise.rpe || '',
+          weight: exercise.weight || '',
+          tempo: exercise.tempo || '',
+          rest: exercise.rest || '',
           notes: exercise.notes || '',
         })
       })
@@ -50,12 +63,23 @@ const rowsToProgramData = (rows, weekStartDate) => {
     // UI padding. But preserve empty day shells so coaches can leave rest
     // days in the plan.
     if (!exerciseName) return
+    const percent = String(row.percent_1rm ?? '').trim()
+    const rpe = String(row.rpe ?? '').trim()
+    const weight = String(row.weight ?? '').trim()
     grouped.get(day).push({
       name: exerciseName,
       sets: String(row.sets ?? '').trim(),
       reps: String(row.reps ?? '').trim(),
-      intensity: String(row.intensity ?? '').trim(),
+      percent_1rm: percent,
+      rpe,
+      weight,
+      tempo: String(row.tempo ?? '').trim(),
+      rest: String(row.rest ?? '').trim(),
+      // Legacy field preserved for backwards-compat with any consumer that
+      // still keys on `intensity`. Prefer % 1RM, then RPE, then weight.
+      intensity: percent || rpe || weight,
       notes: String(row.notes ?? '').trim(),
+      week: String(row.week ?? '').trim(),
     })
   })
   return {
@@ -73,7 +97,10 @@ const SpreadsheetEditor = ({ programData, onChange }) => {
   const displayRows = useMemo(() => {
     const padded = [...baseRows]
     for (let i = 0; i < EMPTY_ROW_PAD; i += 1) {
-      padded.push({ day: '', name: '', sets: '', reps: '', intensity: '', notes: '' })
+      padded.push({
+        week: '', day: '', name: '', sets: '', reps: '',
+        percent_1rm: '', rpe: '', weight: '', tempo: '', rest: '', notes: '',
+      })
     }
     return padded
   }, [baseRows])
