@@ -58,13 +58,41 @@ describe('SpreadsheetEditor', () => {
     const onChange = vi.fn()
     render(<SpreadsheetEditor programData={programFixture} onChange={onChange} />)
     const inputs = screen.getAllByRole('textbox')
-    // 11 columns per row. Real rows: Monday (1) + Tuesday (1) = 2. First padding row day-cell
-    // is at index 2 * 11 + 1 (week=0, day=1).
-    const paddingDayInput = inputs[2 * 11 + 1]
+    // Default intensityMode=percent_1rm hides RPE and Weight, so grid has 9
+    // columns (week, day, exercise, sets, reps, % 1RM, tempo, rest, notes).
+    // Real rows: 2. Padding starts at 2*9; day-cell offset is +1.
+    const paddingDayInput = inputs[2 * 9 + 1]
     fireEvent.change(paddingDayInput, { target: { value: 'Friday' } })
     const nextProgram = onChange.mock.calls.at(-1)[0]
     const fridayDay = nextProgram.days.find((d) => d.day === 'Friday')
     expect(fridayDay).toBeDefined()
     expect(fridayDay.exercises).toEqual([])
+  })
+
+  it('respects intensityMode=percent_1rm: shows % 1RM, hides RPE and Weight', () => {
+    render(<SpreadsheetEditor programData={programFixture} onChange={() => {}} intensityMode="percent_1rm" />)
+    const headers = Array.from(document.querySelectorAll('.spreadsheet-editor-table th'))
+      .map((el) => el.textContent)
+    expect(headers).toContain('% 1RM')
+    expect(headers).not.toContain('RPE')
+    expect(headers).not.toContain('Weight')
+  })
+
+  it('respects intensityMode=rpe: shows RPE only', () => {
+    render(<SpreadsheetEditor programData={programFixture} onChange={() => {}} intensityMode="rpe" />)
+    const headers = Array.from(document.querySelectorAll('.spreadsheet-editor-table th'))
+      .map((el) => el.textContent)
+    expect(headers).toContain('RPE')
+    expect(headers).not.toContain('% 1RM')
+    expect(headers).not.toContain('Weight')
+  })
+
+  it('respects intensityMode=weight: shows Weight only', () => {
+    render(<SpreadsheetEditor programData={programFixture} onChange={() => {}} intensityMode="weight" />)
+    const headers = Array.from(document.querySelectorAll('.spreadsheet-editor-table th'))
+      .map((el) => el.textContent)
+    expect(headers).toContain('Weight')
+    expect(headers).not.toContain('% 1RM')
+    expect(headers).not.toContain('RPE')
   })
 })

@@ -60,6 +60,10 @@ const WorkoutDay = ({
   }
 
   const handleRemoveExercise = (index) => {
+    const name = exercises[index]?.name?.trim()
+    const label = name ? `"${name}"` : 'this exercise'
+    const ok = typeof window === 'undefined' || window.confirm(`Remove ${label}? This cannot be undone.`)
+    if (!ok) return
     onExercisesChange(exercises.filter((_, exerciseIndex) => exerciseIndex !== index))
   }
 

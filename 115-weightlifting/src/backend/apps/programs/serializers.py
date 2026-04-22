@@ -29,7 +29,15 @@ def normalize_program_data(value):
         if not isinstance(exercises, list):
             raise serializers.ValidationError(f'program_data.days[{index}].exercises must be a list.')
 
+        # Preserve stable per-day id so athlete completion records survive day
+        # reorder / rename. Frontend provides the id; fall back to a
+        # position-based default so legacy programs still get a usable id.
+        day_id = day.get('id')
+        if not isinstance(day_id, str) or not day_id:
+            day_id = f'd{index}'
+
         normalized_day = {
+            'id': day_id,
             'day': str(day.get('day') or f'Day {index + 1}'),
             'exercises': [],
         }

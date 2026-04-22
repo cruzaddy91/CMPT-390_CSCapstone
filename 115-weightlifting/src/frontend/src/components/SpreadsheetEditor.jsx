@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react'
 
 // Columns match the xlsx template schema 1:1 so what coaches see here is what
 // they'd see in Excel. Each row = one exercise on one day.
-const COLUMNS = [
+const ALL_COLUMNS = [
   { key: 'week', label: 'Week', width: '4rem' },
   { key: 'day', label: 'Day', width: '9rem' },
   { key: 'name', label: 'Exercise', width: '14rem' },
@@ -15,6 +15,17 @@ const COLUMNS = [
   { key: 'rest', label: 'Rest', width: '5rem' },
   { key: 'notes', label: 'Notes', width: '16rem' },
 ]
+
+// Match the Card View behavior: when an intensity mode is chosen, hide the
+// other two intensity columns. Hidden cells keep their data (only the coach's
+// display preference filters), so switching modes never loses input.
+const columnsForMode = (mode) => {
+  const hide = new Set()
+  if (mode === 'percent_1rm') { hide.add('rpe'); hide.add('weight') }
+  if (mode === 'rpe')         { hide.add('percent_1rm'); hide.add('weight') }
+  if (mode === 'weight')      { hide.add('percent_1rm'); hide.add('rpe') }
+  return ALL_COLUMNS.filter((c) => !hide.has(c.key))
+}
 
 const EMPTY_ROW_PAD = 3 // always render this many blank rows at the bottom for quick entry
 
@@ -88,9 +99,10 @@ const rowsToProgramData = (rows, weekStartDate) => {
   }
 }
 
-const SpreadsheetEditor = ({ programData, onChange }) => {
+const SpreadsheetEditor = ({ programData, onChange, intensityMode = 'percent_1rm' }) => {
   const weekStartDate = programData?.week_start_date
   const baseRows = useMemo(() => programDataToRows(programData), [programData])
+  const columns = useMemo(() => columnsForMode(intensityMode), [intensityMode])
 
   // Always show a buffer of empty rows for quick entry. They get filtered out
   // on serialize so they never corrupt the program_data shape.
@@ -127,16 +139,16 @@ const SpreadsheetEditor = ({ programData, onChange }) => {
       event.preventDefault()
       targetCol = event.shiftKey ? columnIndex - 1 : columnIndex + 1
       if (targetCol < 0) {
-        targetCol = COLUMNS.length - 1
+        targetCol = columns.length - 1
         targetRow -= 1
-      } else if (targetCol >= COLUMNS.length) {
+      } else if (targetCol >= columns.length) {
         targetCol = 0
         targetRow += 1
       }
     }
     const inputs = tableRef.current?.querySelectorAll('input[data-cell]')
     if (!inputs) return
-    const targetIndex = targetRow * COLUMNS.length + targetCol
+    const targetIndex = targetRow * columns.length + targetCol
     const nextInput = inputs[targetIndex]
     if (nextInput) {
       event.preventDefault()
@@ -154,7 +166,7 @@ const SpreadsheetEditor = ({ programData, onChange }) => {
         <table ref={tableRef} className="spreadsheet-editor-table">
           <thead>
             <tr>
-              {COLUMNS.map((col) => (
+              {columns.map((col) => (
                 <th key={col.key} style={{ width: col.width }}>
                   {col.label}
                 </th>
@@ -164,7 +176,7 @@ const SpreadsheetEditor = ({ programData, onChange }) => {
           <tbody>
             {displayRows.map((row, rowIndex) => (
               <tr key={rowIndex}>
-                {COLUMNS.map((col, columnIndex) => (
+                {columns.map((col, columnIndex) => (
                   <td key={col.key}>
                     <input
                       data-cell

@@ -196,6 +196,14 @@ const CoachDashboard = () => {
   }
 
   const handleRemoveDay = (dayIndex) => {
+    const day = programData.days[dayIndex]
+    const name = day?.day?.trim() || `Day ${dayIndex + 1}`
+    const count = day?.exercises?.length || 0
+    const message = count > 0
+      ? `Remove "${name}" and ${count} exercise${count === 1 ? '' : 's'}? This cannot be undone.`
+      : `Remove "${name}"? This cannot be undone.`
+    const ok = typeof window === 'undefined' || window.confirm(message)
+    if (!ok) return
     setProgramData((current) => ({
       ...current,
       days: current.days.filter((_, idx) => idx !== dayIndex),
@@ -633,7 +641,7 @@ const EditorView = ({
       </div>
 
       {editorMode === 'spreadsheet' ? (
-        <SpreadsheetEditor programData={programData} onChange={onProgramDataChange} />
+        <SpreadsheetEditor programData={programData} onChange={onProgramDataChange} intensityMode={intensityMode} />
       ) : (
         <div className="day-stack">
           {programData.days.map((day, dayIndex) => (

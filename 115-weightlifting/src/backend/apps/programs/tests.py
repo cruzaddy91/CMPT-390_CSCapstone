@@ -116,6 +116,69 @@ class ProgramsListNPlusOneTests(TestCase):
         )
 
 
+class ProgramDataDayIdTests(TestCase):
+    """normalize_program_data preserves stable day ids so completion records
+    survive day reorder/rename on the coach side."""
+
+    def setUp(self):
+        self.coach = User.objects.create_user(
+            username='didcoach', password='pw', user_type='coach'
+        )
+        self.athlete = User.objects.create_user(
+            username='didathlete', password='pw', user_type='athlete'
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.coach)
+
+    def test_day_id_round_trips_on_create(self):
+        program_data = {
+            'week_start_date': '2026-04-21',
+            'days': [
+                {'id': 'dabc123', 'day': 'Monday', 'exercises': []},
+                {'id': 'dxyz789', 'day': 'Tuesday', 'exercises': []},
+            ],
+        }
+        response = self.client.post(
+            reverse('program-list-create'),
+            {
+                'name': 'Block 1',
+                'description': '',
+                'athlete_id': self.athlete.id,
+                'start_date': '2026-04-21',
+                'end_date': None,
+                'program_data': program_data,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        days = response.data['program_data']['days']
+        self.assertEqual([d['id'] for d in days], ['dabc123', 'dxyz789'])
+
+    def test_backfills_deterministic_id_for_days_without_one(self):
+        program_data = {
+            'week_start_date': '2026-04-21',
+            'days': [
+                {'day': 'Monday', 'exercises': []},
+                {'day': 'Tuesday', 'exercises': []},
+            ],
+        }
+        response = self.client.post(
+            reverse('program-list-create'),
+            {
+                'name': 'Legacy block',
+                'description': '',
+                'athlete_id': self.athlete.id,
+                'start_date': '2026-04-21',
+                'end_date': None,
+                'program_data': program_data,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        days = response.data['program_data']['days']
+        self.assertEqual([d['id'] for d in days], ['d0', 'd1'])
+
+
 class SettingsHardeningTests(TestCase):
     """Prod boot should refuse insecure SECRET_KEY defaults."""
 

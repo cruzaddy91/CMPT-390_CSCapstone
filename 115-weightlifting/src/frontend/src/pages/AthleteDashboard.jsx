@@ -20,7 +20,7 @@ import {
   getWorkoutLogs,
   updateProgramCompletion
 } from '../services/api'
-import { normalizeProgramData } from '../utils/dataStructure'
+import { getDayCompletionKey, normalizeProgramData, readDayCompletion } from '../utils/dataStructure'
 import { formatApiError } from '../utils/errors'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend)
@@ -188,14 +188,21 @@ const AthleteDashboard = () => {
     }
   }), [])
 
-  const handleProgramResultChange = (programId, dayIndex, exerciseIndex, field, value) => {
+  const handleProgramResultChange = (programId, day, dayIndex, exerciseIndex, field, value) => {
+    // Key by the day's stable id so reordering days on the coach side does
+    // not remap the athlete's prior completion to the wrong day.
+    const dayKey = getDayCompletionKey(day, dayIndex)
     setCompletions((current) => {
       const currentProgramData = current[programId] || { entries: {} }
-      const currentDayData = currentProgramData.entries?.[String(dayIndex)] || {}
+      // Pick up legacy index-keyed entries once, then always write under dayKey.
+      const currentDayData =
+        currentProgramData.entries?.[dayKey] ||
+        currentProgramData.entries?.[String(dayIndex)] ||
+        {}
       const currentExerciseData = currentDayData[String(exerciseIndex)] || {
         completed: false,
         athlete_notes: '',
-        result: ''
+        result: '',
       }
 
       return {
@@ -203,15 +210,15 @@ const AthleteDashboard = () => {
         [programId]: {
           entries: {
             ...currentProgramData.entries,
-            [String(dayIndex)]: {
+            [dayKey]: {
               ...currentDayData,
               [String(exerciseIndex)]: {
                 ...currentExerciseData,
-                [field]: value
-              }
-            }
-          }
-        }
+                [field]: value,
+              },
+            },
+          },
+        },
       }
     })
   }
@@ -370,8 +377,8 @@ const AthleteDashboard = () => {
                     day={day}
                     dayIndex={dayIndex}
                     exercises={day.exercises}
-                    athleteResults={completionData.entries?.[String(dayIndex)] || {}}
-                    onResultChange={(exerciseIndex, field, value) => handleProgramResultChange(program.id, dayIndex, exerciseIndex, field, value)}
+                    athleteResults={readDayCompletion(completionData, day, dayIndex)}
+                    onResultChange={(exerciseIndex, field, value) => handleProgramResultChange(program.id, day, dayIndex, exerciseIndex, field, value)}
                   />
                 ))}
                 <div className="completion-actions">
