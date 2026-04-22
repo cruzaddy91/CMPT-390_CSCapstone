@@ -54,6 +54,7 @@ Safe defaults:
 - `./bin/zw reset-demo` is preview-only unless you add `--yes`
 - `./bin/zw prune-demo` trims the database to **Adminone** (head coach), **Coachone + five GoT**, and **Coachtwo + five LotR** (line coaches report to Adminone; preview without `--yes`). Use `--scrub-events` with `--yes` to clear `var/reports/events/*.json`
 - `./bin/zw seed-coachtwo-lotr` creates **Coachtwo** and the first five **lord-of-the-rings** usernames, aligns bodyweights with `tools/sim/character_sim_profiles.py`, and bulk-seeds ~3 years of PR + workout logs (add `--with-programs` if the API is running and you want training programs too)
+- **`./bin/zw backfill-demo-completion`** (with API up) runs `tools/sim/populate_history.py` for **Coachone+GoT** and **Coachtwo+LotR** so coach program rows get non-zero completion % and “x/y done” (not all zeros). Adds new programs each run; use a fresh DB or clear programs first if you want a clean list
 
 Quick reference:
 

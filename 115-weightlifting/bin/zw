@@ -26,6 +26,7 @@ Commands:
   make-demo        Build a richer demo scenario with seeded app data
   seed-long-history  Bulk ~3y PR + workout demo rows for GoT athletes (ORM)
   seed-coachtwo-lotr Coachtwo + 5 LotR athletes + 3y PR/workout history (optional --with-programs)
+  backfill-demo-completion  HTTP: programs + completion_data for Coachone+GoT and Coachtwo+LotR (no 0% demo rings)
   build            Build the frontend bundle
   dev              Run local development servers (Vite dev + Django runserver)
   host-local       Manage the local self-host stack
@@ -85,6 +86,9 @@ case "$command" in
     ;;
   seed-coachtwo-lotr)
     exec "$ROOT_DIR/scripts/seed_coachtwo_lotr_demo.sh" "$@"
+    ;;
+  backfill-demo-completion)
+    exec "$ROOT_DIR/scripts/backfill_demo_completion.sh" "$@"
     ;;
   build)
     exec "$ROOT_DIR/scripts/build_all.sh" "$@"

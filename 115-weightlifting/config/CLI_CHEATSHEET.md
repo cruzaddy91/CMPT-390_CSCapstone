@@ -66,6 +66,9 @@ var/reports/events/
 ./bin/zw prune-demo --yes --scrub-events   # also delete var/reports/events/*.json
 ./bin/zw seed-coachtwo-lotr      # Coachtwo + 5 LotR + 3y PR/workout history (ORM)
 ./bin/zw seed-coachtwo-lotr --with-programs   # same + programs via HTTP (API up)
+# API up: backfill program completion (coach % / x of y done) for both demo rosters; avoids all-0 rings
+./bin/zw backfill-demo-completion
+./bin/zw backfill-demo-completion --dry-run
 ./bin/zw make-demo
 ./bin/zw smoke
 ```
