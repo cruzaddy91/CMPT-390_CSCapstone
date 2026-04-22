@@ -11,7 +11,7 @@ import {
   getProgramsFromBackend,
   updateProgram,
 } from '../services/api'
-import { countExercises, createEmptyDay, createEmptyWeek, normalizeProgramData } from '../utils/dataStructure'
+import { countExercises, createEmptyDay, createEmptyWeek, generateDayId, normalizeProgramData } from '../utils/dataStructure'
 import { formatApiError } from '../utils/errors'
 import { downloadTemplateXlsx, parseProgramFile } from '../utils/programTemplate'
 import { clearDraft, readDraft, saveDraft } from '../utils/programDraft'
@@ -347,6 +347,7 @@ const CoachDashboard = () => {
         ? `Day ${current.days.length + 1}`
         : source.day
       const cloned = {
+        id: generateDayId(),
         day: nextDayName,
         exercises: (source.exercises || []).map((ex) => ({ ...ex })),
       }
@@ -1015,7 +1016,7 @@ const EditorView = ({
         <div className="day-stack">
           {programData.days.map((day, dayIndex) => (
             <WorkoutDay
-              key={`${day.day}-${dayIndex}`}
+              key={day.id || `day-fallback-${dayIndex}`}
               day={day}
               dayIndex={dayIndex}
               dayCount={dayCount}

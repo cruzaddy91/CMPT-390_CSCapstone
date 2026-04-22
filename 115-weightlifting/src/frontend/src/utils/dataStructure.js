@@ -4,7 +4,8 @@ const WEEKDAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 // Prior to this, athlete completion was keyed by day position, so moving a day
 // silently remapped all completion entries to the wrong day. Now each day
 // carries its own identifier; completion is keyed by that id.
-const generateDayId = () => `d${Math.random().toString(36).slice(2, 10)}`
+/** Stable per-day identity for React keys and completion lookup (export for duplicate-day flows). */
+export const generateDayId = () => `d${Math.random().toString(36).slice(2, 10)}`
 
 export const createEmptyExercise = () => ({
   name: '',

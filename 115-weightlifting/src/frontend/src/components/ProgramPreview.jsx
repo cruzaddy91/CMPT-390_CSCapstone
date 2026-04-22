@@ -50,7 +50,7 @@ const ProgramPreview = ({ programData, programName, athleteUsername, athleteProf
             <div className="day-stack">
               {days.map((day, dayIndex) => (
                 <WorkoutDay
-                  key={`preview-${day.day}-${dayIndex}`}
+                  key={day.id ? `preview-${day.id}` : `preview-${dayIndex}`}
                   day={day}
                   dayIndex={dayIndex}
                   exercises={day.exercises || []}
