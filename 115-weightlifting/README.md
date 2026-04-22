@@ -63,8 +63,28 @@ Quick reference:
 - Structured weekly training programs stored as JSON on each assigned program
 - Coach dashboard for creating, editing, and reassigning weekly plans
 - Athlete dashboard for completing prescribed exercises, adding logs, tracking PRs, and viewing charts
+- Coach program editor shows the same three PR/trend charts for the assigned athlete (read-only; API allows only athletes who already appear on one of your saved programs)
 - Sinclair score API and frontend calculator
 - Django REST backend with SQLite-by-default and PostgreSQL-ready production settings
+
+## Athlete PR charts & next-peak projection
+
+The frontend builds three related series from the PR log in `src/frontend/src/utils/trainingCharts.js` (pure functions; Chart.js only renders the output).
+
+1. **Monthly best (Snatch / Clean & Jerk / Total)** — For each calendar month and each lift, take the maximum logged weight. Missing months are skipped in the line (`spanGaps`) so long macrocycles stay readable.
+
+2. **Peak rhythm & forecast (competition total only)** — Only `lift_type === 'total'` rows are used.
+   - **Monthly envelope:** For every month from the first to the last total PR, store the best total in that month.
+   - **Peak detection:** A month is a *peak* if (a) no higher finite total appears within ±2 months, and (b) its value is at least ~1.5 kg above the mean of other finite neighbors in that window (a cheap *prominence* filter to drop flat noise). Adjacent peak months are merged, keeping the higher total.
+   - **Inter-peak spacing:** When there are ≥2 peaks, gaps (in months) between consecutive peaks are computed; the forecast uses the mean of the **last up to three** gaps as the expected cadence to the next high window.
+   - **Projected month index:** `last_peak_index + round(mean_gap_months)`, extending the label axis with empty trailing months if needed.
+   - **Projected kg:** Ordinary least squares (OLS) linear regression on `(month_index, peak_kg)` using the **last four** peak points, evaluated at the projected index. The value is then **clamped** to roughly the neighborhood of the last peak (not below ~94% or above ~106% of last peak) so the dashed segment stays a conservative planning hint rather than an extrapolation fantasy.
+
+This is **not** a physiology or fatigue model; it is a lightweight **cadence + local trend** heuristic for meet planning. Block / mesocycle names are not stored on PR rows, so copy in the UI nudges athletes and coaches to correlate peaks with their own program notes.
+
+3. **Six-month rolling peak total** — For each month end, the maximum competition total observed in that month or the five prior calendar months.
+
+Unit tests for the chart builders live in `src/frontend/src/__tests__/trainingCharts.test.js`.
 
 ## Tech Stack
 
@@ -143,7 +163,7 @@ See `config/self_hosting.md` for both local and public self-hosting plans.
 - `PATCH /api/programs/<id>/assign/`
 - `GET|PATCH /api/athletes/program-completion/<program_id>/`
 - `GET|POST /api/athletes/workouts/`
-- `GET|POST /api/athletes/prs/`
+- `GET|POST /api/athletes/prs/` (coaches: `GET ...?athlete_id=<id>` — only athletes on your programs; see `apps/athletes/views.py`)
 - `POST /api/analytics/sinclair/`
 
 ## Environment Variables

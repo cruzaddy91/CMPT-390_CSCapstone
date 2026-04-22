@@ -1,15 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-  CategoryScale,
-  Chart as ChartJS,
-  Legend,
-  LinearScale,
-  LineElement,
-  PointElement,
-  Tooltip,
-} from 'chart.js'
-import { Line } from 'react-chartjs-2'
 import AthleteExerciseCard from '../components/AthleteExerciseCard'
+import AthleteTrainingTrendCharts from '../components/AthleteTrainingTrendCharts'
 import WeekStrip from '../components/WeekStrip'
 import {
   calculateRobi,
@@ -23,14 +14,8 @@ import {
 } from '../services/api'
 import { getCurrentUser } from '../utils/auth'
 import { getDayCompletionKey, normalizeProgramData } from '../utils/dataStructure'
-import { buildChartJsCommonOptions, useChartPalette } from '../utils/chartTheme'
 import { formatApiError } from '../utils/errors'
 import { programTitleForDisplay } from '../utils/safeDisplay'
-import {
-  monthlyBestPrLineData,
-  peakPerformanceForecastChart,
-  sixMonthRollingPeakTotalLine,
-} from '../utils/trainingCharts'
 import {
   computeLifetimeCompletions,
   computeStreak,
@@ -40,8 +25,6 @@ import {
   markMilestoneFired,
   todayLocalDateKey,
 } from '../utils/streaks'
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -87,7 +70,6 @@ const pickDefaultDayId = (days, entriesByDayId) =>
   _pickDefaultDayId(days, entriesByDayId, WEEKDAY_NAMES[new Date().getDay()])
 
 const AthleteDashboard = () => {
-  const chartPalette = useChartPalette()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
@@ -423,26 +405,6 @@ const AthleteDashboard = () => {
     }
   }
 
-  const prHistoryChart = useMemo(
-    () => monthlyBestPrLineData(personalRecords, ['snatch', 'clean_jerk', 'total'], chartPalette),
-    [personalRecords, chartPalette],
-  )
-
-  const peakForecast = useMemo(
-    () => peakPerformanceForecastChart(personalRecords, chartPalette),
-    [personalRecords, chartPalette],
-  )
-
-  const rollingPeakChart = useMemo(
-    () => sixMonthRollingPeakTotalLine(personalRecords, chartPalette),
-    [personalRecords, chartPalette],
-  )
-
-  const sharedChartOptions = useMemo(
-    () => buildChartJsCommonOptions(chartPalette),
-    [chartPalette],
-  )
-
   if (loading) {
     return (
       <div className="dashboard-container">
@@ -674,44 +636,7 @@ const AthleteDashboard = () => {
         <section className="athlete-drawer section-card">
           <h3>Stats &amp; tools</h3>
 
-          <p className="athlete-charts-intro">
-            Monthly bests from your PR log (click legend entries to hide or show a lift). The middle chart marks competition-total peaks and a simple rhythm-based next-window estimate; the rolling line is a six-month peak on total. Treat projections as planning hints, not guarantees.
-          </p>
-          <div className="athlete-drawer-stats-grid athlete-drawer-stats-grid--three">
-            <div className="chart-card">
-              <h4>PR trend (monthly best)</h4>
-              {personalRecords.length === 0 ? (
-                <div className="chart-empty">Log a PR to see your trend.</div>
-              ) : (
-                <Line data={prHistoryChart} options={sharedChartOptions} />
-              )}
-            </div>
-            <div className="chart-card">
-              <h4>Peak rhythm &amp; forecast</h4>
-              {peakForecast.labels.length === 0 ? (
-                <div className="chart-empty">Log a competition total to see peak timing and a forecast.</div>
-              ) : (
-                <>
-                  <Line data={{ labels: peakForecast.labels, datasets: peakForecast.datasets }} options={sharedChartOptions} />
-                  {peakForecast.insights.length > 0 && (
-                    <ul className="athlete-chart-footnote" aria-label="Chart notes">
-                      {peakForecast.insights.map((text) => (
-                        <li key={text}>{text}</li>
-                      ))}
-                    </ul>
-                  )}
-                </>
-              )}
-            </div>
-            <div className="chart-card">
-              <h4>Rolling strength trend</h4>
-              {personalRecords.filter((r) => r.lift_type === 'total').length === 0 ? (
-                <div className="chart-empty">Log a total PR to see the rolling peak line.</div>
-              ) : (
-                <Line data={rollingPeakChart} options={sharedChartOptions} />
-              )}
-            </div>
-          </div>
+          <AthleteTrainingTrendCharts personalRecords={personalRecords} />
 
           <h4 className="athlete-drawer-subhead">Sinclair &amp; ROBI</h4>
           <div className="form-grid compact-grid">

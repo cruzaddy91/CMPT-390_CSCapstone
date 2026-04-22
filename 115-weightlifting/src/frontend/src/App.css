@@ -1991,6 +1991,31 @@
   margin-top: 0.35rem;
 }
 
+.coach-athlete-pr-charts {
+  margin-top: 1rem;
+}
+
+.coach-athlete-pr-charts-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.coach-athlete-pr-charts-hint,
+.coach-athlete-pr-charts-policy {
+  margin-top: 0.35rem;
+}
+
+.coach-athlete-pr-charts-error {
+  color: var(--danger);
+}
+
+.coach-athlete-pr-charts-loading {
+  padding: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
 @media (max-width: 768px) {
   .athlete-drawer-stats-grid { grid-template-columns: 1fr; }
   .athlete-drawer-stats-grid--three { grid-template-columns: 1fr; }

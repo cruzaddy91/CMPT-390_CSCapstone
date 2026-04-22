@@ -3,7 +3,14 @@ import WorkoutDay from '../components/WorkoutDay'
 import SpreadsheetEditor from '../components/SpreadsheetEditor'
 import ProgramPreview from '../components/ProgramPreview'
 import ProgressRing from '../components/ProgressRing'
-import { assignProgram, createProgram, getAthletes, getProgramsFromBackend, updateProgram } from '../services/api'
+import {
+  assignProgram,
+  createProgram,
+  getAthletes,
+  getPersonalRecords,
+  getProgramsFromBackend,
+  updateProgram,
+} from '../services/api'
 import { countExercises, createEmptyDay, createEmptyWeek, normalizeProgramData } from '../utils/dataStructure'
 import { formatApiError } from '../utils/errors'
 import { downloadTemplateXlsx, parseProgramFile } from '../utils/programTemplate'
@@ -11,6 +18,7 @@ import { clearDraft, readDraft, saveDraft } from '../utils/programDraft'
 import { BLOCK_PRESETS, endDateForBlock, inferBlockKey } from '../utils/blockLength'
 import { relativeTimeSince } from '../utils/relativeTime'
 import { programTitleForDisplay } from '../utils/safeDisplay'
+import AthleteTrainingTrendCharts from '../components/AthleteTrainingTrendCharts'
 
 const getDefaultForm = () => ({
   name: '',
@@ -61,8 +69,38 @@ const CoachDashboard = () => {
   const [showPreview, setShowPreview] = useState(false)
   const [draftBadge, setDraftBadge] = useState(false) // shows briefly when a saved draft is restored
   const fileInputRef = useRef(null)
+  const [coachAthletePrs, setCoachAthletePrs] = useState([])
+  const [coachPrsLoading, setCoachPrsLoading] = useState(false)
+  const [coachPrsError, setCoachPrsError] = useState(null)
 
   useEffect(() => { loadDashboardData() }, [])
+
+  useEffect(() => {
+    if (view !== 'editor') return
+    const id = Number(formData.athlete_id)
+    if (!id || Number.isNaN(id)) {
+      setCoachAthletePrs([])
+      setCoachPrsError(null)
+      setCoachPrsLoading(false)
+      return
+    }
+    let cancelled = false
+    setCoachPrsLoading(true)
+    setCoachPrsError(null)
+    getPersonalRecords(id)
+      .then((data) => {
+        if (cancelled) return
+        setCoachAthletePrs(Array.isArray(data) ? data : [])
+        setCoachPrsLoading(false)
+      })
+      .catch((error) => {
+        if (cancelled) return
+        setCoachAthletePrs([])
+        setCoachPrsError(formatApiError(error, 'Could not load PR history.'))
+        setCoachPrsLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [view, formData.athlete_id])
 
   useEffect(() => {
     const handle = setTimeout(() => { refreshAthletes(athleteSearch) }, 300)
@@ -374,6 +412,9 @@ const CoachDashboard = () => {
             athleteSearch={athleteSearch}
             athleteTotal={athleteTotal}
             assignedAthleteUsername={assignedAthleteUsername}
+            coachAthletePrs={coachAthletePrs}
+            coachPrsLoading={coachPrsLoading}
+            coachPrsError={coachPrsError}
             editorMode={editorMode}
             intensityMode={intensityMode}
             saving={saving}
@@ -658,6 +699,7 @@ const ListView = ({ programs, athletes, assignmentDrafts, onAssignDraftChange, o
 const EditorView = ({
   editingProgramId, formData, programData, athletes, athleteSearch, athleteTotal,
   assignedAthleteUsername,
+  coachAthletePrs, coachPrsLoading, coachPrsError,
   editorMode, intensityMode, saving, saveMessage, upcomingSummary, currentBlockKey,
   fileInputRef, draftBadge,
   onBack, onFormChange, onBlockPreset, onAthleteSearch, onDayChange, onExercisesChange,
@@ -666,6 +708,9 @@ const EditorView = ({
   onToggleEditorMode, onIntensityModeChange, onProgramDataChange, onPreview, onSave,
 }) => {
   const dayCount = programData.days.length
+  const coachPrChartsIntro = !formData.athlete_id
+    ? ''
+    : `PR history for ${assignedAthleteUsername ? `@${assignedAthleteUsername}` : 'this athlete'} (read-only). Same visualizations as the athlete stats drawer: monthly bests, estimated peak rhythm on competition totals, and a six-month rolling peak. Forecasts are planning hints only—not a physiological model.`
   return (
     <>
       <div className="editor-topbar">
@@ -836,6 +881,30 @@ const EditorView = ({
           </div>
         </div>
       </div>
+
+      <section className="section-card coach-athlete-pr-charts" aria-labelledby="coach-athlete-pr-heading">
+        <h3 id="coach-athlete-pr-heading" className="coach-athlete-pr-charts-title">Athlete PR trends</h3>
+        {!formData.athlete_id ? (
+          <p className="section-subtitle coach-athlete-pr-charts-hint">
+            Choose an assigned athlete above to load charts. Data comes from their PR log; the backend only returns athletes on your programs.
+          </p>
+        ) : coachPrsLoading ? (
+          <div className="loading coach-athlete-pr-charts-loading">Loading PR history…</div>
+        ) : coachPrsError ? (
+          <>
+            <p className="section-subtitle coach-athlete-pr-charts-error" role="alert">{coachPrsError}</p>
+            <p className="section-subtitle coach-athlete-pr-charts-policy">
+              If you picked someone who has never been on a saved program with you, save this program once so the server can authorize PR reads, then reopen the editor or switch athlete and back.
+            </p>
+          </>
+        ) : (
+          <AthleteTrainingTrendCharts
+            personalRecords={coachAthletePrs}
+            intro={coachPrChartsIntro}
+            audience="coach"
+          />
+        )}
+      </section>
 
       <div className="section-title-row">
         <h3>Weekly structure</h3>
