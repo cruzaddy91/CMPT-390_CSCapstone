@@ -19,6 +19,7 @@ import { BLOCK_PRESETS, endDateForBlock, inferBlockKey } from '../utils/blockLen
 import { relativeTimeSince } from '../utils/relativeTime'
 import { programTitleForDisplay } from '../utils/safeDisplay'
 import AthleteTrainingTrendCharts from '../components/AthleteTrainingTrendCharts'
+import CoachRosterAggregateCharts from '../components/CoachRosterAggregateCharts'
 
 const getDefaultForm = () => ({
   name: '',
@@ -72,6 +73,21 @@ const CoachDashboard = () => {
   const [coachAthletePrs, setCoachAthletePrs] = useState([])
   const [coachPrsLoading, setCoachPrsLoading] = useState(false)
   const [coachPrsError, setCoachPrsError] = useState(null)
+  const [rosterPrsByAthlete, setRosterPrsByAthlete] = useState({})
+  const [rosterPrsLoading, setRosterPrsLoading] = useState(false)
+  const [rosterPrsError, setRosterPrsError] = useState(null)
+
+  const rosterAthleteIds = useMemo(() => {
+    const ids = new Set()
+    for (const p of programs) {
+      const aid = p.athlete_id
+      if (aid == null || aid === '') continue
+      const n = Number(aid)
+      if (Number.isFinite(n) && n > 0) ids.add(n)
+    }
+    return [...ids].sort((a, b) => a - b)
+  }, [programs])
+  const rosterAthleteIdsKey = rosterAthleteIds.join(',')
 
   useEffect(() => { loadDashboardData() }, [])
 
@@ -101,6 +117,43 @@ const CoachDashboard = () => {
       })
     return () => { cancelled = true }
   }, [view, formData.athlete_id])
+
+  useEffect(() => {
+    if (view !== 'list') return
+    if (rosterAthleteIds.length === 0) {
+      setRosterPrsByAthlete({})
+      setRosterPrsError(null)
+      setRosterPrsLoading(false)
+      return
+    }
+    let cancelled = false
+    setRosterPrsLoading(true)
+    setRosterPrsError(null)
+    Promise.all(
+      rosterAthleteIds.map((id) =>
+        getPersonalRecords(id).then((data) => ({ id, data: Array.isArray(data) ? data : [] })),
+      ),
+    )
+      .then((pairs) => {
+        if (cancelled) return
+        const next = {}
+        for (const { id, data } of pairs) next[id] = data
+        setRosterPrsByAthlete(next)
+        setRosterPrsLoading(false)
+      })
+      .catch((error) => {
+        if (cancelled) return
+        setRosterPrsByAthlete({})
+        setRosterPrsError(formatApiError(error, 'Could not load roster PR data.'))
+        setRosterPrsLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [view, rosterAthleteIdsKey])
+
+  const rosterRecordsPerAthlete = useMemo(
+    () => rosterAthleteIds.map((id) => rosterPrsByAthlete[id] || []),
+    [rosterAthleteIds, rosterPrsByAthlete],
+  )
 
   useEffect(() => {
     const handle = setTimeout(() => { refreshAthletes(athleteSearch) }, 300)
@@ -401,6 +454,10 @@ const CoachDashboard = () => {
           onNewProgram={openNewProgram}
           onEditProgram={openExistingProgram}
           saveMessage={saveMessage}
+          rosterRecordsPerAthlete={rosterRecordsPerAthlete}
+          rosterAthleteCount={rosterAthleteIds.length}
+          rosterPrsLoading={rosterPrsLoading}
+          rosterPrsError={rosterPrsError}
         />
       ) : (
         <>
@@ -621,8 +678,20 @@ const AthleteGroup = ({ athleteUsername, programs, athletes, assignmentDrafts,
   )
 }
 
-const ListView = ({ programs, athletes, assignmentDrafts, onAssignDraftChange, onAssignSubmit,
-  onNewProgram, onEditProgram, saveMessage }) => {
+const ListView = ({
+  programs,
+  athletes,
+  assignmentDrafts,
+  onAssignDraftChange,
+  onAssignSubmit,
+  onNewProgram,
+  onEditProgram,
+  saveMessage,
+  rosterRecordsPerAthlete,
+  rosterAthleteCount,
+  rosterPrsLoading,
+  rosterPrsError,
+}) => {
   // Bucket programs by athlete, newest-first within each bucket, then sort
   // the groups alphabetically by athlete username so the roster is stable
   // between renders.
@@ -674,20 +743,28 @@ const ListView = ({ programs, athletes, assignmentDrafts, onAssignDraftChange, o
           <p className="section-subtitle">Click <strong>+ New program</strong> to build your first one, or download the Excel template to import from a spreadsheet.</p>
         </div>
       ) : (
-        <div className="athlete-groups-list">
-          {groups.map((group) => (
-            <AthleteGroup
-              key={group.athleteId}
-              athleteUsername={group.athleteUsername}
-              programs={group.programs}
-              athletes={athletes}
-              assignmentDrafts={assignmentDrafts}
-              onAssignDraftChange={onAssignDraftChange}
-              onAssignSubmit={onAssignSubmit}
-              onEditProgram={onEditProgram}
-            />
-          ))}
-        </div>
+        <>
+          <CoachRosterAggregateCharts
+            recordsPerAthlete={rosterRecordsPerAthlete}
+            athleteCount={rosterAthleteCount}
+            loading={rosterPrsLoading}
+            error={rosterPrsError}
+          />
+          <div className="athlete-groups-list">
+            {groups.map((group) => (
+              <AthleteGroup
+                key={group.athleteId}
+                athleteUsername={group.athleteUsername}
+                programs={group.programs}
+                athletes={athletes}
+                assignmentDrafts={assignmentDrafts}
+                onAssignDraftChange={onAssignDraftChange}
+                onAssignSubmit={onAssignSubmit}
+                onEditProgram={onEditProgram}
+              />
+            ))}
+          </div>
+        </>
       )}
     </>
   )

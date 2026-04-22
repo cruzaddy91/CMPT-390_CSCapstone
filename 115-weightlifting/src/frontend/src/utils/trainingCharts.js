@@ -321,3 +321,112 @@ export function sixMonthRollingPeakTotalLine(records, palette = CHART_PALETTE_FA
     }],
   }
 }
+
+/**
+ * Mean of each athlete's monthly-best series (per lift), aligned on the union
+ * of calendar months. Only athletes with a finite value in that month count
+ * toward the average for that point.
+ */
+export function rosterAverageMonthlyBestPrLineData(
+  recordsPerAthlete,
+  liftTypes = ['snatch', 'clean_jerk', 'total'],
+  palette = CHART_PALETTE_FALLBACK,
+) {
+  const inputs = (recordsPerAthlete || []).filter((recs) => Array.isArray(recs) && recs.length > 0)
+  if (inputs.length === 0) {
+    return { labels: [], datasets: [] }
+  }
+
+  const perAthlete = inputs.map((recs) => monthlyBestPrLineData(recs, liftTypes, palette))
+  const labelSet = new Set()
+  for (const chart of perAthlete) {
+    for (const lab of chart.labels) labelSet.add(lab)
+  }
+  const labels = [...labelSet].sort()
+
+  const colors = [
+    { border: palette.snBorder, fill: palette.snFill, point: palette.snPoint },
+    { border: palette.cjBorder, fill: palette.cjFill, point: palette.cjPoint },
+    { border: palette.totBorder, fill: palette.totFill, point: palette.totPoint },
+  ]
+
+  const datasets = liftTypes.map((lift, i) => {
+    const baseName = LIFT_LABELS[lift] || lift
+    return {
+      label: `Avg ${baseName} (kg)`,
+      data: labels.map((lab) => {
+        const nums = []
+        for (const chart of perAthlete) {
+          const ds = chart.datasets[i]
+          const idx = chart.labels.indexOf(lab)
+          if (idx < 0) continue
+          const v = ds.data[idx]
+          if (v != null && Number.isFinite(v)) nums.push(v)
+        }
+        if (nums.length === 0) return null
+        return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10
+      }),
+      borderColor: colors[i % colors.length].border,
+      backgroundColor: colors[i % colors.length].fill,
+      pointBackgroundColor: colors[i % colors.length].point,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      tension: 0.32,
+      spanGaps: true,
+    }
+  })
+
+  return { labels, datasets }
+}
+
+/**
+ * Mean of each athlete's six-month rolling peak total on the union of month labels.
+ */
+export function rosterAverageRollingPeakTotalLine(
+  recordsPerAthlete,
+  palette = CHART_PALETTE_FALLBACK,
+) {
+  const inputs = (recordsPerAthlete || []).filter((recs) => Array.isArray(recs) && recs.length > 0)
+  if (inputs.length === 0) {
+    return { labels: [], datasets: [] }
+  }
+
+  const perAthlete = inputs.map((recs) => sixMonthRollingPeakTotalLine(recs, palette))
+  if (perAthlete.every((c) => c.labels.length === 0)) {
+    return { labels: [], datasets: [] }
+  }
+
+  const labelSet = new Set()
+  for (const chart of perAthlete) {
+    for (const lab of chart.labels) labelSet.add(lab)
+  }
+  const labels = [...labelSet].sort()
+
+  const data = labels.map((lab) => {
+    const nums = []
+    for (const chart of perAthlete) {
+      const idx = chart.labels.indexOf(lab)
+      if (idx < 0) continue
+      const v = chart.datasets[0]?.data[idx]
+      if (v != null && Number.isFinite(v)) nums.push(v)
+    }
+    if (nums.length === 0) return null
+    return Math.round((nums.reduce((a, b) => a + b, 0) / nums.length) * 10) / 10
+  })
+
+  return {
+    labels,
+    datasets: [{
+      label: 'Avg 6-mo rolling peak total (kg)',
+      data,
+      borderColor: palette.rollingBorder,
+      backgroundColor: palette.rollingFill,
+      pointBackgroundColor: palette.rollingPoint,
+      pointRadius: 3,
+      pointHoverRadius: 5,
+      tension: 0.35,
+      fill: true,
+      spanGaps: true,
+    }],
+  }
+}

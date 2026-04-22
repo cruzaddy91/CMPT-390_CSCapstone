@@ -64,6 +64,7 @@ Quick reference:
 - Coach dashboard for creating, editing, and reassigning weekly plans
 - Athlete dashboard for completing prescribed exercises, adding logs, tracking PRs, and viewing charts
 - Coach program editor shows the same three PR/trend charts for the assigned athlete (read-only; API allows only athletes who already appear on one of your saved programs)
+- Coach home (program list) shows **roster-wide averages**: mean of each athlete’s monthly-best PR curves (Snatch, Clean & Jerk, Total) and mean of each athlete’s six-month rolling peak total (`rosterAverageMonthlyBestPrLineData`, `rosterAverageRollingPeakTotalLine` in `trainingCharts.js`)
 - Sinclair score API and frontend calculator
 - Django REST backend with SQLite-by-default and PostgreSQL-ready production settings
 
@@ -83,6 +84,8 @@ The frontend builds three related series from the PR log in `src/frontend/src/ut
 This is **not** a physiology or fatigue model; it is a lightweight **cadence + local trend** heuristic for meet planning. Block / mesocycle names are not stored on PR rows, so copy in the UI nudges athletes and coaches to correlate peaks with their own program notes.
 
 3. **Six-month rolling peak total** — For each month end, the maximum competition total observed in that month or the five prior calendar months.
+
+**Coach roster aggregates (home list):** For every assigned athlete on your programs, PRs are fetched in parallel (same `GET /api/athletes/prs/?athlete_id=` authorization as elsewhere). For each calendar month, the roster chart plots the **arithmetic mean** of the per-athlete monthly bests (each athlete contributes at most one value per lift per month—their own monthly max). Athletes with no data in that month are **omitted** from the average for that month (not counted as zero). The rolling chart applies the same idea to each athlete’s six-month rolling peak total series.
 
 Unit tests for the chart builders live in `src/frontend/src/__tests__/trainingCharts.test.js`.
 
