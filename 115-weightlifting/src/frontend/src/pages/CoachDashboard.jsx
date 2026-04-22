@@ -489,7 +489,6 @@ const EditorView = ({
           </button>
           <button type="button" className="tool-btn" onClick={onPreview}
                   title="See this program from the athlete's perspective">
-            <span className="tool-btn-icon">👁</span>
             <span className="tool-btn-label">Preview as Athlete</span>
           </button>
         </div>
