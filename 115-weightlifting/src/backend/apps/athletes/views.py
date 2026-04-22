@@ -107,7 +107,13 @@ class ProgramCompletionDetail(APIView):
         else:
             return Response({'detail': 'Unsupported user type.'}, status=status.HTTP_403_FORBIDDEN)
 
-        completion, _ = ProgramCompletion.objects.get_or_create(program=program, athlete=athlete)
+        try:
+            completion = ProgramCompletion.objects.get(program=program, athlete=athlete)
+        except ProgramCompletion.DoesNotExist:
+            return Response(
+                {'detail': 'No completion record yet.'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         return Response(ProgramCompletionSerializer(completion).data, status=status.HTTP_200_OK)
 
     def patch(self, request, program_id):

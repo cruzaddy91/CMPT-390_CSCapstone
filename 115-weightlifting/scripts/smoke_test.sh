@@ -71,6 +71,24 @@ unauth_client = APIClient()
 anon_me = unauth_client.get('/api/auth/me/')
 assert anon_me.status_code == 401, f"unauth /me should be 401, got {anon_me.status_code}"
 
+import os as _os
+_prev_coach_code = _os.environ.pop('COACH_SIGNUP_CODE', None)
+try:
+    open_coach_reg = APIClient().post(
+        '/api/auth/register/',
+        {'username': 'open_coach_attempt', 'password': 'longenoughpw1', 'user_type': 'coach'},
+        format='json',
+    )
+    assert open_coach_reg.status_code == 400, (
+        f'coach signup without env code should 400, got {open_coach_reg.status_code}'
+    )
+    assert not User.objects.filter(username='open_coach_attempt').exists(), (
+        'blocked coach signup still created a user'
+    )
+finally:
+    if _prev_coach_code is not None:
+        _os.environ['COACH_SIGNUP_CODE'] = _prev_coach_code
+
 refresh_response = APIClient().post(
     '/api/auth/token/refresh/', {'refresh': coach_tokens['refresh']}, format='json'
 )
@@ -81,6 +99,13 @@ rotated_client = APIClient()
 rotated_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refreshed_access}")
 rotated_me = rotated_client.get('/api/auth/me/')
 assert rotated_me.status_code == 200, rotated_me.content
+
+replay_refresh = APIClient().post(
+    '/api/auth/token/refresh/', {'refresh': coach_tokens['refresh']}, format='json'
+)
+assert replay_refresh.status_code == 401, (
+    f'blacklisted refresh should 401, got {replay_refresh.status_code}: {replay_refresh.content}'
+)
 
 me_response = coach_client.get('/api/auth/me/')
 assert me_response.status_code == 200, me_response.content
@@ -130,6 +155,30 @@ assert sinclair_response.status_code == 200, sinclair_response.content
 completion_count_before = ProgramCompletion.objects.filter(program_id=program_id).count()
 assert completion_count_before >= 1, 'expected at least 1 completion record before reassignment'
 
+athlete_c_username = f'athlete_smoke_readonly_{program_id}'
+athlete_c, _ = User.objects.get_or_create(username=athlete_c_username, defaults={'user_type': 'athlete'})
+athlete_c.user_type = 'athlete'
+athlete_c.set_password('DemoPass123!')
+athlete_c.save()
+readonly_program = TrainingProgram.objects.create(
+    coach=coach, athlete=athlete_c, name='RO Smoke', start_date=date.today(),
+)
+ro_client = APIClient()
+ro_login = ro_client.post(
+    '/api/auth/token/',
+    {'username': athlete_c_username, 'password': 'DemoPass123!'},
+    format='json',
+)
+ro_client.credentials(HTTP_AUTHORIZATION=f"Bearer {ro_login.json()['access']}")
+
+ro_before = ProgramCompletion.objects.filter(program=readonly_program).count()
+ro_get = ro_client.get(f'/api/athletes/program-completion/{readonly_program.id}/')
+assert ro_get.status_code == 404, (
+    f'GET on missing completion should 404, got {ro_get.status_code}'
+)
+ro_after = ProgramCompletion.objects.filter(program=readonly_program).count()
+assert ro_after == ro_before, f'GET mutated DB: {ro_before} -> {ro_after}'
+
 reassign_response = coach_client.patch(
     f'/api/programs/{program_id}/assign/',
     {'athlete_id': athlete_b.id},
@@ -148,8 +197,11 @@ print(json.dumps({
     'sinclair': sinclair_response.json(),
     'coach_program_count': TrainingProgram.objects.filter(coach=coach).count(),
     'refresh_rotated': True,
+    'refresh_blacklist_enforced': replay_refresh.status_code == 401,
     'unauth_me_status': anon_me.status_code,
     'reassignment_preserved_completions': prior_records.count(),
+    'coach_signup_gated': open_coach_reg.status_code == 400,
+    'completion_get_is_readonly': ro_get.status_code == 404 and ro_after == ro_before,
 }))
 PY
 )"

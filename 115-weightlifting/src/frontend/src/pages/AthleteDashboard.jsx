@@ -88,7 +88,9 @@ const AthleteDashboard = () => {
             const completion = await getProgramCompletion(program.id)
             return [program.id, completion.completion_data]
           } catch (error) {
-            console.error(`Error loading completion for program ${program.id}:`, error)
+            if (error?.response?.status !== 404) {
+              console.error(`Error loading completion for program ${program.id}:`, error)
+            }
             return [program.id, { entries: {} }]
           }
         })
