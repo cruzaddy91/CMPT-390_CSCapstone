@@ -41,7 +41,10 @@ const WorkoutDay = ({
   canRemoveDay = false,
   intensityMode = 'percent_1rm',
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true)
+  // Collapse-by-default matches the rest of the app: the coach opens only
+  // the day(s) they're editing, and reloading the editor never leaves a
+  // previously-open day stuck open.
+  const [isExpanded, setIsExpanded] = useState(false)
   const datalistId = useId()
 
   const handleAddExercise = () => {

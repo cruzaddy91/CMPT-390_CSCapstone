@@ -24,6 +24,9 @@ describe('ProgramPreview', () => {
     render(<ProgramPreview programData={programFixture} programName="Block 1" athleteUsername="athlete_a" onClose={() => {}} />)
     expect(screen.getByText('Block 1')).toBeTruthy()
     expect(screen.getByText(/for athlete_a/i)).toBeTruthy()
+    // Days now mount collapsed app-wide. Expand the first day to verify its
+    // exercise contents render under the prescription.
+    fireEvent.click(screen.getByTitle(/expand day/i))
     expect(screen.getByText('Snatch')).toBeTruthy()
     expect(screen.getByRole('dialog')).toBeTruthy()
   })
