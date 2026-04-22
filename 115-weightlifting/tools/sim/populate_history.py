@@ -28,6 +28,26 @@ Run after ``seed.py`` has created the coach + athletes:
 
     python populate_history.py
 
+**Coach dashboard completion %** (per-program ring, “x/y done”) is driven by
+``completion_data`` that this script writes (as each athlete). ``build_programs.py``
+only creates programs with no completion, so those rings stay at 0% until
+``populate_history.py`` (or the athlete checks boxes) runs.
+
+**Same logic for Coachtwo as for Coachone**: limit the roster to one theme
+so you only backfill the athletes for that coach, e.g. first five LotR
+(after those users exist — ``seed.py`` / ``seed-coachtwo-lotr``):
+
+    python populate_history.py --coach Coachtwo --roster-theme lord-of-the-rings --roster-size 5
+
+For **Coachone + first five GoT** (default ``seed.py`` roster):
+
+    python populate_history.py --coach Coachone --roster-theme game-of-thrones --roster-size 5
+
+Without ``--roster-theme``, the script uses **every** username in
+``ATHLETE_PROFILES``; users missing from the API will cause a hard error.
+Each run **creates** new programs; delete older duplicates in admin if
+re-running.
+
 For ~3 years of PR + workout rows (bulk ORM, coach dashboard charts) from the
 Django repo root:
 
@@ -49,6 +69,7 @@ import requests
 
 from client import ApiClient, DEFAULT_API
 from program_generators import build_program_payload
+from themes import available_themes, roster
 
 
 COACH_USERNAME = "Coachone"
@@ -458,6 +479,29 @@ def populate_athlete(
     }
 
 
+def _profiles_for_args(args) -> dict[str, dict[str, Any]]:
+    """Select which ATHLETE_PROFILES entries to run. Same logic as main()."""
+    if not getattr(args, "roster_theme", None):
+        return dict(ATHLETE_PROFILES)
+    size = int(getattr(args, "roster_size", 5) or 5)
+    names = roster(args.roster_theme, size)
+    out: dict[str, dict[str, Any]] = {}
+    missing: list[str] = []
+    for n in names:
+        if n in ATHLETE_PROFILES:
+            out[n] = ATHLETE_PROFILES[n]
+        else:
+            missing.append(n)
+    if missing:
+        raise SystemExit(
+            f"No ATHLETE_PROFILES entry for: {missing!r}. "
+            "Add profiles in populate_history.py (tiers, snatch, clean_jerk)."
+        )
+    if not out:
+        raise SystemExit("No athletes to populate after --roster-theme filter.")
+    return out
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Populate each seeded athlete with realistic training history."
@@ -467,11 +511,32 @@ def main() -> int:
     parser.add_argument("--password", default=PASSWORD)
     parser.add_argument("--dry-run", action="store_true",
                         help="Plan the program windows without writing anything.")
+    parser.add_argument(
+        "--roster-theme",
+        default=None,
+        choices=list(available_themes()),
+        help=(
+            "Only populate the first N names from this theme (see themes.roster). "
+            "Use with --coach and --roster-size so e.g. Coachtwo + lord-of-the-rings "
+            "mirrors Coachone + game-of-thrones without mixing rosters."
+        ),
+    )
+    parser.add_argument(
+        "--roster-size",
+        type=int,
+        default=5,
+        help="With --roster-theme, how many usernames to take (default: 5).",
+    )
     args = parser.parse_args()
+
+    profiles_to_run = _profiles_for_args(args)
 
     print(f"> API:      {args.api}")
     print(f"> Coach:    {args.coach}")
-    print(f"> Athletes: {len(ATHLETE_PROFILES)}")
+    print(
+        f"> Athletes: {len(profiles_to_run)}"
+        + (f"  (roster: {args.roster_theme!r} x{args.roster_size})" if args.roster_theme else "  (all ATHLETE_PROFILES)"),
+    )
     print(f"> Window:   {PAST_PROGRAM_COUNT + 1} programs x {PROGRAM_WEEKS} weeks (~16 weeks)")
     if args.dry_run:
         print("> DRY RUN — nothing will be written.")
@@ -487,7 +552,7 @@ def main() -> int:
 
     today = date.today()
     totals = {"programs": 0, "workout_logs": 0, "prs": 0}
-    for athlete_username, profile in ATHLETE_PROFILES.items():
+    for athlete_username, profile in profiles_to_run.items():
         result = populate_athlete(
             coach=coach,
             athlete_username=athlete_username,
@@ -505,7 +570,7 @@ def main() -> int:
     print(
         f"Wrote {totals['programs']} programs, "
         f"{totals['workout_logs']} workout logs, "
-        f"{totals['prs']} PRs across {len(ATHLETE_PROFILES)} athletes."
+        f"{totals['prs']} PRs across {len(profiles_to_run)} athletes."
     )
     print("=" * 62)
     return 0

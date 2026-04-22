@@ -87,6 +87,32 @@ athlete (useful for reproducible fixtures).
 Note: this script is **additive**. Re-running creates more programs; it
 does not upsert. Use the Django admin or a reset script to clear.
 
+## Program completion (coach dashboard % rings) — `populate_history.py`
+
+The per-program **progress ring** and **“x/y exercises done”** on the coach
+list view come from `completion_data` (athlete-side checkmarks). `build_programs.py`
+creates the week structure only, so those metrics stay at **0%** until
+completion is written (the athlete in the app, or this script simulating
+them).
+
+Use the same tiered PR/workout/programs logic for **any** coach, but pass a
+**theme** so you only backfill the roster that coach owns (mirrors
+Coachone+GoT vs Coachtwo+LotR):
+
+```bash
+# API must be running. Default password matches seed defaults.
+# Coachone + first five GoT (typical `python seed.py` roster)
+python populate_history.py --coach Coachone --roster-theme game-of-thrones --roster-size 5
+
+# Coachtwo + first five LotR (e.g. after seed-coachtwo-lotr; distinct tiers / bodyweight)
+python populate_history.py --coach Coachtwo --roster-theme lord-of-the-rings --roster-size 5
+```
+
+Omitting `--roster-theme` iterates every username in `ATHLETE_PROFILES` (5 GoT
++ 5 LotR) — only use that if **all** those users exist in the database.
+Each run **adds** four new programs per athlete; remove duplicate programs
+in admin if you already ran `build_programs` and are re-stocking completion.
+
 ## What's coming next
 
 - `simulate_completion.py` — athletes "execute" programs over time,
