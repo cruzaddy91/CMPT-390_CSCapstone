@@ -423,13 +423,13 @@ const EditorView = ({
             style={{ display: 'none' }}
             aria-hidden="true"
           />
-          <button type="button" className="tool-btn" onClick={onDownloadTemplate} title="Download .xlsx template">
+          <button type="button" className="tool-btn" onClick={onDownloadTemplate} title="Download the .xlsx template to fill in your program offline">
             <span className="tool-btn-icon">⬇</span>
-            <span className="tool-btn-label">Template</span>
+            <span className="tool-btn-label">Download Template</span>
           </button>
-          <button type="button" className="tool-btn" onClick={onUploadClick} title="Upload .xlsx to autofill">
+          <button type="button" className="tool-btn" onClick={onUploadClick} title="Upload a filled-in .xlsx to autofill this program">
             <span className="tool-btn-icon">⬆</span>
-            <span className="tool-btn-label">Upload</span>
+            <span className="tool-btn-label">Upload Program</span>
           </button>
           <button type="button" className="tool-btn" onClick={onToggleEditorMode}
                   title={editorMode === 'form' ? 'Switch to spreadsheet view' : 'Switch to structured view'}>
