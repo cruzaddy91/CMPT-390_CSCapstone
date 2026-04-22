@@ -10,6 +10,9 @@ Weightlifting project CLI
 Usage:
   ./bin/zw <command>
 
+Before pushing changes, run: ./bin/zw smoke-all && ./bin/zw test
+(see config/CLI_CHEATSHEET.md "Ship checklist".)
+
 Commands:
   help             Show this help
   setup            Install backend/frontend dependencies and ensure env files exist
