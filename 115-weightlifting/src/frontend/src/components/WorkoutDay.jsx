@@ -136,7 +136,7 @@ const CoachExerciseRow = ({ exercise, isFirst, onChange, onRemove }) => (
     <div className="exercise-row-header">
       <input
         type="text"
-        placeholder="Exercise name (e.g. Snatch, Clean & Jerk + OHS)"
+        placeholder="Exercise name (Snatch, Clean & Jerk + OHS)"
         value={exercise.name || ''}
         onChange={(event) => onChange('name', event.target.value)}
         className="exercise-name-input"
@@ -246,7 +246,7 @@ const AthleteExerciseRow = ({ exercise, isFirst, isCompleted, result, onResultCh
         <input
           type="text"
           className="form-input"
-          placeholder="Actual result (e.g. 75x2)"
+          placeholder="Actual result (75x2)"
           value={result?.result || ''}
           onChange={(event) => onResultChange('result', event.target.value)}
           aria-label="Actual result"

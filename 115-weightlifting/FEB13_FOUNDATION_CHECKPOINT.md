@@ -45,7 +45,7 @@ This file summarizes what was implemented so the **Feb 14 – Foundation complet
    Frontend: http://localhost:3000 (CORS is set for this origin).
 
 3. **End-to-end flow**
-   - Open http://localhost:3000 → click “Log in” → click “Register” → create account (e.g. coach) → then “Log in” with same credentials.
+   - Open http://localhost:3000 → click “Log in” → click “Register” → create account (coach) → then “Log in” with same credentials.
    - You should be redirected to Coach Dashboard and see “Programs from API: 0” (no programs yet).
    - That completes: **login + one screen + API call with auth**.
 
