@@ -33,6 +33,7 @@
   background:
     linear-gradient(180deg, rgba(6, 10, 20, 0.92), rgba(4, 8, 16, 0.86)),
     var(--scanlines);
+  -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--line);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
@@ -1252,6 +1253,205 @@
   flex-direction: column;
   gap: 0.45rem;
   margin-top: 0.25rem;
+}
+
+/* --------------------------------------------------------------------------
+   Icon buttons (reorder, duplicate, remove on exercise + day headers)
+   -------------------------------------------------------------------------- */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--bg-deep);
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.icon-btn:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  color: var(--neon-cyan);
+  background: var(--bg-panel-2);
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.icon-btn-danger:hover:not(:disabled) {
+  border-color: rgba(255, 90, 110, 0.5);
+  color: var(--danger);
+}
+
+.day-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.day-remove-btn {
+  margin-left: 0.35rem;
+}
+
+.exercise-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+/* Override the old exercise-remove-btn -- styling now comes from .icon-btn. */
+.exercise-remove-btn { display: none; }
+
+/* --------------------------------------------------------------------------
+   Block-length + intensity-mode chip pickers. Shared chip styling.
+   -------------------------------------------------------------------------- */
+.block-length-picker,
+.intensity-mode-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 0.25rem;
+}
+
+.block-length-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  min-width: 90px;
+}
+
+.block-length-options {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.block-length-chip {
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.block-length-chip:hover:not(:disabled):not([aria-disabled="true"]) {
+  border-color: var(--line-strong);
+  color: var(--text-primary);
+}
+
+.block-length-chip.is-active {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  background: var(--bg-panel-2);
+  box-shadow: var(--glow-ring);
+}
+
+.block-length-chip-custom {
+  cursor: default;
+  color: var(--text-muted);
+}
+
+.block-length-chip-custom.is-active {
+  border-color: var(--line-strong);
+  color: var(--text-secondary);
+}
+
+.editor-date-grid {
+  margin-bottom: 0.25rem;
+}
+
+/* --------------------------------------------------------------------------
+   Draft badge: flashes briefly when an autosaved draft is restored.
+   -------------------------------------------------------------------------- */
+.draft-badge {
+  padding: 0.6rem 0.85rem;
+  margin-bottom: 0.85rem;
+  border-radius: var(--radius-data);
+  border: 1px solid rgba(95, 228, 255, 0.26);
+  background: rgba(95, 228, 255, 0.06);
+  color: var(--neon-ice);
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+}
+
+/* --------------------------------------------------------------------------
+   Athlete preview modal
+   -------------------------------------------------------------------------- */
+.preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(2, 5, 12, 0.86);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.preview-shell {
+  width: min(960px, 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.preview-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-panel-2);
+  gap: 1rem;
+}
+
+.preview-kicker {
+  font-size: 0.68rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--neon-cyan);
+  margin-bottom: 0.25rem;
+}
+
+.preview-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.preview-subtitle {
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  margin-top: 0.3rem;
+}
+
+.preview-body {
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
 }
 
 /* --------------------------------------------------------------------------
