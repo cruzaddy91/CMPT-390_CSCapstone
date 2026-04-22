@@ -69,6 +69,9 @@ var/reports/events/
 # API up: backfill program completion (coach % / x of y done) for both demo rosters; avoids all-0 rings
 ./bin/zw backfill-demo-completion
 ./bin/zw backfill-demo-completion --dry-run
+# Same API, no new programs — fill completion for existing programs only (default coach Coachtwo)
+./bin/zw backfill-coach-completion
+./bin/zw backfill-coach-completion Coachone
 ./bin/zw make-demo
 ./bin/zw smoke
 ```
