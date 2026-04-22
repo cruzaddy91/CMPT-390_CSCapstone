@@ -432,9 +432,9 @@ const EditorView = ({
             <span className="tool-btn-label">Upload Program</span>
           </button>
           <button type="button" className="tool-btn" onClick={onToggleEditorMode}
-                  title={editorMode === 'form' ? 'Switch to spreadsheet view' : 'Switch to structured view'}>
+                  title={editorMode === 'form' ? 'Switch to spreadsheet view (Excel-like grid)' : 'Switch to card view (day-by-day cards)'}>
             <span className="tool-btn-icon">{editorMode === 'form' ? '⊞' : '☰'}</span>
-            <span className="tool-btn-label">{editorMode === 'form' ? 'Spreadsheet' : 'Structured'}</span>
+            <span className="tool-btn-label">{editorMode === 'form' ? 'Spreadsheet View' : 'Card View'}</span>
           </button>
         </div>
         <button type="button" className="save-btn editor-save-btn" onClick={onSave}
