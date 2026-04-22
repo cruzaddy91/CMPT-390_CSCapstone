@@ -57,4 +57,53 @@ if ! printf '%s\n' "$prod_output" | grep -q 'PROD_BOOT_OK'; then
   exit 1
 fi
 
-echo 'ok settings.py hardening: insecure-key-refused, dev-boot-ok, prod-boot-ok'
+prod_hardening="$(
+  env -i \
+    PATH="$PATH" \
+    HOME="$HOME" \
+    PYTHONPATH="$BACKEND_DIR" \
+    DJANGO_SETTINGS_MODULE=config.settings \
+    DEBUG=False \
+    SECRET_KEY='prod-grade-random-another-'"$(date +%s%N)"'-key' \
+    "$BACKEND_PYTHON" -c "
+import django
+django.setup()
+from django.conf import settings as s
+assert s.SECURE_PROXY_SSL_HEADER == ('HTTP_X_FORWARDED_PROTO', 'https'), s.SECURE_PROXY_SSL_HEADER
+assert s.SESSION_COOKIE_SECURE is True, 'SESSION_COOKIE_SECURE'
+assert s.CSRF_COOKIE_SECURE is True, 'CSRF_COOKIE_SECURE'
+assert s.SECURE_HSTS_SECONDS >= 0, 'SECURE_HSTS_SECONDS'
+assert s.SECURE_HSTS_INCLUDE_SUBDOMAINS is True, 'SECURE_HSTS_INCLUDE_SUBDOMAINS'
+assert s.SECURE_CONTENT_TYPE_NOSNIFF is True, 'SECURE_CONTENT_TYPE_NOSNIFF'
+assert s.X_FRAME_OPTIONS == 'DENY', s.X_FRAME_OPTIONS
+print('PROD_HARDENING_OK')
+" 2>&1
+)"
+if ! printf '%s\n' "$prod_hardening" | grep -q 'PROD_HARDENING_OK'; then
+  echo "FAIL: prod TLS/security settings not applied correctly under DEBUG=False" >&2
+  printf '%s\n' "$prod_hardening" >&2
+  exit 1
+fi
+
+dev_no_hsts="$(
+  env -i \
+    PATH="$PATH" \
+    HOME="$HOME" \
+    PYTHONPATH="$BACKEND_DIR" \
+    DJANGO_SETTINGS_MODULE=config.settings \
+    DEBUG=True \
+    "$BACKEND_PYTHON" -c "
+import django
+django.setup()
+from django.conf import settings as s
+assert not getattr(s, 'SECURE_SSL_REDIRECT', False), 'DEBUG build should not redirect to HTTPS'
+print('DEV_NO_HSTS_OK')
+" 2>&1
+)"
+if ! printf '%s\n' "$dev_no_hsts" | grep -q 'DEV_NO_HSTS_OK'; then
+  echo "FAIL: DEBUG=True build leaked prod TLS enforcement" >&2
+  printf '%s\n' "$dev_no_hsts" >&2
+  exit 1
+fi
+
+echo 'ok settings.py hardening: insecure-key-refused, dev-boot-ok, prod-boot-ok, prod-tls-hardened, dev-no-hsts'
