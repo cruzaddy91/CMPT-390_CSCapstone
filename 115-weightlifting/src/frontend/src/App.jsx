@@ -4,8 +4,10 @@ import AthleteDashboard from './pages/AthleteDashboard'
 import CoachDashboard from './pages/CoachDashboard'
 import Login from './pages/Login'
 import ErrorBoundary from './components/ErrorBoundary'
-import { getCurrentUserFromApi, logout } from './services/api'
+import { getAthletes, getCurrentUserFromApi, getProgramsFromBackend, logout } from './services/api'
 import { clearAuth, getCurrentUser, getToken, isAuthenticated, setCurrentUser } from './utils/auth'
+import { countExercises, normalizeProgramData } from './utils/dataStructure'
+import { relativeTimeSince } from './utils/relativeTime'
 import './App.css'
 
 const getDefaultRouteForUser = () => {
@@ -91,8 +93,12 @@ const Navigation = () => {
 
 const Home = () => {
   const currentUser = getCurrentUser()
-  const destination = currentUser ? getDefaultRouteForUser() : '/login'
+  if (currentUser?.user_type === 'coach') return <CoachHome currentUser={currentUser} />
+  return <AnonymousHome currentUser={currentUser} />
+}
 
+const AnonymousHome = ({ currentUser }) => {
+  const destination = currentUser ? getDefaultRouteForUser() : '/login'
   return (
     <div className="home-container">
       <div className="home-grid">
@@ -137,6 +143,134 @@ const Home = () => {
           </div>
           <div className="home-status">
             <span className="status-pill">{currentUser ? `Signed in as ${currentUser.user_type}` : 'Ready for login or preview'}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Coach-logged-in home: roster-forward. Fetches the coach's athletes
+// (scope=mine) alongside every program the coach owns, groups programs
+// by athlete, and renders a scannable "your people" list with the key
+// decision-making data (program count + most recent activity) on the
+// right. Falls back to an empty-state prompt when the coach has no
+// athletes yet so the landing page never feels blank.
+const CoachHome = ({ currentUser }) => {
+  const [athletes, setAthletes] = useState([])
+  const [programs, setPrograms] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([
+      getAthletes({ scope: 'mine' }).catch(() => ({ results: [] })),
+      getProgramsFromBackend().catch(() => []),
+    ])
+      .then(([athletesResponse, programsResponse]) => {
+        if (cancelled) return
+        setAthletes(athletesResponse?.results || [])
+        setPrograms(Array.isArray(programsResponse) ? programsResponse : [])
+      })
+      .catch((err) => { if (!cancelled) setError(err.message || 'Could not load your roster.') })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+  }, [])
+
+  // Bucket each program under its athlete so we can show per-athlete stats.
+  const programsByAthlete = programs.reduce((acc, program) => {
+    const bucket = acc[program.athlete_id] || []
+    bucket.push(program)
+    acc[program.athlete_id] = bucket
+    return acc
+  }, {})
+
+  const totalExercises = programs.reduce((sum, program) => {
+    const normalized = normalizeProgramData(program.program_data, program.start_date)
+    return sum + countExercises(normalized)
+  }, 0)
+  const totalDays = programs.reduce((sum, program) => {
+    const normalized = normalizeProgramData(program.program_data, program.start_date)
+    return sum + (normalized?.days?.length || 0)
+  }, 0)
+
+  return (
+    <div className="home-container coach-home">
+      <div className="home-grid">
+        <div className="home-copy">
+          <div className="home-eyebrow">Coach · {currentUser.username}</div>
+          <h1>Welcome back.</h1>
+          <p className="home-description">
+            {loading
+              ? 'Loading your roster…'
+              : athletes.length === 0
+                ? 'No athletes on your roster yet. Open the Coach Dashboard to build your first program.'
+                : `You coach ${athletes.length} athlete${athletes.length === 1 ? '' : 's'} across ${programs.length} program${programs.length === 1 ? '' : 's'}.`}
+          </p>
+          <div className="home-buttons">
+            <Link to="/coach" className="home-btn coach-btn">Open Coach Dashboard</Link>
+          </div>
+          {error && <div className="save-message error">{error}</div>}
+        </div>
+
+        <div className="home-side">
+          <div className="home-panel coach-home-roster-panel">
+            <div className="coach-home-roster-header">
+              <span className="home-panel-label">Your roster</span>
+              <span className="coach-home-roster-count data">{athletes.length}</span>
+            </div>
+            {loading ? (
+              <div className="empty-inline">Loading…</div>
+            ) : athletes.length === 0 ? (
+              <div className="empty-inline">
+                No athletes yet. Create a program from the Coach Dashboard and the assigned athlete will appear here.
+              </div>
+            ) : (
+              <div className="coach-home-roster-list">
+                {athletes.map((athlete) => {
+                  const athletePrograms = programsByAthlete[athlete.id] || []
+                  const mostRecent = athletePrograms
+                    .map((p) => p.updated_at)
+                    .sort()
+                    .at(-1)
+                  return (
+                    <Link
+                      key={athlete.id}
+                      to="/coach"
+                      className="coach-home-roster-row"
+                    >
+                      <span className="coach-home-roster-name">@{athlete.username}</span>
+                      <span className="coach-home-roster-meta">
+                        <span className="data">{athletePrograms.length}</span>
+                        <span> program{athletePrograms.length === 1 ? '' : 's'}</span>
+                        {mostRecent && (
+                          <>
+                            <span className="program-row-dot">·</span>
+                            <span className="coach-home-roster-updated">updated {relativeTimeSince(mostRecent)}</span>
+                          </>
+                        )}
+                      </span>
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="home-metrics">
+            <div className="home-metric">
+              <span className="label">Athletes</span>
+              <span className="value">{athletes.length}</span>
+            </div>
+            <div className="home-metric">
+              <span className="label">Programs</span>
+              <span className="value">{programs.length}</span>
+            </div>
+            <div className="home-metric">
+              <span className="label">Days · Exercises</span>
+              <span className="value">{totalDays} · {totalExercises}</span>
+            </div>
           </div>
         </div>
       </div>

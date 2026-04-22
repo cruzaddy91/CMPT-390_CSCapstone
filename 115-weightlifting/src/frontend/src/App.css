@@ -1285,6 +1285,94 @@
 }
 
 /* --------------------------------------------------------------------------
+   Coach home: roster panel on /
+   -------------------------------------------------------------------------- */
+.coach-home .home-panel-label {
+  color: var(--text-muted);
+}
+
+.coach-home-roster-panel {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.coach-home-roster-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.coach-home-roster-count {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--neon-cyan);
+  font-size: 0.95rem;
+}
+
+.coach-home-roster-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: var(--radius-data);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.coach-home-roster-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-deep);
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: background-color var(--transition-fast);
+}
+
+.coach-home-roster-row:last-child {
+  border-bottom: none;
+}
+
+.coach-home-roster-row:hover,
+.coach-home-roster-row:focus-visible {
+  background: var(--bg-panel-2);
+  color: var(--neon-cyan);
+}
+
+.coach-home-roster-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.coach-home-roster-meta {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.coach-home-roster-meta .data {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.coach-home-roster-updated {
+  color: var(--text-dim);
+}
+
+/* --------------------------------------------------------------------------
    Icon buttons (reorder, duplicate, remove on exercise + day headers)
    -------------------------------------------------------------------------- */
 .icon-btn {
