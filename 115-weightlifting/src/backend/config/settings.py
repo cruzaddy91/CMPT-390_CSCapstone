@@ -41,9 +41,16 @@ def parse_csv_env(name, default=''):
     raw_value = os.getenv(name, default)
     return [item.strip() for item in raw_value.split(',') if item.strip()]
 
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production')
+INSECURE_KEY_DEFAULT = 'django-insecure-change-this-in-production'
+SECRET_KEY = os.getenv('SECRET_KEY', INSECURE_KEY_DEFAULT)
 
-DEBUG = os.getenv('DEBUG', 'True') == 'True'
+DEBUG = os.getenv('DEBUG', 'True').strip().lower() in ('1', 'true', 'yes', 'on')
+
+if not DEBUG and SECRET_KEY.startswith('django-insecure'):
+    raise RuntimeError(
+        'Refusing to start: SECRET_KEY uses the insecure default. '
+        'Set a strong SECRET_KEY env var before running with DEBUG=False.'
+    )
 
 ALLOWED_HOSTS = parse_csv_env('ALLOWED_HOSTS', 'localhost,127.0.0.1')
 

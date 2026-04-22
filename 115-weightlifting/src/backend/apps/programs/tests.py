@@ -1,0 +1,126 @@
+from datetime import date
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase
+from django.urls import reverse
+from rest_framework.test import APIClient
+
+from apps.athletes.models import ProgramCompletion
+from .models import TrainingProgram
+
+User = get_user_model()
+
+
+class ProgramAssignPreservesHistoryTests(TestCase):
+    """Reassigning a program to a new athlete must not wipe the prior athlete's logs."""
+
+    def setUp(self):
+        self.coach = User.objects.create_user(
+            username='coach1', password='pw', user_type='coach'
+        )
+        self.athlete_a = User.objects.create_user(
+            username='athlete_a', password='pw', user_type='athlete'
+        )
+        self.athlete_b = User.objects.create_user(
+            username='athlete_b', password='pw', user_type='athlete'
+        )
+        self.program = TrainingProgram.objects.create(
+            coach=self.coach,
+            athlete=self.athlete_a,
+            name='Block 1',
+            start_date=date(2026, 1, 1),
+        )
+        ProgramCompletion.objects.create(
+            program=self.program,
+            athlete=self.athlete_a,
+            completion_data={'sessions': [{'day': 'Monday', 'done': True}]},
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.coach)
+
+    def test_reassignment_preserves_prior_athletes_completion(self):
+        url = reverse('program-assign', kwargs={'program_id': self.program.id})
+        response = self.client.patch(url, {'athlete_id': self.athlete_b.id}, format='json')
+        self.assertEqual(response.status_code, 200)
+
+        self.program.refresh_from_db()
+        self.assertEqual(self.program.athlete_id, self.athlete_b.id)
+
+        prior_records = ProgramCompletion.objects.filter(
+            program=self.program, athlete=self.athlete_a
+        )
+        self.assertEqual(prior_records.count(), 1, 'prior athletes history was destroyed')
+        self.assertEqual(
+            prior_records.first().completion_data['sessions'][0]['done'], True
+        )
+
+    def test_reassignment_allows_new_athlete_to_log_independently(self):
+        url = reverse('program-assign', kwargs={'program_id': self.program.id})
+        self.client.patch(url, {'athlete_id': self.athlete_b.id}, format='json')
+
+        new_record = ProgramCompletion.objects.create(
+            program=self.program,
+            athlete=self.athlete_b,
+            completion_data={'sessions': []},
+        )
+        self.assertEqual(
+            ProgramCompletion.objects.filter(program=self.program).count(),
+            2,
+            'new athletes record should coexist with prior athletes history',
+        )
+
+
+class SettingsHardeningTests(TestCase):
+    """Prod boot should refuse insecure SECRET_KEY defaults."""
+
+    def test_debug_parsing_case_insensitive(self):
+        import importlib
+        import os
+
+        original_debug = os.environ.get('DEBUG')
+        original_key = os.environ.get('SECRET_KEY')
+        try:
+            os.environ['DEBUG'] = 'TRUE'
+            os.environ['SECRET_KEY'] = 'test-ok-key'
+            from config import settings as s
+            importlib.reload(s)
+            self.assertTrue(s.DEBUG)
+
+            os.environ['DEBUG'] = 'false'
+            importlib.reload(s)
+            self.assertFalse(s.DEBUG)
+        finally:
+            if original_debug is None:
+                os.environ.pop('DEBUG', None)
+            else:
+                os.environ['DEBUG'] = original_debug
+            if original_key is None:
+                os.environ.pop('SECRET_KEY', None)
+            else:
+                os.environ['SECRET_KEY'] = original_key
+            from config import settings as s
+            importlib.reload(s)
+
+    def test_insecure_key_refused_when_debug_false(self):
+        import importlib
+        import os
+
+        original_debug = os.environ.get('DEBUG')
+        original_key = os.environ.get('SECRET_KEY')
+        try:
+            os.environ['DEBUG'] = 'False'
+            os.environ['SECRET_KEY'] = 'django-insecure-change-this-in-production'
+            with self.assertRaises(RuntimeError):
+                from config import settings as s
+                importlib.reload(s)
+        finally:
+            if original_debug is None:
+                os.environ.pop('DEBUG', None)
+            else:
+                os.environ['DEBUG'] = original_debug
+            if original_key is None:
+                os.environ.pop('SECRET_KEY', None)
+            else:
+                os.environ['SECRET_KEY'] = original_key
+            from config import settings as s
+            importlib.reload(s)

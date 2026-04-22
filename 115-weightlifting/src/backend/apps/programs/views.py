@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from .models import TrainingProgram
 from .serializers import ProgramCreateSerializer, ProgramUpdateSerializer, TrainingProgramSerializer
@@ -66,8 +67,11 @@ class ProgramAssign(APIView):
         except User.DoesNotExist:
             return Response({'athlete_id': ['Selected athlete does not exist.']}, status=status.HTTP_400_BAD_REQUEST)
 
-        program.athlete = athlete
-        program.save(update_fields=['athlete', 'updated_at'])
-        program.completion_records.all().delete()
+        # Preserve prior athlete's completion history. The (program, athlete)
+        # unique constraint means the new athlete gets a fresh record on first log;
+        # wiping all records would silently destroy the prior athlete's work.
+        with transaction.atomic():
+            program.athlete = athlete
+            program.save(update_fields=['athlete', 'updated_at'])
         serializer = TrainingProgramSerializer(program)
         return Response(serializer.data, status=status.HTTP_200_OK)
