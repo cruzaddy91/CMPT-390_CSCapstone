@@ -66,8 +66,11 @@ export function monthlyBestPrLineData(records, liftTypes = ['snatch', 'clean_jer
   }
 }
 
-/** One bar per calendar quarter: max logged competition total in that quarter. */
-export function quarterlyBestTotalBarData(records) {
+/**
+ * Quarter-by-quarter max competition total as a filled line (area).
+ * Reads better than bars for long multi-year macrocycle trends.
+ */
+export function quarterlyBestTotalLineData(records) {
   const totals = records.filter((r) => r.lift_type === 'total')
   const buckets = new Map()
   for (const r of totals) {
@@ -90,12 +93,17 @@ export function quarterlyBestTotalBarData(records) {
   return {
     labels,
     datasets: [{
-      label: 'Best total (kg)',
+      label: 'Best competition total (kg)',
       data: labels.map((k) => buckets.get(k)),
-      backgroundColor: 'rgba(95, 228, 255, 0.45)',
       borderColor: 'rgba(95, 228, 255, 0.95)',
-      borderWidth: 1,
-      borderRadius: 4,
+      backgroundColor: 'rgba(95, 228, 255, 0.18)',
+      borderWidth: 2,
+      fill: true,
+      tension: 0.22,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      pointBackgroundColor: '#a5ecff',
+      spanGaps: true,
     }],
   }
 }

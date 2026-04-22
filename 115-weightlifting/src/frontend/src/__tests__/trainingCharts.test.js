@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   monthlyBestPrLineData,
-  quarterlyBestTotalBarData,
+  quarterlyBestTotalLineData,
   sixMonthRollingPeakTotalLine,
 } from '../utils/trainingCharts'
 
@@ -24,11 +24,12 @@ describe('trainingCharts', () => {
     expect(sn.data).toEqual([102, 105])
   })
 
-  it('quarterlyBestTotalBarData buckets by quarter', () => {
-    const { labels, datasets } = quarterlyBestTotalBarData(sample)
+  it('quarterlyBestTotalLineData buckets by quarter for area line', () => {
+    const { labels, datasets } = quarterlyBestTotalLineData(sample)
     expect(labels).toContain('2024 Q1')
     expect(labels).toContain('2024 Q2')
     expect(datasets[0].data.length).toBe(labels.length)
+    expect(datasets[0].fill).toBe(true)
     const q2 = labels.indexOf('2024 Q2')
     expect(datasets[0].data[q2]).toBe(235)
   })

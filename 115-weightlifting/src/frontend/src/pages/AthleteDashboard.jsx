@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  BarElement,
   CategoryScale,
   Chart as ChartJS,
   Legend,
@@ -9,7 +8,7 @@ import {
   PointElement,
   Tooltip,
 } from 'chart.js'
-import { Bar, Line } from 'react-chartjs-2'
+import { Line } from 'react-chartjs-2'
 import AthleteExerciseCard from '../components/AthleteExerciseCard'
 import WeekStrip from '../components/WeekStrip'
 import {
@@ -28,7 +27,7 @@ import { formatApiError } from '../utils/errors'
 import { programTitleForDisplay } from '../utils/safeDisplay'
 import {
   monthlyBestPrLineData,
-  quarterlyBestTotalBarData,
+  quarterlyBestTotalLineData,
   sixMonthRollingPeakTotalLine,
 } from '../utils/trainingCharts'
 import {
@@ -41,7 +40,7 @@ import {
   todayLocalDateKey,
 } from '../utils/streaks'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -432,7 +431,7 @@ const AthleteDashboard = () => {
   )
 
   const quarterlyTotalChart = useMemo(
-    () => quarterlyBestTotalBarData(personalRecords),
+    () => quarterlyBestTotalLineData(personalRecords),
     [personalRecords],
   )
 
@@ -465,14 +464,6 @@ const AthleteDashboard = () => {
       y: { beginAtZero: false, ticks: { color: chartTickColor }, grid: { color: chartGridColor }, border: { color: chartBorderColor } },
     },
   }), [])
-
-  const barChartOptions = useMemo(() => ({
-    ...sharedChartOptions,
-    scales: {
-      ...sharedChartOptions.scales,
-      y: { ...sharedChartOptions.scales.y, beginAtZero: true },
-    },
-  }), [sharedChartOptions])
 
   if (loading) {
     return (
@@ -706,7 +697,7 @@ const AthleteDashboard = () => {
           <h3>Stats &amp; tools</h3>
 
           <p className="athlete-charts-intro">
-            Monthly bests from your PR log (click legend entries to hide or show a lift). Bars show quarter peaks; the green line is a six-month rolling peak on total — useful for macrocycle decisions.
+            Monthly bests from your PR log (click legend entries to hide or show a lift). The cyan area is best competition total by quarter; the green line is a six-month rolling peak on total — both support macrocycle decisions.
           </p>
           <div className="athlete-drawer-stats-grid athlete-drawer-stats-grid--three">
             <div className="chart-card">
@@ -722,7 +713,7 @@ const AthleteDashboard = () => {
               {personalRecords.filter((r) => r.lift_type === 'total').length === 0 ? (
                 <div className="chart-empty">Log a competition total to see quarter peaks.</div>
               ) : (
-                <Bar data={quarterlyTotalChart} options={barChartOptions} />
+                <Line data={quarterlyTotalChart} options={sharedChartOptions} />
               )}
             </div>
             <div className="chart-card">
