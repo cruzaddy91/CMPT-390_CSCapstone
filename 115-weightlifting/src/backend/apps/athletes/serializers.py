@@ -1,5 +1,22 @@
+from datetime import date as date_cls
+from decimal import Decimal
+
 from rest_framework import serializers
 from .models import PersonalRecord, ProgramCompletion, WorkoutLog, default_completion_data
+
+MIN_LOG_DATE = date_cls(2000, 1, 1)
+MAX_LIFT_WEIGHT_KG = Decimal('500')
+
+
+def _validate_event_date(value):
+    if value is None:
+        return value
+    today = date_cls.today()
+    if value > today:
+        raise serializers.ValidationError('Date cannot be in the future.')
+    if value < MIN_LOG_DATE:
+        raise serializers.ValidationError('Date is before the supported logging window.')
+    return value
 
 
 class WorkoutLogSerializer(serializers.ModelSerializer):
@@ -8,6 +25,9 @@ class WorkoutLogSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkoutLog
         fields = ['id', 'athlete_id', 'date', 'notes', 'created_at', 'updated_at']
+
+    def validate_date(self, value):
+        return _validate_event_date(value)
 
     def create(self, validated_data):
         return WorkoutLog.objects.create(athlete=self.context['athlete'], **validated_data)
@@ -23,7 +43,14 @@ class PersonalRecordSerializer(serializers.ModelSerializer):
     def validate_weight(self, value):
         if value <= 0:
             raise serializers.ValidationError('Weight must be greater than 0.')
+        if value > MAX_LIFT_WEIGHT_KG:
+            raise serializers.ValidationError(
+                f'Weight cannot exceed {MAX_LIFT_WEIGHT_KG} kg.'
+            )
         return value
+
+    def validate_date(self, value):
+        return _validate_event_date(value)
 
     def create(self, validated_data):
         return PersonalRecord.objects.create(athlete=self.context['athlete'], **validated_data)

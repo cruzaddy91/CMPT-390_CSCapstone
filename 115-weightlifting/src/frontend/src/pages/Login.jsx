@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login, register as apiRegister } from '../services/api'
+import { formatApiError } from '../utils/errors'
 import './Login.css'
 
 const Login = () => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [userType, setUserType] = useState('coach')
+  const [coachSignupCode, setCoachSignupCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showRegister, setShowRegister] = useState(false)
@@ -23,7 +25,7 @@ const Login = () => {
       const response = await login(username, password)
       navigate(response.user?.user_type === 'coach' ? '/coach' : '/athlete', { replace: true })
     } catch (err) {
-      setError(err.response?.data?.detail || err.message || 'Login failed')
+      setError(formatApiError(err, 'Login failed.'))
     } finally {
       setLoading(false)
     }
@@ -36,14 +38,14 @@ const Login = () => {
     setLoading(true)
 
     try {
-      await apiRegister(username, password, userType)
+      const extras = userType === 'coach' ? { coach_signup_code: coachSignupCode } : {}
+      await apiRegister(username, password, userType, extras)
       setRegisterSuccess('Account created. You can log in now.')
       setShowRegister(false)
       setPassword('')
+      setCoachSignupCode('')
     } catch (err) {
-      const message = err.response?.data
-      const text = typeof message === 'object' ? JSON.stringify(message) : (message || err.message)
-      setError(text)
+      setError(formatApiError(err, 'Registration failed.'))
     } finally {
       setLoading(false)
     }
@@ -111,6 +113,20 @@ const Login = () => {
                     <option value="athlete">Athlete</option>
                   </select>
                 </div>
+                {userType === 'coach' && (
+                  <div className="form-group">
+                    <label htmlFor="coach_signup_code">Coach signup code</label>
+                    <input
+                      id="coach_signup_code"
+                      type="password"
+                      value={coachSignupCode}
+                      onChange={(event) => setCoachSignupCode(event.target.value)}
+                      required
+                      autoComplete="off"
+                      placeholder="Provided by program administrator"
+                    />
+                  </div>
+                )}
                 {error && <div className="login-error">{error}</div>}
                 {registerSuccess && <div className="login-success">{registerSuccess}</div>}
                 <button type="submit" className="login-btn" disabled={loading}>

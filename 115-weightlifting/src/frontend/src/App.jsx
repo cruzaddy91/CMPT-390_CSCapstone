@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Navigate, Route, Routes, Link, useLocation, us
 import AthleteDashboard from './pages/AthleteDashboard'
 import CoachDashboard from './pages/CoachDashboard'
 import Login from './pages/Login'
+import ErrorBoundary from './components/ErrorBoundary'
 import { getCurrentUserFromApi, logout } from './services/api'
 import { clearAuth, getCurrentUser, getToken, setCurrentUser } from './utils/auth'
 import './App.css'
@@ -57,8 +58,8 @@ const Navigation = () => {
   const navigate = useNavigate()
   const currentUser = getCurrentUser()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/login', { replace: true })
   }
 
@@ -148,7 +149,8 @@ function App() {
     <Router>
       <div className="App">
         <Navigation />
-        <Routes>
+        <ErrorBoundary>
+          <Routes>
           <Route path="/" element={<Home />} />
           <Route
             path="/login"
@@ -162,7 +164,8 @@ function App() {
             path="/athlete"
             element={<ProtectedRoute role="athlete"><AthleteDashboard /></ProtectedRoute>}
           />
-        </Routes>
+          </Routes>
+        </ErrorBoundary>
       </div>
     </Router>
   )

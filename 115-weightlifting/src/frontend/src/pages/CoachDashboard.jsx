@@ -37,7 +37,7 @@ const CoachDashboard = () => {
       setLoading(true)
       const [programDataResponse, athletesResponse] = await Promise.all([
         getProgramsFromBackend(),
-        getAthletes()
+        getAthletes({ scope: 'all' })
       ])
       setPrograms(programDataResponse)
       setAthletes(athletesResponse)

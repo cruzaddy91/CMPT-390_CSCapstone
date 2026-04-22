@@ -98,3 +98,84 @@ class RefreshTokenBlacklistTests(TestCase):
             401,
             f'expected 401 on blacklisted refresh, got {replay.status_code}: {replay.content}',
         )
+
+
+class LogoutTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='logout_user', password='longenoughpw1', user_type='athlete'
+        )
+        self.client = APIClient()
+        tokens = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': 'logout_user', 'password': 'longenoughpw1'},
+            format='json',
+        ).json()
+        self.access = tokens['access']
+        self.refresh = tokens['refresh']
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {self.access}')
+
+    def test_logout_blacklists_refresh(self):
+        response = self.client.post(reverse('logout'), {'refresh': self.refresh}, format='json')
+        self.assertEqual(response.status_code, 205)
+
+        replay = APIClient().post(
+            reverse('token_refresh'), {'refresh': self.refresh}, format='json'
+        )
+        self.assertEqual(replay.status_code, 401)
+
+    def test_logout_without_refresh_returns_400(self):
+        response = self.client.post(reverse('logout'), {}, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_logout_with_garbage_refresh_returns_400(self):
+        response = self.client.post(reverse('logout'), {'refresh': 'not-a-jwt'}, format='json')
+        self.assertEqual(response.status_code, 400)
+
+
+class AthleteListScopingTests(TestCase):
+    def setUp(self):
+        self.coach = User.objects.create_user(
+            username='scope_coach', password='longenoughpw1', user_type='coach'
+        )
+        self.my_athlete = User.objects.create_user(
+            username='my_athlete', password='longenoughpw1', user_type='athlete'
+        )
+        self.stranger = User.objects.create_user(
+            username='stranger_athlete', password='longenoughpw1', user_type='athlete'
+        )
+        from datetime import date
+        from apps.programs.models import TrainingProgram
+        TrainingProgram.objects.create(
+            coach=self.coach, athlete=self.my_athlete,
+            name='scope block', start_date=date(2026, 1, 1),
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.coach)
+
+    def test_default_scope_mine_hides_unassigned_athletes(self):
+        response = self.client.get(reverse('athlete-list'))
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        usernames = {a['username'] for a in payload['results']}
+        self.assertIn('my_athlete', usernames)
+        self.assertNotIn('stranger_athlete', usernames)
+        self.assertEqual(payload['scope'], 'mine')
+        self.assertEqual(payload['page_size'], 50)
+
+    def test_scope_all_returns_every_athlete(self):
+        response = self.client.get(reverse('athlete-list'), {'scope': 'all'})
+        payload = response.json()
+        usernames = {a['username'] for a in payload['results']}
+        self.assertIn('my_athlete', usernames)
+        self.assertIn('stranger_athlete', usernames)
+
+    def test_q_filter_narrows_results(self):
+        response = self.client.get(reverse('athlete-list'), {'scope': 'all', 'q': 'stranger'})
+        payload = response.json()
+        self.assertEqual([a['username'] for a in payload['results']], ['stranger_athlete'])
+
+    def test_athlete_cannot_list(self):
+        self.client.force_authenticate(user=self.my_athlete)
+        response = self.client.get(reverse('athlete-list'))
+        self.assertEqual(response.status_code, 403)

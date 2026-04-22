@@ -105,8 +105,13 @@ export const login = async (username, password) => {
   }
 }
 
-export const register = async (username, password, user_type) => {
-  await axios.post(`${API_BASE}/api/auth/register/`, { username, password, user_type })
+export const register = async (username, password, user_type, extraFields = {}) => {
+  await axios.post(`${API_BASE}/api/auth/register/`, {
+    username,
+    password,
+    user_type,
+    ...extraFields,
+  })
 }
 
 export const refreshCurrentUser = async () => {
@@ -115,7 +120,21 @@ export const refreshCurrentUser = async () => {
   return currentUser
 }
 
-export const logout = () => clearAuth()
+export const logout = async () => {
+  const refresh = getRefreshToken()
+  if (refresh) {
+    try {
+      await axios.post(
+        `${API_BASE}/api/auth/logout/`,
+        { refresh },
+        { headers: getAuthHeaders() }
+      )
+    } catch (_error) {
+      /* ignore: local clear still happens below */
+    }
+  }
+  clearAuth()
+}
 
 export const getProgramsFromBackend = async () => {
   const { data } = await apiClient.get('/api/programs/')
@@ -140,9 +159,11 @@ export const assignProgram = async (programId, athleteId) => {
   return data
 }
 
-export const getAthletes = async () => {
-  const { data } = await apiClient.get('/api/auth/athletes/')
-  return data
+export const getAthletes = async ({ scope = 'mine', q = '', page = 1 } = {}) => {
+  const { data } = await apiClient.get('/api/auth/athletes/', {
+    params: { scope, q, page },
+  })
+  return Array.isArray(data) ? data : data.results || []
 }
 
 export const getProgramCompletion = async (programId) => {

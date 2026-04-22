@@ -107,6 +107,24 @@ assert replay_refresh.status_code == 401, (
     f'blacklisted refresh should 401, got {replay_refresh.status_code}: {replay_refresh.content}'
 )
 
+logout_login = APIClient().post(
+    '/api/auth/token/',
+    {'username': 'coach_smoke', 'password': 'DemoPass123!'},
+    format='json',
+).json()
+logout_client = APIClient()
+logout_client.credentials(HTTP_AUTHORIZATION=f"Bearer {logout_login['access']}")
+logout_response = logout_client.post('/api/auth/logout/', {'refresh': logout_login['refresh']}, format='json')
+assert logout_response.status_code == 205, (
+    f'expected 205 from logout, got {logout_response.status_code}: {logout_response.content}'
+)
+post_logout_refresh = APIClient().post(
+    '/api/auth/token/refresh/', {'refresh': logout_login['refresh']}, format='json'
+)
+assert post_logout_refresh.status_code == 401, (
+    'logout should blacklist refresh token'
+)
+
 me_response = coach_client.get('/api/auth/me/')
 assert me_response.status_code == 200, me_response.content
 
@@ -179,6 +197,46 @@ assert ro_get.status_code == 404, (
 ro_after = ProgramCompletion.objects.filter(program=readonly_program).count()
 assert ro_after == ro_before, f'GET mutated DB: {ro_before} -> {ro_after}'
 
+from datetime import timedelta as _td
+future_pr = athlete_client.post(
+    '/api/athletes/prs/',
+    {'lift_type': 'snatch', 'weight': '80', 'date': str(date.today() + _td(days=5))},
+    format='json',
+)
+assert future_pr.status_code == 400, f'future PR should 400, got {future_pr.status_code}'
+
+absurd_pr = athlete_client.post(
+    '/api/athletes/prs/',
+    {'lift_type': 'snatch', 'weight': '9999', 'date': str(date.today())},
+    format='json',
+)
+assert absurd_pr.status_code == 400, f'absurd weight should 400, got {absurd_pr.status_code}'
+
+unassigned_username = f'athlete_smoke_unassigned_{program_id}'
+unassigned_athlete, _ = User.objects.get_or_create(
+    username=unassigned_username, defaults={'user_type': 'athlete'}
+)
+unassigned_athlete.user_type = 'athlete'
+unassigned_athlete.set_password('DemoPass123!')
+unassigned_athlete.save()
+
+scoped_athletes = coach_client.get('/api/auth/athletes/')
+assert scoped_athletes.status_code == 200
+scoped_body = scoped_athletes.json()
+assert isinstance(scoped_body, dict) and 'results' in scoped_body, (
+    f'expected paginated envelope, got {type(scoped_body).__name__}'
+)
+assert scoped_body['scope'] == 'mine', scoped_body
+scoped_usernames = {a['username'] for a in scoped_body['results']}
+assert athlete.username in scoped_usernames, scoped_usernames
+assert unassigned_username not in scoped_usernames, (
+    'scope=mine leaked an athlete the coach has no program for'
+)
+
+all_athletes = coach_client.get('/api/auth/athletes/', {'scope': 'all'}).json()
+all_usernames = {a['username'] for a in all_athletes['results']}
+assert unassigned_username in all_usernames, 'scope=all should include every athlete'
+
 reassign_response = coach_client.patch(
     f'/api/programs/{program_id}/assign/',
     {'athlete_id': athlete_b.id},
@@ -202,6 +260,11 @@ print(json.dumps({
     'reassignment_preserved_completions': prior_records.count(),
     'coach_signup_gated': open_coach_reg.status_code == 400,
     'completion_get_is_readonly': ro_get.status_code == 404 and ro_after == ro_before,
+    'logout_blacklisted_refresh': post_logout_refresh.status_code == 401,
+    'future_date_pr_rejected': future_pr.status_code == 400,
+    'absurd_weight_rejected': absurd_pr.status_code == 400,
+    'athlete_list_scope_mine_safe': unassigned_username not in scoped_usernames,
+    'athlete_list_scope_all_available': unassigned_username in all_usernames,
 }))
 PY
 )"

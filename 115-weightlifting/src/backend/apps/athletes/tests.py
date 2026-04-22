@@ -1,11 +1,11 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
 
-from apps.athletes.models import ProgramCompletion
+from apps.athletes.models import PersonalRecord, ProgramCompletion, WorkoutLog
 from apps.programs.models import TrainingProgram
 
 User = get_user_model()
@@ -70,3 +70,64 @@ class ProgramCompletionGetIsReadOnlyTests(TestCase):
         self.assertEqual(
             ProgramCompletion.objects.filter(program=self.program).count(), 1
         )
+
+
+class PersonalRecordValidationTests(TestCase):
+    def setUp(self):
+        self.athlete = User.objects.create_user(
+            username='pr_athlete', password='longenoughpw1', user_type='athlete'
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.athlete)
+        self.url = reverse('personal-record-list-create')
+
+    def _payload(self, **overrides):
+        base = {'lift_type': 'snatch', 'weight': '120.0', 'date': str(date.today())}
+        base.update(overrides)
+        return base
+
+    def test_valid_pr_accepted(self):
+        response = self.client.post(self.url, self._payload(), format='json')
+        self.assertEqual(response.status_code, 201)
+
+    def test_future_date_rejected(self):
+        future = (date.today() + timedelta(days=1)).isoformat()
+        response = self.client.post(self.url, self._payload(date=future), format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('date', response.json())
+        self.assertEqual(PersonalRecord.objects.count(), 0)
+
+    def test_zero_weight_rejected(self):
+        response = self.client.post(self.url, self._payload(weight='0'), format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('weight', response.json())
+
+    def test_absurd_weight_rejected(self):
+        response = self.client.post(self.url, self._payload(weight='999'), format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('weight', response.json())
+        self.assertEqual(PersonalRecord.objects.count(), 0)
+
+    def test_ancient_date_rejected(self):
+        response = self.client.post(
+            self.url, self._payload(date='1999-12-31'), format='json'
+        )
+        self.assertEqual(response.status_code, 400)
+
+
+class WorkoutLogValidationTests(TestCase):
+    def setUp(self):
+        self.athlete = User.objects.create_user(
+            username='wl_athlete', password='longenoughpw1', user_type='athlete'
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.athlete)
+        self.url = reverse('workout-log-list-create')
+
+    def test_future_dated_workout_rejected(self):
+        future = (date.today() + timedelta(days=2)).isoformat()
+        response = self.client.post(
+            self.url, {'date': future, 'notes': 'bad date'}, format='json'
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(WorkoutLog.objects.count(), 0)
