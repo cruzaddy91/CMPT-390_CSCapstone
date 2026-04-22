@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import WorkoutDay from '../components/WorkoutDay'
 import SpreadsheetEditor from '../components/SpreadsheetEditor'
 import ProgramPreview from '../components/ProgramPreview'
+import ProgressRing from '../components/ProgressRing'
 import { assignProgram, createProgram, getAthletes, getProgramsFromBackend, updateProgram } from '../services/api'
 import { countExercises, createEmptyDay, createEmptyWeek, normalizeProgramData } from '../utils/dataStructure'
 import { formatApiError } from '../utils/errors'
@@ -23,6 +24,21 @@ const swap = (array, i, j) => {
   const next = [...array]
   const tmp = next[i]; next[i] = next[j]; next[j] = tmp
   return next
+}
+
+// Walk a program's completion_data and sum every completed: true flag. Used
+// to show a block-level completion ring on each program row so the coach can
+// glance-see which athletes are actually doing the work.
+const summarizeProgramCompletion = (program, totalExercises) => {
+  const entries = program?.completion_data?.entries || {}
+  let completed = 0
+  for (const dayKey in entries) {
+    const bag = entries[dayKey] || {}
+    for (const exIdx in bag) {
+      if (bag[exIdx]?.completed) completed += 1
+    }
+  }
+  return { completed, total: totalExercises }
 }
 
 const CoachDashboard = () => {
@@ -445,17 +461,23 @@ const ListView = ({ programs, athletes, assignmentDrafts, onAssignDraftChange, o
         {programs.map((program) => {
           const normalized = normalizeProgramData(program.program_data, program.start_date)
           const exerciseCount = countExercises(normalized)
+          const progress = summarizeProgramCompletion(program, exerciseCount)
+          const pct = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
           return (
             <div key={program.id} className="program-row">
+              <div className="program-row-ring" aria-label={`${progress.completed} of ${progress.total} exercises completed`}>
+                <ProgressRing completed={progress.completed} total={progress.total} size={44} strokeWidth={3} />
+                <span className="program-row-ring-pct data">{pct}%</span>
+              </div>
               <div className="program-row-main" onClick={() => onEditProgram(program)} role="button" tabIndex={0}
                    onKeyDown={(event) => (event.key === 'Enter' || event.key === ' ') && onEditProgram(program)}>
                 <div className="program-row-title">{program.name}</div>
                 <div className="program-row-meta">
                   <span>{program.athlete_username}</span>
                   <span className="program-row-dot">·</span>
-                  <span className="data">{normalized.days.length}</span> <span>days</span>
+                  <span className="data">{progress.completed}</span>/<span className="data">{progress.total}</span> <span>done</span>
                   <span className="program-row-dot">·</span>
-                  <span className="data">{exerciseCount}</span> <span>exercises</span>
+                  <span className="data">{normalized.days.length}</span> <span>days</span>
                   <span className="program-row-dot">·</span>
                   <span>starts {program.start_date}</span>
                   {program.updated_at && (

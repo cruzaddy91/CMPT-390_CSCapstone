@@ -125,6 +125,9 @@ const Login = () => {
                       autoComplete="off"
                       placeholder="Provided by program administrator"
                     />
+                    <p className="form-hint">
+                      Ask your program administrator for this code. Coach accounts are gated to prevent unauthorized program authorship.
+                    </p>
                   </div>
                 )}
                 {error && <div className="login-error">{error}</div>}

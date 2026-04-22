@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BarElement,
   CategoryScale,
@@ -23,6 +23,12 @@ import {
 } from '../services/api'
 import { getDayCompletionKey, normalizeProgramData } from '../utils/dataStructure'
 import { formatApiError } from '../utils/errors'
+import {
+  computeLifetimeCompletions,
+  computeStreak,
+  crossedCompletionMilestone,
+  crossedStreakMilestone,
+} from '../utils/streaks'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend)
 
@@ -69,6 +75,10 @@ const AthleteDashboard = () => {
   const [activeProgramId, setActiveProgramId] = useState(null)
   const [selectedDayId, setSelectedDayId] = useState(null)
   const [drawerSection, setDrawerSection] = useState(null) // 'workout' | 'pr' | 'stats' | null
+  // Encouragement toast is separate from saveMessage so the technical 'Logged'
+  // status and the emotional milestone humor don't overwrite each other when
+  // both fire in the same save cycle.
+  const [encouragement, setEncouragement] = useState('')
 
   const [logForm, setLogForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -166,6 +176,39 @@ const AthleteDashboard = () => {
   const selectedDayCounts = completionCounts[selectedDayId] || { completed: 0, total: 0 }
   const todayName = WEEKDAY_NAMES[new Date().getDay()]
   const todayDate = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+
+  // Encouragement math. Streak comes from workout logs (explicit date), lifetime
+  // comes from every completed: true flag across every program.
+  const streak = useMemo(() => computeStreak(workoutLogs), [workoutLogs])
+  const lifetimeCompleted = useMemo(() => computeLifetimeCompletions(completions), [completions])
+
+  // Milestone crossings become one-time humor toasts. The refs are seeded on
+  // first render so page-load doesn't fire a celebration for counts the athlete
+  // already had before opening the dashboard.
+  const prevLifetimeRef = useRef(null)
+  const prevStreakRef = useRef(null)
+
+  useEffect(() => {
+    if (loading) return
+    if (prevLifetimeRef.current === null) { prevLifetimeRef.current = lifetimeCompleted; return }
+    const crossed = crossedCompletionMilestone(prevLifetimeRef.current, lifetimeCompleted)
+    prevLifetimeRef.current = lifetimeCompleted
+    if (crossed) {
+      setEncouragement(crossed.message)
+      setTimeout(() => setEncouragement(''), 5000)
+    }
+  }, [lifetimeCompleted, loading])
+
+  useEffect(() => {
+    if (loading) return
+    if (prevStreakRef.current === null) { prevStreakRef.current = streak; return }
+    const crossed = crossedStreakMilestone(prevStreakRef.current, streak)
+    prevStreakRef.current = streak
+    if (crossed) {
+      setEncouragement(crossed.message)
+      setTimeout(() => setEncouragement(''), 5000)
+    }
+  }, [streak, loading])
 
   // Persist a single exercise's result. Writes locally, then PATCHes to the
   // backend. Avoids the 'Save Program Progress' explicit button -- every
@@ -353,9 +396,33 @@ const AthleteDashboard = () => {
           {' exercises done on '}
           <span className="athlete-hero-dayname">{selectedDay?.day || '—'}</span>
         </p>
+        {(streak > 0 || lifetimeCompleted > 0) && (
+          <div className="athlete-hero-stats" aria-label="Athlete streak and lifetime completions">
+            {streak > 0 && (
+              <span className="athlete-hero-stat">
+                <span className="athlete-hero-stat-label">Streak</span>
+                <span className="athlete-hero-stat-value data">{streak}</span>
+                <span className="athlete-hero-stat-unit">day{streak === 1 ? '' : 's'}</span>
+              </span>
+            )}
+            {lifetimeCompleted > 0 && (
+              <span className="athlete-hero-stat">
+                <span className="athlete-hero-stat-label">Lifetime</span>
+                <span className="athlete-hero-stat-value data">{lifetimeCompleted}</span>
+                <span className="athlete-hero-stat-unit">lifts logged</span>
+              </span>
+            )}
+          </div>
+        )}
         {saveMessage && (
           <div className={`save-message ${saveMessage.toLowerCase().includes('error') || saveMessage.toLowerCase().includes('could') ? 'error' : 'success'}`}>
             {saveMessage}
+          </div>
+        )}
+        {encouragement && (
+          <div className="encouragement-toast" role="status" aria-live="polite">
+            <span className="encouragement-toast-kicker">Milestone</span>
+            <span className="encouragement-toast-body">{encouragement}</span>
           </div>
         )}
       </div>

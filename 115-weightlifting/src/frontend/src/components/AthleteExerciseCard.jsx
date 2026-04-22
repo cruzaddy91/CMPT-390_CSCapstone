@@ -47,7 +47,9 @@ const prescriptionSummary = (exercise) => {
 
 const AthleteExerciseCard = ({ exercise, result, onSaveResult }) => {
   const isDone = !!result?.completed
-  const [isExpanded, setIsExpanded] = useState(!isDone && !result?.result)
+  // Always mount collapsed. The athlete opens only what they need as they go,
+  // and reloading the page never restores a previously expanded card.
+  const [isExpanded, setIsExpanded] = useState(false)
   const parsed = parseNotesForFeel(result?.athlete_notes || '')
   const [weightInput, setWeightInput] = useState(result?.result || '')
   const [feel, setFeel] = useState(parsed.feel)

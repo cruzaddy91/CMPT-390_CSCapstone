@@ -19,19 +19,21 @@ describe('AthleteExerciseCard', () => {
     expect(screen.getByText(/5×2 @ 75%/)).toBeTruthy()
   })
 
-  it('expands by default when not yet completed', () => {
+  it('starts collapsed regardless of completion state', () => {
     render(<AthleteExerciseCard exercise={snatch} result={{}} onSaveResult={() => {}} />)
-    // Quick-log fields visible
-    expect(screen.getByLabelText('Actual weight hit')).toBeTruthy()
-    expect(screen.getByRole('radio', { name: 'Solid' })).toBeTruthy()
+    // Header visible, quick-log fields not yet in the DOM.
+    expect(screen.getByText('Snatch')).toBeTruthy()
+    expect(screen.queryByLabelText('Actual weight hit')).toBeNull()
+    expect(screen.queryByRole('radio', { name: 'Solid' })).toBeNull()
   })
 
-  it('collapses by default when already completed and submits on Mark done', () => {
+  it('expands on header tap and submits on Mark done', () => {
     const onSaveResult = vi.fn()
     render(<AthleteExerciseCard exercise={snatch}
             result={{ completed: false, result: '', athlete_notes: '' }}
             onSaveResult={onSaveResult} />)
 
+    fireEvent.click(screen.getByText('Snatch'))
     fireEvent.change(screen.getByLabelText('Actual weight hit'), { target: { value: '105kg' } })
     fireEvent.click(screen.getByRole('radio', { name: 'Solid' }))
     fireEvent.click(screen.getByRole('button', { name: /mark done/i }))

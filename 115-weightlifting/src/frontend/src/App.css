@@ -252,6 +252,17 @@
   cursor: not-allowed;
 }
 
+/* Motion as earned feedback: a tiny scale dip on press so the button feels
+   like it registered. Disabled states and reduced-motion skip it via inheritance
+   of the global prefers-reduced-motion rule. */
+.save-btn:active:not(:disabled),
+.login-btn:active:not(:disabled),
+.home-btn:active:not(:disabled),
+.nav-button:active:not(:disabled),
+.text-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
 .coach-btn {
   background: linear-gradient(180deg, #3b1f06, #1a0c02);
   border-color: rgba(255, 178, 63, 0.5);
@@ -559,6 +570,12 @@
   border-radius: var(--radius-data);
   border: 1px solid;
   font-size: 0.92rem;
+  animation: wl-toast-slide 220ms ease-out both;
+}
+
+@keyframes wl-toast-slide {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .save-message.success,
@@ -573,6 +590,36 @@
   color: #ff8ea6;
   border-color: rgba(255, 90, 110, 0.34);
   background: var(--danger-soft);
+}
+
+/* Encouragement toast: separate channel from save-message so the dry status
+   line ('Logged — Snatch') never clobbers milestone humor. Amber accent to
+   match the 'coach/reward' palette already used elsewhere in the app. */
+.encouragement-toast {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-data);
+  border: 1px solid rgba(255, 178, 63, 0.38);
+  background: rgba(255, 178, 63, 0.08);
+  color: #ffd489;
+  font-size: 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  animation: wl-toast-slide 260ms ease-out both;
+}
+
+.encouragement-toast-kicker {
+  font-size: 0.65rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--neon-amber);
+  font-weight: 700;
+}
+
+.encouragement-toast-body {
+  color: var(--text-primary);
+  line-height: 1.45;
 }
 
 /* --------------------------------------------------------------------------
@@ -802,6 +849,30 @@
   padding: 1rem 1.15rem;
   border-bottom: 1px solid var(--line);
   transition: background-color var(--transition-fast);
+}
+
+/* Block-progress ring on each program row. Reuses the athlete WeekStrip
+   vocabulary so a coach sees progress the same way their athlete does. */
+.program-row-ring {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.program-row-ring-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  letter-spacing: -0.02em;
+  pointer-events: none;
 }
 
 .program-row:last-child {
@@ -1311,6 +1382,45 @@
   font-weight: 700;
 }
 
+/* Encouragement chips: small pills under the hero meta line. Purely subtle;
+   the milestone-humor toast does the actual celebrating. */
+.athlete-hero-stats {
+  margin-top: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.athlete-hero-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--bg-panel-2);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.athlete-hero-stat-label {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.athlete-hero-stat-value {
+  color: var(--neon-cyan);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.athlete-hero-stat-unit {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
 .athlete-hero-dayname {
   color: var(--neon-cyan);
   font-weight: 600;
@@ -1384,7 +1494,17 @@
   font-weight: 700;
 }
 
+.progress-ring,
 .week-strip-ring { display: block; }
+
+/* Let the ring fill smoothly when completion count changes. stroke-dashoffset
+   is the one attribute React re-renders, so this transition lands on every
+   save-and-rerender path for free. Applies to any ring in the app (week strip,
+   coach program row, anywhere else we reuse ProgressRing). */
+.progress-ring circle,
+.week-strip-ring circle {
+  transition: stroke-dashoffset 280ms ease-out, stroke 180ms ease-out;
+}
 
 .week-strip-ratio {
   font-size: 0.82rem;
@@ -1458,6 +1578,13 @@
   border-color: var(--success);
   color: var(--success);
   background: rgba(54, 240, 197, 0.1);
+  animation: wl-check-pop 240ms ease-out both;
+}
+
+@keyframes wl-check-pop {
+  0%   { transform: scale(0.6); }
+  70%  { transform: scale(1.1); }
+  100% { transform: scale(1); }
 }
 
 .athlete-exercise-main {

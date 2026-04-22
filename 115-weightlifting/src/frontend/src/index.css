@@ -193,6 +193,14 @@ textarea::placeholder {
   color: var(--text-dim);
 }
 
+/* Hide the example-value placeholder the instant the field is focused, so the
+   user never has to squint around their own caret. The placeholder returns
+   only if the field is emptied and blurred. */
+input:focus::placeholder,
+textarea:focus::placeholder {
+  color: transparent;
+}
+
 button,
 a,
 input,

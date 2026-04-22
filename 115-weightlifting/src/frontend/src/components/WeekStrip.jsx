@@ -2,34 +2,13 @@
 // the dashboard's selected day. Keyboard navigable (tab + Enter/Space).
 // Scrolls horizontally on narrow screens so it never forces the viewport wide.
 
+import ProgressRing from './ProgressRing'
+
 const dayAbbrev = (dayName, fallbackIndex) => {
   if (!dayName) return `D${fallbackIndex + 1}`
   const trimmed = dayName.trim()
   if (/^day\s*\d+$/i.test(trimmed)) return trimmed.replace(/\s+/g, '').toUpperCase()
   return trimmed.slice(0, 3).toUpperCase()
-}
-
-const CompletionRing = ({ completed, total, size = 38, active }) => {
-  const radius = (size / 2) - 3
-  const circumference = 2 * Math.PI * radius
-  const pct = total > 0 ? Math.min(1, completed / total) : 0
-  const dashOffset = circumference * (1 - pct)
-  const stroke = active ? 'var(--neon-cyan)' : pct === 1 ? 'var(--success)' : 'var(--line-strong)'
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true" className="week-strip-ring">
-      <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(95,228,255,0.14)" strokeWidth="3" />
-      <circle
-        cx={size / 2} cy={size / 2} r={radius}
-        fill="none"
-        stroke={stroke}
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={dashOffset}
-        transform={`rotate(-90 ${size / 2} ${size / 2})`}
-      />
-    </svg>
-  )
 }
 
 const WeekStrip = ({ days, completionCounts, selectedDayId, onSelectDay }) => {
@@ -49,7 +28,7 @@ const WeekStrip = ({ days, completionCounts, selectedDayId, onSelectDay }) => {
             onClick={() => onSelectDay(day.id)}
           >
             <span className="week-strip-label">{dayAbbrev(day.day, index)}</span>
-            <CompletionRing completed={counts.completed} total={counts.total} active={isActive} />
+            <ProgressRing completed={counts.completed} total={counts.total} active={isActive} />
             <span className="week-strip-ratio data">
               {counts.completed}/{counts.total}
             </span>
