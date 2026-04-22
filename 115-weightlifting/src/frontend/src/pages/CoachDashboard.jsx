@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import WorkoutDay from '../components/WorkoutDay'
+import SpreadsheetEditor from '../components/SpreadsheetEditor'
 import { assignProgram, createProgram, getAthletes, getProgramsFromBackend, updateProgram } from '../services/api'
 import { countExercises, createEmptyDay, createEmptyWeek, normalizeProgramData } from '../utils/dataStructure'
 import { formatApiError } from '../utils/errors'
+import { downloadTemplateXlsx, parseProgramFile } from '../utils/programTemplate'
 
 const getDefaultForm = () => ({
   name: '',
@@ -25,6 +27,8 @@ const CoachDashboard = () => {
   const [assignmentDrafts, setAssignmentDrafts] = useState({})
   const [formData, setFormData] = useState(getDefaultForm())
   const [programData, setProgramData] = useState(createEmptyWeek())
+  const [editorMode, setEditorMode] = useState('form') // 'form' | 'spreadsheet'
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     loadDashboardData()
@@ -108,6 +112,40 @@ const CoachDashboard = () => {
       ...current,
       days: current.days.filter((_, index) => index !== dayIndex)
     }))
+  }
+
+  const handleDownloadTemplate = () => {
+    downloadTemplateXlsx()
+    setSaveMessage('Template downloaded. Fill it in and re-upload to autofill a new program.')
+    setTimeout(() => setSaveMessage(''), 4000)
+  }
+
+  const handleTemplateUploadClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleTemplateFileChosen = async (event) => {
+    const file = event.target.files?.[0]
+    // Reset the input so re-uploading the same filename still triggers change.
+    event.target.value = ''
+    if (!file) return
+    try {
+      setSaveMessage('')
+      const nextProgramData = await parseProgramFile(file)
+      setProgramData(nextProgramData)
+      const exercises = nextProgramData.days.reduce((t, d) => t + d.exercises.length, 0)
+      setSaveMessage(
+        `Loaded ${nextProgramData.days.length} day(s) / ${exercises} exercise(s) from ${file.name}. Review and hit Create Program.`
+      )
+      setTimeout(() => setSaveMessage(''), 6000)
+    } catch (error) {
+      console.error('Template upload failed:', error)
+      setSaveMessage(`Could not read ${file.name}: ${error.message || 'unknown error'}`)
+    }
+  }
+
+  const toggleEditorMode = () => {
+    setEditorMode((current) => (current === 'form' ? 'spreadsheet' : 'form'))
   }
 
   const handleEditProgram = (program) => {
@@ -285,16 +323,41 @@ const CoachDashboard = () => {
         <div className="section-card builder-toolbar">
           <div>
             <h3>Weekly Structure</h3>
-            <p className="section-subtitle">Add or trim days, then prescribe exercises with sets, reps, intensity, and notes.</p>
+            <p className="section-subtitle">
+              Add or trim days, then prescribe exercises with sets, reps, intensity, and notes. Coaches who live
+              in Excel can download the template, fill it in, and upload it to autofill this view.
+            </p>
           </div>
           <div className="toolbar-actions">
-            <button type="button" className="text-btn" onClick={handleAddDay}>+ Add day</button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.csv,.ods,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+              onChange={handleTemplateFileChosen}
+              style={{ display: 'none' }}
+              aria-hidden="true"
+            />
+            <button type="button" className="text-btn" onClick={handleDownloadTemplate}>
+              ⬇ Download template
+            </button>
+            <button type="button" className="text-btn" onClick={handleTemplateUploadClick}>
+              ⬆ Upload .xlsx
+            </button>
+            <button type="button" className="text-btn" onClick={toggleEditorMode}>
+              {editorMode === 'form' ? '⊞ Spreadsheet view' : '☰ Structured view'}
+            </button>
+            {editorMode === 'form' && (
+              <button type="button" className="text-btn" onClick={handleAddDay}>+ Add day</button>
+            )}
             <button type="button" className="save-btn" onClick={handleSave} disabled={saving || !formData.name || !formData.athlete_id}>
               {saving ? 'Saving...' : editingProgramId ? 'Update Program' : 'Create Program'}
             </button>
           </div>
         </div>
 
+        {editorMode === 'spreadsheet' ? (
+          <SpreadsheetEditor programData={programData} onChange={setProgramData} />
+        ) : (
         <div className="day-stack">
           {programData.days.map((day, dayIndex) => (
             <WorkoutDay
@@ -310,6 +373,7 @@ const CoachDashboard = () => {
             />
           ))}
         </div>
+        )}
 
         <div className="section-title-row">
           <h3>Existing Programs</h3>
