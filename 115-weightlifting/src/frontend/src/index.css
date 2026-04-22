@@ -1,61 +1,69 @@
-@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
 
+/* ============================================================================
+   Design tokens — "Tron, grown up".
+   One neon system: cyan primary, amber reserved for coach-action accents only.
+   Dark near-black base. High-contrast text. Data-forward typography.
+   ============================================================================ */
 :root {
   color-scheme: dark;
 
-  --neon-cyan: #52d8ff;
-  --neon-blue: #2aa9ff;
-  --neon-ice: #8be9ff;
-  --neon-orange: #ff9f1a;
-  --neon-amber: #ffc857;
-  --neon-violet: #a78bfa;
-  --bg-void: #02040d;
-  --bg-deep: #040816;
-  --bg-panel: #081225;
-  --bg-panel-2: #0b1a33;
-  --text-main: #e6f7ff;
-  --text-muted: #9fc3d9;
-  --danger-neon: #ff4d6d;
-  --success-neon: #36f0c5;
+  /* Canonical neons */
+  --neon-cyan:  #5fe4ff;   /* primary accent */
+  --neon-blue:  #2aa9ff;
+  --neon-ice:   #a5ecff;
+  --neon-amber: #ffb23f;   /* coach-action only */
 
-  --bg-base: var(--bg-void);
-  --bg-elevated: var(--bg-deep);
-  --bg-panel-soft: rgba(8, 18, 37, 0.82);
-  --bg-panel-strong: rgba(11, 26, 51, 0.96);
-  --bg-input: rgba(4, 11, 24, 0.95);
-  --bg-input-hover: rgba(7, 16, 32, 0.98);
+  /* Surfaces */
+  --bg-void:    #020309;
+  --bg-deep:    #060a14;
+  --bg-panel:   #0a1220;
+  --bg-panel-2: #0e1a2e;
+  --bg-input:   #060c18;
 
-  --text-primary: var(--text-main);
-  --text-secondary: #c3dcf0;
-  --text-dim: #6f8da7;
+  /* Text */
+  --text-primary:   #f4f7fb;
+  --text-secondary: #c9d6e3;
+  --text-muted:     #8a9db0;
+  --text-dim:       #5d7388;
 
-  --accent-cyan: var(--neon-cyan);
-  --accent-blue: var(--neon-blue);
-  --accent-violet: var(--neon-violet);
-  --accent-orange: var(--neon-orange);
-  --accent-amber: var(--neon-amber);
-  --accent-ice: var(--neon-ice);
-  --accent-soft: rgba(82, 216, 255, 0.16);
-  --accent-soft-blue: rgba(42, 169, 255, 0.18);
-  --accent-soft-violet: rgba(167, 139, 250, 0.18);
-  --accent-soft-orange: rgba(255, 159, 26, 0.18);
-  --line: rgba(91, 169, 255, 0.24);
-  --line-strong: rgba(82, 216, 255, 0.6);
-  --line-hot: rgba(255, 159, 26, 0.52);
-
-  --success: var(--success-neon);
-  --success-soft: rgba(54, 240, 197, 0.14);
-  --danger: var(--danger-neon);
-  --danger-soft: rgba(255, 77, 109, 0.16);
+  /* Semantic */
+  --danger:  #ff5a6e;
+  --success: #36f0c5;
   --warning: var(--neon-amber);
-  --warning-soft: rgba(255, 200, 87, 0.14);
+  --danger-soft:  rgba(255, 90, 110, 0.12);
+  --success-soft: rgba(54, 240, 197, 0.12);
+  --warning-soft: rgba(255, 178, 63, 0.12);
 
-  --radius-xs: 8px;
-  --radius-sm: 12px;
-  --radius-md: 18px;
-  --radius-lg: 26px;
-  --radius-xl: 34px;
+  /* Accent aliases used across App.css */
+  --accent-cyan:   var(--neon-cyan);
+  --accent-blue:   var(--neon-blue);
+  --accent-ice:    var(--neon-ice);
+  --accent-amber:  var(--neon-amber);
+  --accent-orange: var(--neon-amber); /* deprecated; points to amber */
+  --accent-violet: var(--neon-cyan);  /* retired: fall back to cyan */
 
+  --accent-soft:        rgba(95, 228, 255, 0.12);
+  --accent-soft-blue:   rgba(42, 169, 255, 0.12);
+  --accent-soft-amber:  rgba(255, 178, 63, 0.12);
+  --accent-soft-violet: rgba(95, 228, 255, 0.08); /* retired alias */
+  --accent-soft-orange: rgba(255, 178, 63, 0.12);
+
+  /* Structural lines — thin 1px rules instead of gradient borders */
+  --line:        rgba(95, 228, 255, 0.14);
+  --line-strong: rgba(95, 228, 255, 0.42);
+  --line-hot:    rgba(255, 178, 63, 0.38);
+
+  /* Radii — data surfaces are sharp (blueprint feel), interactive rounded */
+  --radius-data: 4px;
+  --radius-xs:   6px;
+  --radius-sm:   10px;
+  --radius-md:   12px;
+  --radius-lg:   16px;
+  --radius-xl:   20px;
+  --radius-pill: 999px;
+
+  /* Spacing scale */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -66,28 +74,42 @@
   --space-10: 2.5rem;
   --space-12: 3rem;
 
-  --glow-chip: 0 0 0 1px rgba(82, 216, 255, 0.16), 0 0 18px rgba(42, 169, 255, 0.12);
-  --glow-sm: 0 0 0 1px rgba(82, 216, 255, 0.2), 0 10px 24px rgba(4, 12, 24, 0.42), 0 0 18px rgba(42, 169, 255, 0.14);
-  --glow-md: 0 0 0 1px rgba(82, 216, 255, 0.24), 0 16px 36px rgba(4, 12, 24, 0.52), 0 0 24px rgba(82, 216, 255, 0.16);
-  --glow-lg: 0 0 0 1px rgba(82, 216, 255, 0.28), 0 22px 52px rgba(2, 8, 18, 0.62), 0 0 34px rgba(82, 216, 255, 0.18);
-  --glow-hot: 0 0 0 1px rgba(255, 159, 26, 0.24), 0 16px 34px rgba(18, 9, 2, 0.46), 0 0 24px rgba(255, 159, 26, 0.16);
-  --inner-glow: inset 0 0 0 1px rgba(82, 216, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.03), inset 0 0 24px rgba(42, 169, 255, 0.05);
-  --inner-hot: inset 0 0 0 1px rgba(255, 159, 26, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.03), inset 0 0 20px rgba(255, 159, 26, 0.06);
+  /* Shadows — subtle, no more multi-layer neon pileup */
+  --shadow-sm: 0 1px 0 rgba(255, 255, 255, 0.03), 0 1px 12px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 1px 0 rgba(255, 255, 255, 0.03), 0 12px 28px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 1px 0 rgba(255, 255, 255, 0.03), 0 20px 44px rgba(0, 0, 0, 0.6);
 
+  --glow-ring: 0 0 0 1px rgba(95, 228, 255, 0.26);
+  --glow-ring-hot: 0 0 0 1px rgba(255, 178, 63, 0.36);
+  --glow-chip: 0 0 0 1px rgba(95, 228, 255, 0.14);
+
+  /* Legacy alias names still used by App.css until fully migrated */
+  --glow-sm: var(--shadow-sm), var(--glow-ring);
+  --glow-md: var(--shadow-md), var(--glow-ring);
+  --glow-lg: var(--shadow-lg), var(--glow-ring);
+  --glow-hot: var(--shadow-md), var(--glow-ring-hot);
+  --inner-glow: inset 0 0 0 1px rgba(95, 228, 255, 0.06);
+  --inner-hot:  inset 0 0 0 1px rgba(255, 178, 63, 0.08);
+
+  /* Scanlines retained but now only used on the outer body background, not
+     every content surface. Kept for optional reintroduction. */
   --scanlines: repeating-linear-gradient(
     180deg,
-    rgba(139, 233, 255, 0.028) 0,
-    rgba(139, 233, 255, 0.028) 1px,
+    rgba(165, 236, 255, 0.022) 0,
+    rgba(165, 236, 255, 0.022) 1px,
     transparent 1px,
     transparent 4px
   );
-  --noise: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.035) 0, transparent 18%),
-    radial-gradient(circle at 80% 0%, rgba(167, 139, 250, 0.05) 0, transparent 20%),
-    radial-gradient(circle at 100% 100%, rgba(255, 159, 26, 0.06) 0, transparent 22%);
+  --noise: none;
 
-  --transition-fast: 140ms ease-out;
-  --transition-main: 200ms ease-out;
-  --transition-slow: 320ms ease-out;
+  --transition-fast: 120ms ease-out;
+  --transition-main: 180ms ease-out;
+  --transition-slow: 260ms ease-out;
+
+  /* Font stacks */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Exo 2', 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
 }
 
 * {
@@ -103,14 +125,12 @@ body,
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   color: var(--text-primary);
   background:
-    radial-gradient(circle at 10% 14%, rgba(42, 169, 255, 0.12), transparent 24%),
-    radial-gradient(circle at 88% 10%, rgba(82, 216, 255, 0.12), transparent 22%),
-    radial-gradient(circle at 80% 86%, rgba(167, 139, 250, 0.08), transparent 18%),
-    linear-gradient(180deg, rgba(255, 159, 26, 0.035), transparent 16%),
-    linear-gradient(135deg, #02040d 0%, #040816 46%, #02040d 100%);
+    radial-gradient(circle at 18% 8%, rgba(42, 169, 255, 0.10), transparent 28%),
+    radial-gradient(circle at 88% 6%, rgba(95, 228, 255, 0.08), transparent 26%),
+    linear-gradient(180deg, #020309 0%, #040714 50%, #020309 100%);
   background-attachment: fixed;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
@@ -120,29 +140,21 @@ body {
   overflow-x: hidden;
 }
 
-body::before,
-body::after {
+/* Subtle grid pattern on the backdrop — one of the few "Tron" cues that stays.
+   Fades out toward the edges so content area reads cleanly. */
+body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: -2;
-}
-
-body::before {
   background-image:
-    linear-gradient(rgba(82, 216, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(82, 216, 255, 0.024) 1px, transparent 1px);
-  background-size: 48px 48px;
+    linear-gradient(rgba(95, 228, 255, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(95, 228, 255, 0.02) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(circle at center, black 30%, transparent 90%);
+  mask-image: radial-gradient(circle at center, black 30%, transparent 90%);
   opacity: 0.32;
-  mask-image: radial-gradient(circle at center, black 34%, transparent 100%);
-}
-
-body::after {
-  inset: 16px;
-  border: 1px solid rgba(82, 216, 255, 0.08);
-  border-radius: 24px;
-  box-shadow: inset 0 0 24px rgba(82, 216, 255, 0.02);
 }
 
 h1,
@@ -152,8 +164,8 @@ h4,
 h5,
 h6,
 .nav-logo {
-  font-family: 'Exo 2', 'Inter', sans-serif;
-  letter-spacing: 0.04em;
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
 }
 
 p,
@@ -192,8 +204,7 @@ select {
     background-color var(--transition-main),
     box-shadow var(--transition-main),
     transform var(--transition-fast),
-    opacity var(--transition-fast),
-    filter var(--transition-fast);
+    opacity var(--transition-fast);
 }
 
 :focus {
@@ -201,14 +212,22 @@ select {
 }
 
 :focus-visible {
-  outline: 2px solid rgba(82, 216, 255, 0.96);
+  outline: 2px solid var(--neon-cyan);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(82, 216, 255, 0.18), 0 0 22px rgba(82, 216, 255, 0.14);
+  box-shadow: 0 0 0 4px rgba(95, 228, 255, 0.18);
 }
 
 ::selection {
-  background: rgba(82, 216, 255, 0.32);
+  background: rgba(95, 228, 255, 0.28);
   color: var(--text-primary);
+}
+
+/* Data-display utility: monospace, tabular, tighter tracking. Use for weights,
+   sets, reps, percentages -- anywhere numbers matter more than decoration. */
+.data {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 @media (prefers-reduced-motion: reduce) {

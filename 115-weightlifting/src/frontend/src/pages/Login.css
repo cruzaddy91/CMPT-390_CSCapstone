@@ -1,9 +1,12 @@
+/* "Tron, grown up" login. No scanlines, no masked gradient borders, no
+   neon-pulse. Flat panels with thin cyan rules, typography-led hierarchy. */
+
 .login-container {
   min-height: calc(100vh - 86px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2.25rem 1rem 1rem;
+  padding: 2rem 1rem 1rem;
 }
 
 .login-grid {
@@ -23,72 +26,61 @@
   position: relative;
   padding: clamp(1.6rem, 3vw, 2.4rem);
   border-radius: var(--radius-lg);
-  background:
-    linear-gradient(145deg, rgba(8, 18, 37, 0.98), rgba(5, 11, 22, 0.9)),
-    var(--scanlines),
-    var(--noise);
-  box-shadow: var(--glow-lg), inset 0 0 34px rgba(82, 216, 255, 0.05);
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
 }
 
-.login-intro::before {
-  inset: 0;
-}
-
+/* One subtle corner accent, not two overlapping radials. */
 .login-intro::after {
   content: '';
   position: absolute;
-  inset: auto -12% 8% auto;
-  width: 280px;
-  height: 280px;
-  background:
-    radial-gradient(circle, rgba(82, 216, 255, 0.18), transparent 62%),
-    radial-gradient(circle at 30% 30%, rgba(255, 159, 26, 0.08), transparent 34%);
+  inset: auto -10% 6% auto;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(circle, rgba(95, 228, 255, 0.14), transparent 62%);
   pointer-events: none;
-  filter: blur(4px);
 }
 
 .login-intro h1 {
-  margin-top: 1.15rem;
-  font-size: clamp(2.5rem, 2rem + 2vw, 4.2rem);
-  line-height: 0.95;
-  text-transform: uppercase;
-  text-shadow: 0 0 14px rgba(82, 216, 255, 0.1);
+  margin-top: 1rem;
+  font-size: clamp(2.2rem, 1.8rem + 1.8vw, 3.6rem);
+  line-height: 1.04;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  /* Sentence case -- no uppercase, no text-shadow. */
 }
 
 .login-intro-copy {
   max-width: 34ch;
-  margin-top: 1.1rem;
+  margin-top: 1rem;
   color: var(--text-secondary);
-  font-size: 1.02rem;
-  line-height: 1.8;
+  font-size: 1rem;
+  line-height: 1.7;
 }
 
 .login-intro-list {
   display: grid;
-  gap: 0.85rem;
-  margin-top: 2rem;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
 }
 
 .login-intro-item {
   display: flex;
   flex-direction: column;
-  gap: 0.32rem;
-  padding: 0.95rem 1rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(82, 216, 255, 0.18);
-  background:
-    linear-gradient(180deg, rgba(10, 20, 39, 0.96), rgba(6, 13, 25, 0.98)),
-    var(--scanlines);
-  box-shadow: var(--glow-sm), inset 0 0 20px rgba(82, 216, 255, 0.04);
+  gap: 0.3rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-data);
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
 }
 
 .login-intro-item .label {
   color: var(--text-muted);
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  text-shadow: 0 0 8px rgba(82, 216, 255, 0.08);
 }
 
 .login-intro-item .value {
@@ -98,11 +90,12 @@
 
 .login-card {
   padding: 1rem;
-  background:
-    linear-gradient(145deg, rgba(9, 19, 38, 0.98), rgba(5, 11, 22, 0.94)),
-    var(--scanlines),
-    var(--noise);
-  box-shadow: var(--glow-lg), inset 0 0 28px rgba(82, 216, 255, 0.05);
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+  overflow: hidden;
 }
 
 .login-card-frame {
@@ -110,51 +103,42 @@
   z-index: 1;
 }
 
-.login-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(82, 216, 255, 0.08), transparent 32%),
-    radial-gradient(circle at 100% 0%, rgba(167, 139, 250, 0.12), transparent 26%);
-  pointer-events: none;
-}
-
 .login-card h2 {
-  margin: 1rem 0 0.25rem;
-  font-size: 2rem;
-  text-transform: uppercase;
-  text-shadow: 0 0 12px rgba(82, 216, 255, 0.08);
+  margin: 0.75rem 0 0.25rem;
+  font-size: 1.6rem;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
 }
 
 .login-subtitle {
-  color: var(--text-secondary);
-  font-size: 0.94rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   margin-bottom: 1.4rem;
 }
 
 .login-card .form-group {
-  margin-bottom: 0.95rem;
+  margin-bottom: 0.85rem;
 }
 
 .login-card label {
   display: block;
-  margin-bottom: 0.42rem;
-  font-size: 0.82rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--text-secondary);
-  text-shadow: 0 0 8px rgba(82, 216, 255, 0.06);
+  color: var(--text-muted);
 }
 
 .login-btn {
   width: 100%;
-  margin-top: 0.35rem;
+  margin-top: 0.5rem;
 }
 
 .login-register {
-  margin-top: 1.15rem;
+  margin-top: 1.1rem;
   color: var(--text-muted);
   font-size: 0.88rem;
 }
@@ -166,9 +150,7 @@
   cursor: pointer;
   padding: 0;
   font-size: inherit;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-shadow: 0 0 8px rgba(82, 216, 255, 0.1);
+  font-weight: 600;
 }
 
 .link-btn:hover {
@@ -181,13 +163,8 @@
     grid-template-columns: 1fr;
   }
 
-  .login-intro {
-    order: 2;
-  }
-
-  .login-card {
-    order: 1;
-  }
+  .login-intro { order: 2; }
+  .login-card  { order: 1; }
 }
 
 @media (max-width: 640px) {
@@ -216,7 +193,7 @@
   .login-card textarea {
     width: 100%;
     min-height: 48px;
-    font-size: 16px; /* prevent iOS zoom-on-focus */
+    font-size: 16px; /* prevents iOS zoom-on-focus */
   }
 
   .login-btn {
@@ -224,16 +201,8 @@
     min-height: 48px;
   }
 
-  h1 {
-    font-size: 1.6rem;
-    line-height: 1.2;
-  }
+  h1 { font-size: 1.6rem; line-height: 1.2; }
+  h2 { font-size: 1.25rem; }
 
-  h2 {
-    font-size: 1.25rem;
-  }
-
-  .login-intro-list {
-    gap: 0.5rem;
-  }
+  .login-intro-list { gap: 0.5rem; }
 }

@@ -1,22 +1,18 @@
+/* ============================================================================
+   "Tron, grown up" — App.css
+   One-cyan neon system (amber reserved for coach-action accents).
+   No scanlines on content surfaces. No neonPulse / panelReveal / consoleSweep.
+   Sharper corners on data panels (blueprint feel). Rounded on buttons.
+   Section kickers and headings keep the uppercase/tracked treatment;
+   body text reads at normal case. Data values use tabular mono.
+   ============================================================================ */
+
 .App {
   min-height: 100vh;
   width: 100%;
   color: var(--text-primary);
   position: relative;
   padding-bottom: var(--space-10);
-}
-
-.App::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  background:
-    radial-gradient(circle at 12% 20%, rgba(82, 216, 255, 0.12), transparent 20%),
-    radial-gradient(circle at 88% 10%, rgba(42, 169, 255, 0.14), transparent 18%),
-    radial-gradient(circle at 78% 84%, rgba(167, 139, 250, 0.09), transparent 18%),
-    radial-gradient(circle at 20% 86%, rgba(255, 159, 26, 0.07), transparent 16%);
 }
 
 .page-shell,
@@ -26,24 +22,20 @@
   margin: 0 auto;
 }
 
+/* --------------------------------------------------------------------------
+   Navigation — one of the few surfaces that keeps a whisper of the scanline
+   texture to signal the Tron identity without suffocating content.
+   -------------------------------------------------------------------------- */
 .main-nav {
   position: sticky;
   top: 0;
   z-index: 100;
   background:
-    linear-gradient(180deg, rgba(5, 10, 21, 0.9), rgba(3, 8, 18, 0.82)),
+    linear-gradient(180deg, rgba(6, 10, 20, 0.92), rgba(4, 8, 16, 0.86)),
     var(--scanlines);
-  backdrop-filter: blur(18px);
-  border-bottom: 1px solid rgba(82, 216, 255, 0.18);
-  box-shadow: 0 12px 34px rgba(2, 8, 18, 0.42), inset 0 -1px 0 rgba(82, 216, 255, 0.08);
-}
-
-.main-nav::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(82, 216, 255, 0.5), rgba(255, 159, 26, 0.18), transparent);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
 }
 
 .nav-container {
@@ -56,36 +48,39 @@
 
 .nav-logo {
   text-decoration: none;
-  font-size: clamp(1.15rem, 1rem + 0.7vw, 1.55rem);
+  font-size: clamp(1.1rem, 1rem + 0.6vw, 1.35rem);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--neon-ice);
+  letter-spacing: 0.18em;
+  color: var(--text-primary);
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  text-shadow: 0 0 10px rgba(82, 216, 255, 0.18);
+  gap: 0.35rem;
 }
 
 .nav-logo span {
   color: var(--neon-cyan);
-  text-shadow: 0 0 16px rgba(82, 216, 255, 0.42);
 }
 
 .nav-actions {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .nav-links {
   display: flex;
-  gap: 0.6rem;
+  gap: 0.5rem;
   align-items: center;
   flex-wrap: wrap;
 }
 
+/* --------------------------------------------------------------------------
+   Pill-shaped interactive elements (nav, buttons). Simple 1px border, solid
+   fill, no masked gradient border or radial overlay. Rounded stays to mark
+   "this is a control, not information".
+   -------------------------------------------------------------------------- */
 .nav-links a,
 .nav-button,
 .text-btn,
@@ -93,80 +88,18 @@
 .add-exercise-btn,
 .status-pill,
 .completion-chip {
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   min-height: 44px;
-  border: 1px solid rgba(91, 169, 255, 0.28);
-  border-radius: 999px;
-  background:
-    linear-gradient(180deg, rgba(12, 24, 46, 0.96), rgba(6, 14, 28, 0.98)),
-    var(--scanlines);
-  box-shadow: var(--glow-chip), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--bg-panel);
   color: var(--text-secondary);
   text-decoration: none;
-  overflow: hidden;
-}
-
-.nav-links a::before,
-.nav-button::before,
-.text-btn::before,
-.remove-btn::before,
-.add-exercise-btn::before,
-.status-pill::before,
-.completion-chip::before,
-.home-container::before,
-.home-panel::before,
-.dashboard-header::before,
-.section-card::before,
-.exercise-card::before,
-.login-card::before,
-.login-intro::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background:
-    linear-gradient(135deg, rgba(82, 216, 255, 0.9), rgba(42, 169, 255, 0.72) 42%, rgba(82, 216, 255, 0.9) 74%, rgba(255, 159, 26, 0.4) 100%);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-.nav-links a::after,
-.nav-button::after,
-.text-btn::after,
-.remove-btn::after,
-.add-exercise-btn::after,
-.status-pill::after,
-.completion-chip::after,
-.home-panel::after,
-.section-card::after,
-.exercise-card::after,
-.dashboard-header::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(255, 159, 26, 0.12), transparent 24%),
-    radial-gradient(circle at 100% 0%, rgba(167, 139, 250, 0.14), transparent 26%),
-    linear-gradient(180deg, rgba(82, 216, 255, 0.045), transparent 28%),
-    var(--scanlines);
-  opacity: 0.85;
-}
-
-.nav-links a,
-.nav-button,
-.text-btn,
-.remove-btn,
-.add-exercise-btn {
-  appearance: none;
-  padding: 0.72rem 1rem;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -175,64 +108,55 @@
 .text-btn:hover,
 .remove-btn:hover,
 .add-exercise-btn:hover {
-  transform: translateY(-1px);
   border-color: var(--line-strong);
   color: var(--text-primary);
-  box-shadow: var(--glow-sm), inset 0 0 18px rgba(82, 216, 255, 0.08);
-  filter: brightness(1.04);
+  background: var(--bg-panel-2);
 }
 
 .nav-links a.active {
-  color: var(--neon-ice);
+  color: var(--neon-cyan);
   border-color: var(--line-strong);
-  background:
-    linear-gradient(180deg, rgba(18, 38, 72, 0.98), rgba(8, 18, 34, 0.98)),
-    var(--scanlines);
-  box-shadow: var(--glow-md), inset 0 0 20px rgba(82, 216, 255, 0.12);
+  background: var(--bg-panel-2);
+  box-shadow: var(--glow-ring);
 }
 
 .nav-user {
   color: var(--text-muted);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   text-transform: capitalize;
   padding: 0.35rem 0;
 }
 
+/* --------------------------------------------------------------------------
+   Home / marketing surface
+   -------------------------------------------------------------------------- */
 .home-container {
   width: min(1220px, calc(100% - 3rem));
-  margin: 4.75rem auto 0;
-  padding: clamp(1.2rem, 2vw, 1.6rem);
-  border-radius: var(--radius-xl);
-  background:
-    linear-gradient(145deg, rgba(8, 18, 37, 0.96), rgba(5, 11, 22, 0.88)),
-    var(--scanlines),
-    var(--noise);
-  box-shadow: var(--glow-lg), inset 0 0 42px rgba(82, 216, 255, 0.04);
+  margin: 3rem auto 0;
+  padding: clamp(1.4rem, 2.4vw, 2.2rem);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-lg);
   position: relative;
   overflow: hidden;
 }
 
-.home-container::before {
-  inset: 0;
-}
-
+/* One single corner accent — replaces the two radial gradient overlays */
 .home-container::after {
   content: '';
   position: absolute;
-  inset: auto -8% -20% auto;
-  width: 400px;
-  height: 400px;
-  background:
-    radial-gradient(circle, rgba(82, 216, 255, 0.2), transparent 58%),
-    radial-gradient(circle at 28% 30%, rgba(255, 159, 26, 0.08), transparent 34%);
+  inset: auto -6% -20% auto;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, rgba(95, 228, 255, 0.12), transparent 62%);
   pointer-events: none;
-  filter: blur(6px);
 }
 
 .home-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.8fr);
-  gap: clamp(1.4rem, 3vw, 2.4rem);
+  gap: clamp(1.4rem, 3vw, 2.2rem);
   position: relative;
   z-index: 1;
 }
@@ -247,6 +171,8 @@
   justify-content: center;
 }
 
+/* Small caps-style kickers. These KEEP the uppercase + wide tracking;
+   everything else drops it. */
 .home-eyebrow,
 .dashboard-kicker,
 .login-eyebrow {
@@ -254,183 +180,134 @@
   align-items: center;
   gap: 0.5rem;
   width: fit-content;
-  font-size: 0.77rem;
-  letter-spacing: 0.22em;
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
-  color: var(--neon-ice);
-  text-shadow: 0 0 8px rgba(82, 216, 255, 0.16);
-  padding: 0.48rem 0.84rem;
-  border-radius: 999px;
-  border: 1px solid rgba(82, 216, 255, 0.28);
-  background: linear-gradient(180deg, rgba(82, 216, 255, 0.09), rgba(42, 169, 255, 0.05));
-  box-shadow: var(--glow-chip);
+  color: var(--neon-cyan);
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--bg-panel-2);
 }
 
 .home-container h1,
 .dashboard-header h1 {
-  margin-top: 1.15rem;
-  font-size: clamp(2.3rem, 1.8rem + 2vw, 4.05rem);
-  line-height: 1.04;
-  text-transform: uppercase;
-  text-shadow: 0 0 12px rgba(82, 216, 255, 0.08);
+  margin-top: 1rem;
+  font-size: clamp(2rem, 1.6rem + 1.8vw, 3.4rem);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+  /* No uppercase, no text-shadow. Typography carries the weight. */
 }
 
 .home-description,
 .dashboard-description {
-  margin-top: 1.15rem;
+  margin-top: 1rem;
   max-width: 62ch;
   color: var(--text-secondary);
-  font-size: 1.04rem;
-  line-height: 1.8;
+  font-size: 1rem;
+  line-height: 1.7;
 }
 
 .home-buttons {
   display: flex;
-  gap: 0.9rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
-  margin-top: 2rem;
+  margin-top: 1.75rem;
 }
 
+/* --------------------------------------------------------------------------
+   Primary action buttons. Solid fill, thin cyan border, no multi-gradient
+   masked border. Amber variant for coach actions keeps its distinct hue.
+   -------------------------------------------------------------------------- */
 .home-btn,
 .save-btn,
 .login-btn {
-  position: relative;
-  border: 1px solid rgba(82, 216, 255, 0.42);
-  border-radius: 999px;
-  background:
-    linear-gradient(180deg, rgba(18, 47, 88, 0.98), rgba(8, 19, 36, 0.98)),
-    var(--scanlines);
-  color: var(--text-main);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  box-shadow: var(--glow-md), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  overflow: hidden;
-}
-
-.home-btn::before,
-.save-btn::before,
-.login-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background:
-    linear-gradient(135deg, rgba(82, 216, 255, 0.98), rgba(42, 169, 255, 0.82) 42%, rgba(82, 216, 255, 0.98) 74%, rgba(255, 159, 26, 0.48) 100%);
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-.home-btn::after,
-.save-btn::after,
-.login-btn::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(139, 233, 255, 0.08), transparent 30%);
-  pointer-events: none;
-}
-
-.home-btn,
-.save-btn,
-.login-btn,
-.status-pill,
-.completion-chip {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, #102a48, #081426);
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  padding: 0.85rem 1.35rem;
+  text-transform: none;
   text-decoration: none;
-}
-
-.home-btn,
-.save-btn,
-.login-btn,
-.status-pill {
-  padding: 0.9rem 1.38rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .home-btn:hover,
 .save-btn:hover:not(:disabled),
 .login-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  border-color: rgba(82, 216, 255, 0.84);
-  box-shadow: 0 0 0 1px rgba(82, 216, 255, 0.34), 0 18px 34px rgba(2, 8, 18, 0.56), 0 0 26px rgba(82, 216, 255, 0.22);
-  filter: brightness(1.06);
+  border-color: var(--neon-cyan);
+  background: linear-gradient(180deg, #143455, #0a1a2e);
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--neon-cyan);
 }
 
 .save-btn:disabled,
 .login-btn:disabled {
-  opacity: 0.58;
+  opacity: 0.5;
   cursor: not-allowed;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .coach-btn {
-  background:
-    linear-gradient(180deg, rgba(74, 34, 7, 0.96), rgba(34, 15, 4, 0.98)),
-    var(--scanlines);
-  border-color: rgba(255, 159, 26, 0.42);
-  box-shadow: var(--glow-hot), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, #3b1f06, #1a0c02);
+  border-color: rgba(255, 178, 63, 0.5);
+  color: #ffd489;
 }
 
-.coach-btn::before {
-  background:
-    linear-gradient(135deg, rgba(255, 159, 26, 0.98), rgba(255, 200, 87, 0.82) 42%, rgba(255, 159, 26, 0.98) 78%, rgba(82, 216, 255, 0.36) 100%);
+.coach-btn:hover {
+  border-color: var(--neon-amber);
+  background: linear-gradient(180deg, #4a2708, #210f03);
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--neon-amber);
 }
 
 .athlete-btn {
-  background:
-    linear-gradient(180deg, rgba(22, 18, 54, 0.96), rgba(10, 12, 28, 0.98)),
-    var(--scanlines);
-  border-color: rgba(167, 139, 250, 0.4);
-  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2), 0 16px 34px rgba(4, 8, 18, 0.54), 0 0 22px rgba(167, 139, 250, 0.16);
+  background: linear-gradient(180deg, #0d1f33, #06111f);
+  border-color: var(--line);
+  color: var(--text-primary);
 }
 
-.athlete-btn::before {
-  background:
-    linear-gradient(135deg, rgba(167, 139, 250, 0.96), rgba(82, 216, 255, 0.68) 42%, rgba(167, 139, 250, 0.96) 78%, rgba(255, 159, 26, 0.24) 100%);
+.athlete-btn:hover {
+  border-color: var(--neon-cyan);
+  background: linear-gradient(180deg, #12273f, #091625);
 }
 
 .home-side {
-  gap: 1rem;
+  gap: 0.875rem;
 }
 
+/* --------------------------------------------------------------------------
+   Cards (data surfaces). Sharper corners (blueprint feel), flat fill,
+   thin border, subtle shadow. No scanlines, no gradient-border masks,
+   no hover translate, no brightness pulse.
+   -------------------------------------------------------------------------- */
 .home-panel,
 .section-card,
 .exercise-card,
 .dashboard-header,
-.login-card {
+.login-card,
+.chart-card {
   position: relative;
-  border-radius: var(--radius-md);
-  background:
-    linear-gradient(180deg, rgba(8, 18, 37, 0.96), rgba(5, 11, 22, 0.98)),
-    var(--scanlines),
-    var(--noise);
-  box-shadow: var(--glow-md), inset 0 0 24px rgba(82, 216, 255, 0.04);
-  overflow: hidden;
-}
-
-.home-panel,
-.dashboard-header,
-.section-card,
-.exercise-card {
-  animation: panelReveal 380ms ease both, neonPulse 5.4s ease-in-out infinite;
+  border-radius: var(--radius-data);
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-sm);
 }
 
 .home-panel:hover,
 .section-card:hover,
 .exercise-card:hover,
-.chart-card:hover,
-.dashboard-header:hover,
-.login-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 0 0 1px rgba(82, 216, 255, 0.3), 0 20px 42px rgba(2, 8, 18, 0.6), 0 0 28px rgba(82, 216, 255, 0.18);
+.chart-card:hover {
+  border-color: var(--line-strong);
 }
 
 .home-panel {
   padding: 1.25rem;
   min-height: 168px;
+  display: flex;
+  flex-direction: column;
   justify-content: center;
 }
 
@@ -444,13 +321,19 @@
   color: var(--text-muted);
 }
 
+.home-panel-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .home-panel strong {
   display: block;
   margin-top: 0.8rem;
-  font-family: 'Exo 2', sans-serif;
+  font-family: var(--font-display);
   font-size: 1.1rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--text-primary);
 }
 
@@ -459,6 +342,9 @@
   color: var(--text-secondary);
 }
 
+/* --------------------------------------------------------------------------
+   Grids
+   -------------------------------------------------------------------------- */
 .home-metrics,
 .summary-grid,
 .dashboard-grid,
@@ -477,61 +363,60 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* --------------------------------------------------------------------------
+   Stat cells — data-forward. Big values use tabular mono.
+   -------------------------------------------------------------------------- */
 .home-metric,
 .detail-item {
-  padding: 0.98rem 1rem;
-  border-radius: var(--radius-sm);
-  background:
-    linear-gradient(180deg, rgba(9, 18, 34, 0.96), rgba(5, 12, 24, 0.98)),
-    var(--scanlines);
-  border: 1px solid rgba(82, 216, 255, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(82, 216, 255, 0.05), inset 0 0 18px rgba(42, 169, 255, 0.04);
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius-data);
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
   display: flex;
   flex-direction: column;
-  gap: 0.32rem;
-  position: relative;
-}
-
-.home-metric::after,
-.detail-item::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(180deg, rgba(139, 233, 255, 0.05), transparent 32%);
-  pointer-events: none;
+  gap: 0.35rem;
 }
 
 .home-metric .label,
 .detail-item .label {
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  text-shadow: 0 0 8px rgba(82, 216, 255, 0.08);
+  color: var(--text-muted);
 }
 
 .home-metric .value,
 .detail-item .value {
-  font-size: 1rem;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: -0.01em;
 }
 
 .home-status {
   margin-top: auto;
 }
 
+/* --------------------------------------------------------------------------
+   Chips / pills
+   -------------------------------------------------------------------------- */
 .status-pill,
 .completion-chip {
   min-height: auto;
-  padding: 0.58rem 0.9rem;
+  padding: 0.45rem 0.8rem;
   color: var(--text-secondary);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  box-shadow: var(--glow-chip), inset 0 0 12px rgba(82, 216, 255, 0.05);
+  letter-spacing: 0.14em;
+  border-radius: var(--radius-pill);
+  background: var(--bg-deep);
 }
 
+/* --------------------------------------------------------------------------
+   Dashboards
+   -------------------------------------------------------------------------- */
 .dashboard-container {
   margin-top: 2rem;
 }
@@ -541,122 +426,105 @@
   padding-bottom: var(--space-10);
 }
 
-.coach-dashboard .dashboard-header {
-  background:
-    linear-gradient(180deg, rgba(12, 20, 40, 0.98), rgba(6, 13, 26, 0.98)),
-    linear-gradient(90deg, rgba(255, 159, 26, 0.08), rgba(82, 216, 255, 0.04) 38%, transparent 60%),
-    var(--scanlines);
+.dashboard-header {
+  padding: clamp(1.25rem, 2vw, 1.75rem);
+  margin-bottom: 1rem;
+  background: var(--bg-panel);
 }
 
+/* Coach role: amber accent stripe. */
+.coach-dashboard .dashboard-header {
+  background:
+    linear-gradient(90deg, rgba(255, 178, 63, 0.06), transparent 40%),
+    var(--bg-panel);
+}
+
+/* Athlete role: cyan accent stripe (was violet — retired). */
 .athlete-dashboard .dashboard-header {
   background:
-    linear-gradient(180deg, rgba(12, 18, 37, 0.98), rgba(6, 13, 26, 0.98)),
-    linear-gradient(90deg, rgba(167, 139, 250, 0.1), rgba(82, 216, 255, 0.04) 42%, transparent 62%),
-    var(--scanlines);
+    linear-gradient(90deg, rgba(95, 228, 255, 0.06), transparent 40%),
+    var(--bg-panel);
 }
 
 .coach-dashboard .dashboard-kicker {
-  border-color: rgba(255, 159, 26, 0.34);
+  border-color: rgba(255, 178, 63, 0.4);
   color: var(--neon-amber);
-  background: rgba(255, 159, 26, 0.08);
-  box-shadow: var(--glow-hot);
+  background: rgba(255, 178, 63, 0.08);
 }
 
 .athlete-dashboard .dashboard-kicker {
-  border-color: rgba(167, 139, 250, 0.38);
-  color: var(--neon-violet);
-  background: rgba(167, 139, 250, 0.1);
-  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2), 0 0 18px rgba(167, 139, 250, 0.12);
+  border-color: var(--line-strong);
+  color: var(--neon-cyan);
+  background: var(--bg-panel-2);
 }
 
 .coach-dashboard .status-pill {
-  border-color: rgba(255, 159, 26, 0.26);
+  border-color: rgba(255, 178, 63, 0.28);
   color: var(--neon-amber);
 }
 
 .athlete-dashboard .status-pill {
-  border-color: rgba(167, 139, 250, 0.26);
-  color: #ddd4ff;
+  border-color: var(--line);
+  color: var(--neon-cyan);
 }
 
-.coach-dashboard .section-card,
-.coach-dashboard .exercise-card {
-  box-shadow: 0 0 0 1px rgba(255, 159, 26, 0.08), 0 18px 36px rgba(2, 8, 18, 0.54), 0 0 18px rgba(82, 216, 255, 0.1);
+/* Simplified section-card tinting per role (just a top border-glow) */
+.coach-dashboard .section-card {
+  box-shadow: var(--shadow-sm), inset 3px 0 0 rgba(255, 178, 63, 0.14);
+}
+
+.athlete-dashboard .section-card {
+  box-shadow: var(--shadow-sm), inset 3px 0 0 rgba(95, 228, 255, 0.14);
 }
 
 .coach-dashboard .section-title-row::after {
-  background: linear-gradient(90deg, rgba(255, 159, 26, 0.54), rgba(82, 216, 255, 0.18), transparent);
-}
-
-.athlete-dashboard .section-card,
-.athlete-dashboard .exercise-card {
-  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.08), 0 18px 36px rgba(2, 8, 18, 0.54), 0 0 18px rgba(82, 216, 255, 0.1);
+  background: linear-gradient(90deg, rgba(255, 178, 63, 0.4), transparent);
 }
 
 .athlete-dashboard .section-title-row::after {
-  background: linear-gradient(90deg, rgba(167, 139, 250, 0.52), rgba(82, 216, 255, 0.18), transparent);
+  background: linear-gradient(90deg, var(--line-strong), transparent);
 }
 
-.athlete-dashboard .chart-card {
-  background:
-    linear-gradient(180deg, rgba(10, 18, 38, 0.98), rgba(5, 11, 22, 0.98)),
-    linear-gradient(180deg, rgba(167, 139, 250, 0.06), transparent 35%),
-    var(--scanlines);
-}
-
-.coach-dashboard .builder-toolbar {
-  background:
-    linear-gradient(180deg, rgba(10, 18, 37, 0.98), rgba(6, 13, 26, 0.98)),
-    linear-gradient(90deg, rgba(255, 159, 26, 0.06), transparent 28%),
-    var(--scanlines);
-}
-
+/* Coach save button stays amber for brand recognition in the coach workflow. */
 .coach-dashboard .save-btn {
-  background:
-    linear-gradient(180deg, rgba(78, 36, 7, 0.98), rgba(34, 14, 4, 0.98)),
-    var(--scanlines);
-  border-color: rgba(255, 159, 26, 0.46);
-  box-shadow: var(--glow-hot), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, #3b1f06, #1a0c02);
+  border-color: rgba(255, 178, 63, 0.5);
+  color: #ffd489;
 }
 
-.coach-dashboard .save-btn::before {
-  background:
-    linear-gradient(135deg, rgba(255, 159, 26, 0.98), rgba(255, 200, 87, 0.82) 42%, rgba(255, 159, 26, 0.98) 78%, rgba(82, 216, 255, 0.28) 100%);
+.coach-dashboard .save-btn:hover:not(:disabled) {
+  border-color: var(--neon-amber);
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--neon-amber);
 }
 
+/* Athlete save button uses the primary cyan (violet retired). */
 .athlete-dashboard .save-btn {
-  background:
-    linear-gradient(180deg, rgba(24, 20, 58, 0.98), rgba(8, 14, 29, 0.98)),
-    var(--scanlines);
-  border-color: rgba(167, 139, 250, 0.42);
-  box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.2), 0 16px 34px rgba(2, 8, 18, 0.54), 0 0 24px rgba(167, 139, 250, 0.16);
+  background: linear-gradient(180deg, #102a48, #081426);
+  border-color: var(--line-strong);
 }
 
-.athlete-dashboard .save-btn::before {
-  background:
-    linear-gradient(135deg, rgba(167, 139, 250, 0.96), rgba(82, 216, 255, 0.72) 46%, rgba(167, 139, 250, 0.96) 78%, rgba(255, 159, 26, 0.22) 100%);
-}
-
+/* --------------------------------------------------------------------------
+   API status bar
+   -------------------------------------------------------------------------- */
 .api-status {
   margin-bottom: 0.9rem;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
 }
 
-.api-ok {
-  color: var(--success);
-  text-shadow: 0 0 10px rgba(54, 240, 197, 0.16);
+.api-ok { color: var(--success); }
+.api-error { color: var(--danger); }
+
+.dashboard-header h1 {
+  font-size: clamp(1.6rem, 1.3rem + 1.2vw, 2.4rem);
 }
 
-.api-error {
-  color: var(--danger);
-  text-shadow: 0 0 10px rgba(255, 77, 109, 0.16);
+.dashboard-description {
+  max-width: 70ch;
 }
 
-.dashboard-header {
-  padding: clamp(1.35rem, 2vw, 2rem);
-  margin-bottom: 1.25rem;
-}
-
+/* --------------------------------------------------------------------------
+   Rows / horizontal groups
+   -------------------------------------------------------------------------- */
 .dashboard-kicker-row,
 .section-title-row,
 .exercise-header,
@@ -670,7 +538,7 @@
 .result-row,
 .header-actions {
   display: flex;
-  gap: 0.8rem;
+  gap: 0.75rem;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -679,23 +547,17 @@
   justify-content: space-between;
 }
 
-.dashboard-header h1 {
-  font-size: clamp(1.85rem, 1.45rem + 1.4vw, 2.9rem);
-}
-
-.dashboard-description {
-  max-width: 70ch;
-}
-
+/* --------------------------------------------------------------------------
+   Messaging
+   -------------------------------------------------------------------------- */
 .save-message,
 .login-error,
 .login-success {
   margin-top: 1rem;
-  padding: 0.88rem 1rem;
-  border-radius: var(--radius-sm);
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-data);
   border: 1px solid;
-  font-size: 0.94rem;
-  box-shadow: inset 0 0 14px rgba(255, 255, 255, 0.02);
+  font-size: 0.92rem;
 }
 
 .save-message.success,
@@ -708,10 +570,13 @@
 .save-message.error,
 .login-error {
   color: #ff8ea6;
-  border-color: rgba(255, 77, 109, 0.34);
+  border-color: rgba(255, 90, 110, 0.34);
   background: var(--danger-soft);
 }
 
+/* --------------------------------------------------------------------------
+   Program / day / exercise stacks
+   -------------------------------------------------------------------------- */
 .program-content,
 .section-stack,
 .day-stack,
@@ -737,7 +602,7 @@
 .section-title-row {
   justify-content: space-between;
   align-items: baseline;
-  margin-top: 0.45rem;
+  margin-top: 0.25rem;
   padding-bottom: 0.45rem;
   position: relative;
 }
@@ -749,30 +614,26 @@
   right: 0;
   bottom: 0;
   height: 1px;
-  background: linear-gradient(90deg, rgba(82, 216, 255, 0.44), rgba(42, 169, 255, 0.16), transparent);
+  background: linear-gradient(90deg, var(--line-strong), transparent);
 }
 
 .section-title-row h3,
 .exercise-header h4,
 .chart-card h4,
 .day-header h3 {
-  font-size: 1.02rem;
-  letter-spacing: 0.12em;
+  font-size: 0.95rem;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--neon-ice);
-  text-shadow: 0 0 10px rgba(82, 216, 255, 0.12);
-}
-
-.exercise-card h4,
-.chart-card h4,
-.day-header h3 {
   color: var(--text-primary);
 }
 
 .section-subtitle {
-  font-size: 0.84rem;
+  font-size: 0.82rem;
 }
 
+/* --------------------------------------------------------------------------
+   Forms
+   -------------------------------------------------------------------------- */
 .form-row {
   align-items: stretch;
 }
@@ -780,7 +641,7 @@
 .form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.8rem;
+  gap: 0.75rem;
 }
 
 .compact-grid {
@@ -797,21 +658,18 @@
 .login-card select,
 .login-card textarea {
   width: 100%;
-  min-height: 48px;
-  padding: 0.82rem 0.92rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(91, 169, 255, 0.28);
-  background:
-    linear-gradient(180deg, rgba(4, 11, 24, 0.98), rgba(7, 15, 30, 0.98)),
-    var(--scanlines);
+  min-height: 44px;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-data);
+  border: 1px solid var(--line);
+  background: var(--bg-input);
   color: var(--text-primary);
-  box-shadow: var(--inner-glow), 0 0 0 1px rgba(82, 216, 255, 0.04);
 }
 
 .notes-textarea,
 .athlete-notes {
   resize: vertical;
-  min-height: 104px;
+  min-height: 96px;
 }
 
 .exercise-input:hover,
@@ -822,8 +680,7 @@
 .login-card input:hover,
 .login-card select:hover,
 .login-card textarea:hover {
-  background: linear-gradient(180deg, rgba(6, 15, 31, 0.98), rgba(8, 19, 37, 1)), var(--scanlines);
-  border-color: rgba(82, 216, 255, 0.38);
+  border-color: var(--line-strong);
 }
 
 .exercise-input:focus,
@@ -835,17 +692,16 @@
 .login-card input:focus,
 .login-card select:focus,
 .login-card textarea:focus {
-  border-color: rgba(82, 216, 255, 0.84);
-  box-shadow: 0 0 0 3px rgba(82, 216, 255, 0.16), 0 0 22px rgba(82, 216, 255, 0.16), inset 0 0 16px rgba(82, 216, 255, 0.08);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 0 3px rgba(95, 228, 255, 0.14);
 }
 
 .day-title-input {
   min-width: 0;
   flex: 1 1 220px;
   font-weight: 700;
-  font-family: 'Exo 2', sans-serif;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
 }
 
 .exercise-input {
@@ -869,25 +725,22 @@
 
 .exercise-header span {
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .coach-notes,
 .empty-inline,
 .chart-empty,
 .week-info {
-  padding: 0.9rem 1rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(82, 216, 255, 0.18);
-  background:
-    linear-gradient(180deg, rgba(8, 15, 30, 0.9), rgba(6, 12, 24, 0.98)),
-    var(--scanlines);
-  box-shadow: inset 0 0 16px rgba(82, 216, 255, 0.04);
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-data);
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
 }
 
 .exercise-card.completed {
-  border-color: rgba(54, 240, 197, 0.34);
-  box-shadow: 0 0 0 1px rgba(54, 240, 197, 0.16), 0 16px 34px rgba(2, 8, 18, 0.54), 0 0 22px rgba(54, 240, 197, 0.12);
+  border-color: rgba(54, 240, 197, 0.4);
+  box-shadow: var(--shadow-sm), inset 0 0 0 1px rgba(54, 240, 197, 0.12);
 }
 
 .completed-checkbox {
@@ -899,81 +752,157 @@
 }
 
 .completed-checkbox input {
-  accent-color: var(--accent-cyan);
+  accent-color: var(--neon-cyan);
 }
 
 .chart-card {
-  min-height: 360px;
+  min-height: 320px;
+  padding: 1rem;
 }
 
 .chart-card canvas {
-  max-height: 280px;
+  max-height: 260px;
 }
 
 .loading,
 .no-program {
   text-align: center;
-  padding: 3.5rem 1.25rem;
-  border-radius: var(--radius-md);
-  background:
-    linear-gradient(180deg, rgba(8, 15, 30, 0.94), rgba(6, 12, 24, 0.98)),
-    var(--scanlines);
-  box-shadow: var(--glow-md);
+  padding: 3rem 1.25rem;
+  border-radius: var(--radius-data);
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
 }
 
 .loading {
-  color: var(--accent-cyan);
+  color: var(--neon-cyan);
 }
 
 .no-program h2 {
   margin-bottom: 0.55rem;
 }
 
-@keyframes panelReveal {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* --------------------------------------------------------------------------
+   Route loading state + ErrorBoundary fallback
+   -------------------------------------------------------------------------- */
+.route-loading {
+  margin: 4rem auto;
+  text-align: center;
+  color: var(--neon-cyan);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  font-size: 0.8rem;
 }
 
-@keyframes neonPulse {
-  0%,
-  100% {
-    filter: brightness(1);
-  }
-  50% {
-    filter: brightness(1.03);
-  }
+.error-boundary {
+  margin: 4rem auto;
+  max-width: 640px;
+  padding: 2rem;
+  border-radius: var(--radius-data);
+  border: 1px solid rgba(255, 90, 110, 0.34);
+  background: var(--danger-soft);
+  color: var(--text-primary);
+  text-align: center;
 }
 
-@keyframes consoleSweep {
-  0% {
-    background-position: 0 0, 0 0, 0 0;
-  }
-  50% {
-    background-position: 0 8px, 0 0, 0 0;
-  }
-  100% {
-    background-position: 0 0, 0 0, 0 0;
-  }
+.error-boundary h1 {
+  color: var(--danger);
+  margin-bottom: 0.75rem;
 }
 
-.home-panel,
-.dashboard-header,
-.section-card,
-.exercise-card,
-.login-card,
-.login-intro {
-  animation-name: panelReveal, neonPulse, consoleSweep;
-  animation-duration: 380ms, 5.4s, 8s;
-  animation-timing-function: ease, ease-in-out, linear;
-  animation-iteration-count: 1, infinite, infinite;
+.error-boundary-details {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: var(--bg-void);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-data);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
+.error-boundary button {
+  margin-top: 1rem;
+  padding: 0.7rem 1.4rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--bg-panel-2);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   Spreadsheet editor (alternative view of the program builder).
+   Intentionally utilitarian -- coaches who choose this view want it to feel
+   like Excel, not a sci-fi console. Kept flat and dense.
+   -------------------------------------------------------------------------- */
+.spreadsheet-editor {
+  padding: 1rem;
+}
+
+.spreadsheet-editor-hint {
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.spreadsheet-editor-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-data);
+}
+
+.spreadsheet-editor-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-deep);
+  min-width: 820px;
+}
+
+.spreadsheet-editor-table th,
+.spreadsheet-editor-table td {
+  border: 1px solid var(--line);
+  padding: 0;
+  vertical-align: middle;
+}
+
+.spreadsheet-editor-table th {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--text-muted);
+  background: var(--bg-panel);
+}
+
+.spreadsheet-editor-table input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0.4rem 0.55rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.spreadsheet-editor-table input:focus {
+  background: rgba(95, 228, 255, 0.06);
+  box-shadow: inset 0 0 0 2px var(--neon-cyan);
+}
+
+.spreadsheet-editor-table tr:hover input {
+  background: rgba(95, 228, 255, 0.02);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive: 1024 / 768 / 640 breakpoints. The 640 block preserves the
+   mobile retrofit landed earlier.
+   -------------------------------------------------------------------------- */
 @media (max-width: 1024px) {
   .home-grid,
   .dashboard-grid,
@@ -1042,12 +971,7 @@
   }
 }
 
-/* ============================================================
-   Phone breakpoint (<= 640px). Mobile-first retrofit so the app
-   is usable on a 360px-wide Android. Stacks every horizontal row,
-   collapses every multi-column grid, tightens page chrome, and
-   keeps tap targets at the 44px iOS HIG minimum.
-   ============================================================ */
+/* Phone breakpoint (<=640px) — preserved from the earlier mobile retrofit. */
 @media (max-width: 640px) {
   .page-shell,
   .nav-container,
@@ -1134,24 +1058,12 @@
     padding: 0.75rem 0;
   }
 
-  h1 {
-    font-size: 1.55rem;
-    line-height: 1.2;
-  }
+  h1 { font-size: 1.55rem; line-height: 1.2; }
+  h2 { font-size: 1.25rem; }
 
-  h2 {
-    font-size: 1.25rem;
-  }
+  .chart-card { min-height: 280px; }
+  .chart-card canvas { max-height: 220px !important; }
 
-  .chart-card {
-    min-height: 280px;
-  }
-
-  .chart-card canvas {
-    max-height: 220px !important;
-  }
-
-  /* Inputs and selects: full-width with comfortable tap height. */
   .exercise-input,
   .form-input,
   .date-input,
@@ -1164,93 +1076,11 @@
   }
 
   .notes-textarea,
-  .athlete-notes {
-    min-height: 96px;
-  }
+  .athlete-notes { min-height: 96px; }
 
-  /* Bottom-sticky save bar feels native on phones during long
-     forms; cheap to add and avoids hunting for a button at the
-     bottom of a long workout list. */
   .save-message {
     position: sticky;
     bottom: 0.5rem;
     z-index: 5;
-  }
-}
-
-/* ============================================================
-   Spreadsheet editor (alternative view of the program builder).
-   Intentionally utilitarian, not neon: coaches who choose this
-   view want it to feel like Excel, not a sci-fi console.
-   ============================================================ */
-.spreadsheet-editor {
-  padding: 1rem;
-}
-
-.spreadsheet-editor-hint {
-  margin-bottom: 0.75rem;
-  font-size: 0.8rem;
-}
-
-.spreadsheet-editor-scroll {
-  overflow-x: auto;
-  border: 1px solid rgba(91, 169, 255, 0.2);
-  border-radius: var(--radius-sm);
-}
-
-.spreadsheet-editor-table {
-  width: 100%;
-  border-collapse: collapse;
-  background:
-    linear-gradient(180deg, rgba(4, 11, 24, 0.98), rgba(7, 15, 30, 0.98));
-  min-width: 640px;
-}
-
-.spreadsheet-editor-table th,
-.spreadsheet-editor-table td {
-  border: 1px solid rgba(91, 169, 255, 0.18);
-  padding: 0;
-  vertical-align: middle;
-}
-
-.spreadsheet-editor-table th {
-  padding: 0.5rem 0.6rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  text-align: left;
-  color: var(--neon-ice);
-  background: rgba(8, 18, 37, 0.94);
-}
-
-.spreadsheet-editor-table input {
-  width: 100%;
-  min-height: 36px;
-  padding: 0.45rem 0.6rem;
-  border: none;
-  background: transparent;
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 0.9rem;
-  outline: none;
-}
-
-.spreadsheet-editor-table input:focus {
-  background: rgba(82, 216, 255, 0.08);
-  box-shadow: inset 0 0 0 2px rgba(82, 216, 255, 0.5);
-}
-
-.spreadsheet-editor-table tr:hover input {
-  background: rgba(82, 216, 255, 0.03);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-panel,
-  .dashboard-header,
-  .section-card,
-  .exercise-card,
-  .login-card,
-  .login-intro {
-    animation: panelReveal 220ms ease both;
   }
 }
