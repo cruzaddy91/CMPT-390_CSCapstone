@@ -830,33 +830,148 @@
 }
 
 /* --------------------------------------------------------------------------
-   Coach dashboard: list view (sparse rows)
+   Coach dashboard: programs grouped by athlete. Two nested collapse levels.
+   Outer .athlete-group is the roster row -- click toggles the inner list of
+   their programs. Inner .program-row is each block -- click toggles the
+   extra-detail + actions panel. Opening the editor is a distinct CTA inside
+   the program's expanded body, never a side-effect of toggling a chevron.
    -------------------------------------------------------------------------- */
-.programs-list {
+.athlete-groups-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 0.75rem;
+}
+
+.athlete-group {
   border: 1px solid var(--line);
   border-radius: var(--radius-data);
-  overflow: hidden;
   background: var(--bg-panel);
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
 }
 
-.program-row {
+.athlete-group.is-open {
+  border-color: var(--line-strong);
+}
+
+.athlete-group-head {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.15rem;
-  border-bottom: 1px solid var(--line);
-  transition: background-color var(--transition-fast);
+  gap: 0.9rem;
+  padding: 0.9rem 1.1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
 }
 
-/* Block-progress ring on each program row. Reuses the athlete WeekStrip
-   vocabulary so a coach sees progress the same way their athlete does. */
-.program-row-ring {
+.athlete-group-head:hover {
+  background: var(--bg-panel-2);
+}
+
+.athlete-group-ring {
   position: relative;
   width: 44px;
   height: 44px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.athlete-group-ring-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  letter-spacing: -0.02em;
+  pointer-events: none;
+}
+
+.athlete-group-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.athlete-group-name {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.athlete-group-meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.athlete-group-meta .data {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.athlete-group-chevron {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  padding: 0 0.25rem;
+}
+
+.athlete-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.3rem 0.75rem 0.75rem 0.75rem;
+  background: var(--bg-deep);
+  border-top: 1px solid var(--line);
+}
+
+/* Program row -- one block inside an athlete's expanded list. */
+.program-row {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-data);
+  background: var(--bg-panel);
+  transition: border-color var(--transition-fast);
+  margin-top: 0.5rem;
+}
+
+.program-row.is-open {
+  border-color: var(--line-strong);
+}
+
+.program-row-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.75rem 0.9rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.program-row-head:hover {
+  background: var(--bg-panel-2);
+}
+
+.program-row-ring {
+  position: relative;
+  width: 38px;
+  height: 38px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -869,46 +984,61 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   color: var(--text-secondary);
   letter-spacing: -0.02em;
   pointer-events: none;
 }
 
-.program-row:last-child {
-  border-bottom: none;
-}
-
-.program-row:hover {
-  background: var(--bg-panel-2);
-}
-
-.program-row-main {
+.program-row-head-main {
   flex: 1;
   min-width: 0;
-  cursor: pointer;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-}
-
-.program-row-main:focus-visible {
-  outline: 2px solid var(--neon-cyan);
-  outline-offset: 2px;
-  border-radius: var(--radius-xs);
+  gap: 0.15rem;
 }
 
 .program-row-title {
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: 0.01em;
 }
 
-.program-row-meta {
+.program-row-dates {
   color: var(--text-muted);
-  font-size: 0.86rem;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.program-row-dates .data {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.program-row-chevron {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  padding: 0 0.15rem;
+}
+
+.program-row-body {
+  padding: 0 0.9rem 0.85rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  border-top: 1px solid var(--line);
+}
+
+.program-row-meta {
+  margin-top: 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
   display: flex;
   gap: 0.35rem;
   align-items: center;
@@ -928,7 +1058,7 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .program-row-reassign-select {

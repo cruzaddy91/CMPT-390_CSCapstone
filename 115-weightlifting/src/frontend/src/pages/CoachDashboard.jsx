@@ -430,90 +430,226 @@ const AssignedAthleteBadge = ({ username }) => {
 }
 
 // --------------------------------------------------------------------------
-// List view -- sparse rows instead of full cards, one primary CTA.
+// List view -- programs grouped by athlete. Each athlete is a collapse-default
+// container with a glance-view of progress; expand reveals their programs
+// sorted newest-first; each program is its own collapse-default row that
+// shows extra detail when expanded and links into the full editor.
 // --------------------------------------------------------------------------
-const ListView = ({ programs, athletes, assignmentDrafts, onAssignDraftChange, onAssignSubmit,
-  onNewProgram, onEditProgram, saveMessage }) => (
-  <>
-    <div className="dashboard-header">
-      <div className="dashboard-kicker-row">
-        <span className="dashboard-kicker">Coach</span>
-        <button type="button" className="save-btn" onClick={onNewProgram}>+ New program</button>
-      </div>
-      <h1>Your programs</h1>
-      <p className="dashboard-description">
-        Structured weekly plans, assignments, and reassignments. Click a program to edit, or start a new one.
-      </p>
-      {saveMessage && (
-        <div className={`save-message ${saveMessage.toLowerCase().includes('error') || saveMessage.toLowerCase().includes('could') ? 'error' : 'success'}`}>
-          {saveMessage}
+
+// One program inside an athlete group. Collapsed: name + date range + pct ring
+// only. Expanded: progress breakdown + Edit + Reassign controls.
+const ProgramRow = ({ program, athletes, assignmentDrafts, onAssignDraftChange, onAssignSubmit, onEditProgram }) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const normalized = normalizeProgramData(program.program_data, program.start_date)
+  const exerciseCount = countExercises(normalized)
+  const progress = summarizeProgramCompletion(program, exerciseCount)
+  const pct = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
+  return (
+    <div className={`program-row ${isOpen ? 'is-open' : ''}`}>
+      <button
+        type="button"
+        className="program-row-head"
+        onClick={() => setIsOpen((v) => !v)}
+        aria-expanded={isOpen}
+      >
+        <div className="program-row-ring" aria-label={`${progress.completed} of ${progress.total} exercises completed`}>
+          <ProgressRing completed={progress.completed} total={progress.total} size={38} strokeWidth={3} />
+          <span className="program-row-ring-pct data">{pct}%</span>
+        </div>
+        <span className="program-row-head-main">
+          <span className="program-row-title">{program.name}</span>
+          <span className="program-row-dates">
+            <span className="data">{program.start_date}</span>
+            {program.end_date && (
+              <>
+                <span className="program-row-dot">→</span>
+                <span className="data">{program.end_date}</span>
+              </>
+            )}
+          </span>
+        </span>
+        <span className="program-row-chevron" aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+      </button>
+      {isOpen && (
+        <div className="program-row-body">
+          <div className="program-row-meta">
+            <span><span className="data">{progress.completed}</span>/<span className="data">{progress.total}</span> done</span>
+            <span className="program-row-dot">·</span>
+            <span><span className="data">{normalized.days.length}</span> days</span>
+            <span className="program-row-dot">·</span>
+            <span><span className="data">{exerciseCount}</span> exercises</span>
+            {program.updated_at && (
+              <>
+                <span className="program-row-dot">·</span>
+                <span className="program-row-updated">updated {relativeTimeSince(program.updated_at)}</span>
+              </>
+            )}
+          </div>
+          <div className="program-row-actions">
+            <button type="button" className="save-btn" onClick={() => onEditProgram(program)}>
+              Open program →
+            </button>
+            <select
+              value={assignmentDrafts[program.id] ?? ''}
+              onChange={(event) => onAssignDraftChange(program.id, event.target.value)}
+              className="form-input program-row-reassign-select"
+              aria-label="Reassign athlete"
+            >
+              <option value="">Reassign…</option>
+              {athletes.map((athlete) => (
+                <option key={athlete.id} value={athlete.id}>{athlete.username}</option>
+              ))}
+            </select>
+            {assignmentDrafts[program.id] && (
+              <button type="button" className="text-btn program-row-reassign-go" onClick={() => onAssignSubmit(program.id)}>
+                Go
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
+  )
+}
 
-    {programs.length === 0 ? (
-      <div className="empty-state">
-        <p>No programs yet.</p>
-        <p className="section-subtitle">Click <strong>+ New program</strong> to build your first one, or download the Excel template to import from a spreadsheet.</p>
+// One athlete container. Collapsed: name + program count + aggregate ring.
+// Expanded: their programs, newest start_date first.
+const AthleteGroup = ({ athleteUsername, programs, athletes, assignmentDrafts,
+  onAssignDraftChange, onAssignSubmit, onEditProgram }) => {
+  const [isOpen, setIsOpen] = useState(false)
+  // Aggregate totals across every program in this athlete's bucket so the
+  // collapsed header shows a single "how's this athlete doing overall" read.
+  const { totalCompleted, totalExercises, mostRecent } = programs.reduce(
+    (acc, p) => {
+      const normalized = normalizeProgramData(p.program_data, p.start_date)
+      const exerciseCount = countExercises(normalized)
+      const summary = summarizeProgramCompletion(p, exerciseCount)
+      acc.totalCompleted += summary.completed
+      acc.totalExercises += summary.total
+      if (!acc.mostRecent || (p.updated_at && p.updated_at > acc.mostRecent)) acc.mostRecent = p.updated_at
+      return acc
+    },
+    { totalCompleted: 0, totalExercises: 0, mostRecent: null },
+  )
+  const pct = totalExercises > 0 ? Math.round((totalCompleted / totalExercises) * 100) : 0
+  return (
+    <div className={`athlete-group ${isOpen ? 'is-open' : ''}`}>
+      <button
+        type="button"
+        className="athlete-group-head"
+        onClick={() => setIsOpen((v) => !v)}
+        aria-expanded={isOpen}
+      >
+        <div className="athlete-group-ring">
+          <ProgressRing completed={totalCompleted} total={totalExercises} size={44} strokeWidth={3} />
+          <span className="athlete-group-ring-pct data">{pct}%</span>
+        </div>
+        <span className="athlete-group-main">
+          <span className="athlete-group-name">@{athleteUsername}</span>
+          <span className="athlete-group-meta">
+            <span className="data">{programs.length}</span> program{programs.length === 1 ? '' : 's'}
+            <span className="program-row-dot">·</span>
+            <span className="data">{totalCompleted}</span>/<span className="data">{totalExercises}</span> exercises done
+            {mostRecent && (
+              <>
+                <span className="program-row-dot">·</span>
+                <span>updated {relativeTimeSince(mostRecent)}</span>
+              </>
+            )}
+          </span>
+        </span>
+        <span className="athlete-group-chevron" aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+      </button>
+      {isOpen && (
+        <div className="athlete-group-body">
+          {programs.map((program) => (
+            <ProgramRow
+              key={program.id}
+              program={program}
+              athletes={athletes}
+              assignmentDrafts={assignmentDrafts}
+              onAssignDraftChange={onAssignDraftChange}
+              onAssignSubmit={onAssignSubmit}
+              onEditProgram={onEditProgram}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const ListView = ({ programs, athletes, assignmentDrafts, onAssignDraftChange, onAssignSubmit,
+  onNewProgram, onEditProgram, saveMessage }) => {
+  // Bucket programs by athlete, newest-first within each bucket, then sort
+  // the groups alphabetically by athlete username so the roster is stable
+  // between renders.
+  const groupsByAthlete = programs.reduce((acc, program) => {
+    const key = program.athlete_id ?? 'unassigned'
+    if (!acc[key]) {
+      acc[key] = {
+        athleteId: key,
+        athleteUsername: program.athlete_username || 'unassigned',
+        programs: [],
+      }
+    }
+    acc[key].programs.push(program)
+    return acc
+  }, {})
+  const groups = Object.values(groupsByAthlete)
+  groups.forEach((group) => {
+    group.programs.sort((a, b) => {
+      // Start date descending -> most-recent block surfaces first.
+      const aStart = a.start_date || ''
+      const bStart = b.start_date || ''
+      if (aStart !== bStart) return bStart.localeCompare(aStart)
+      return (b.updated_at || '').localeCompare(a.updated_at || '')
+    })
+  })
+  groups.sort((a, b) => a.athleteUsername.localeCompare(b.athleteUsername))
+
+  return (
+    <>
+      <div className="dashboard-header">
+        <div className="dashboard-kicker-row">
+          <span className="dashboard-kicker">Coach</span>
+          <button type="button" className="save-btn" onClick={onNewProgram}>+ New program</button>
+        </div>
+        <h1>Your athletes</h1>
+        <p className="dashboard-description">
+          Each athlete's programs are collapsed by default. Tap to expand, then tap a program to open it.
+        </p>
+        {saveMessage && (
+          <div className={`save-message ${saveMessage.toLowerCase().includes('error') || saveMessage.toLowerCase().includes('could') ? 'error' : 'success'}`}>
+            {saveMessage}
+          </div>
+        )}
       </div>
-    ) : (
-      <div className="programs-list">
-        {programs.map((program) => {
-          const normalized = normalizeProgramData(program.program_data, program.start_date)
-          const exerciseCount = countExercises(normalized)
-          const progress = summarizeProgramCompletion(program, exerciseCount)
-          const pct = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
-          return (
-            <div key={program.id} className="program-row">
-              <div className="program-row-ring" aria-label={`${progress.completed} of ${progress.total} exercises completed`}>
-                <ProgressRing completed={progress.completed} total={progress.total} size={44} strokeWidth={3} />
-                <span className="program-row-ring-pct data">{pct}%</span>
-              </div>
-              <div className="program-row-main" onClick={() => onEditProgram(program)} role="button" tabIndex={0}
-                   onKeyDown={(event) => (event.key === 'Enter' || event.key === ' ') && onEditProgram(program)}>
-                <div className="program-row-title">{program.name}</div>
-                <div className="program-row-meta">
-                  <span>{program.athlete_username}</span>
-                  <span className="program-row-dot">·</span>
-                  <span className="data">{progress.completed}</span>/<span className="data">{progress.total}</span> <span>done</span>
-                  <span className="program-row-dot">·</span>
-                  <span className="data">{normalized.days.length}</span> <span>days</span>
-                  <span className="program-row-dot">·</span>
-                  <span>starts {program.start_date}</span>
-                  {program.updated_at && (
-                    <>
-                      <span className="program-row-dot">·</span>
-                      <span className="program-row-updated">updated {relativeTimeSince(program.updated_at)}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-              <div className="program-row-actions">
-                <button type="button" className="text-btn" onClick={() => onEditProgram(program)}>Edit</button>
-                <select
-                  value={assignmentDrafts[program.id] ?? ''}
-                  onChange={(event) => onAssignDraftChange(program.id, event.target.value)}
-                  className="form-input program-row-reassign-select"
-                  aria-label="Reassign athlete"
-                >
-                  <option value="">Reassign…</option>
-                  {athletes.map((athlete) => (
-                    <option key={athlete.id} value={athlete.id}>{athlete.username}</option>
-                  ))}
-                </select>
-                {assignmentDrafts[program.id] && (
-                  <button type="button" className="save-btn program-row-reassign-go" onClick={() => onAssignSubmit(program.id)}>
-                    Go
-                  </button>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    )}
-  </>
-)
+
+      {programs.length === 0 ? (
+        <div className="empty-state">
+          <p>No programs yet.</p>
+          <p className="section-subtitle">Click <strong>+ New program</strong> to build your first one, or download the Excel template to import from a spreadsheet.</p>
+        </div>
+      ) : (
+        <div className="athlete-groups-list">
+          {groups.map((group) => (
+            <AthleteGroup
+              key={group.athleteId}
+              athleteUsername={group.athleteUsername}
+              programs={group.programs}
+              athletes={athletes}
+              assignmentDrafts={assignmentDrafts}
+              onAssignDraftChange={onAssignDraftChange}
+              onAssignSubmit={onAssignSubmit}
+              onEditProgram={onEditProgram}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  )
+}
 
 // --------------------------------------------------------------------------
 // Editor view -- clean focused program builder with all seven power features.
