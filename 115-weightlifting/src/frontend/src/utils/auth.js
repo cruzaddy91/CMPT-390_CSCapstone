@@ -1,9 +1,14 @@
 const AUTH_TOKEN_KEY = 'weightlifting_auth_token'
+const AUTH_REFRESH_KEY = 'weightlifting_refresh_token'
 const AUTH_USER_KEY = 'weightlifting_current_user'
 
 export const getToken = () => localStorage.getItem(AUTH_TOKEN_KEY)
 export const setToken = (token) => localStorage.setItem(AUTH_TOKEN_KEY, token)
 export const clearToken = () => localStorage.removeItem(AUTH_TOKEN_KEY)
+
+export const getRefreshToken = () => localStorage.getItem(AUTH_REFRESH_KEY)
+export const setRefreshToken = (token) => localStorage.setItem(AUTH_REFRESH_KEY, token)
+export const clearRefreshToken = () => localStorage.removeItem(AUTH_REFRESH_KEY)
 
 export const getCurrentUser = () => {
   const rawUser = localStorage.getItem(AUTH_USER_KEY)
@@ -26,6 +31,7 @@ export const clearCurrentUser = () => localStorage.removeItem(AUTH_USER_KEY)
 
 export const clearAuth = () => {
   clearToken()
+  clearRefreshToken()
   clearCurrentUser()
 }
 

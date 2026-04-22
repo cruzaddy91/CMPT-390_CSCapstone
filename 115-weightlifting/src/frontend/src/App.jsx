@@ -1,9 +1,10 @@
+import { useEffect, useState } from 'react'
 import { BrowserRouter as Router, Navigate, Route, Routes, Link, useLocation, useNavigate } from 'react-router-dom'
 import AthleteDashboard from './pages/AthleteDashboard'
 import CoachDashboard from './pages/CoachDashboard'
 import Login from './pages/Login'
-import { logout } from './services/api'
-import { getCurrentUser, isAuthenticated } from './utils/auth'
+import { getCurrentUserFromApi, logout } from './services/api'
+import { clearAuth, getCurrentUser, getToken, setCurrentUser } from './utils/auth'
 import './App.css'
 
 const getDefaultRouteForUser = () => {
@@ -13,19 +14,41 @@ const getDefaultRouteForUser = () => {
 }
 
 const ProtectedRoute = ({ role, children }) => {
-  if (!isAuthenticated()) {
+  const [status, setStatus] = useState(() => (getToken() ? 'checking' : 'denied'))
+  const [verifiedUser, setVerifiedUser] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    if (!getToken()) {
+      setStatus('denied')
+      return () => {}
+    }
+    getCurrentUserFromApi()
+      .then((user) => {
+        if (cancelled) return
+        setCurrentUser(user)
+        setVerifiedUser(user)
+        setStatus('authed')
+      })
+      .catch(() => {
+        if (cancelled) return
+        clearAuth()
+        setStatus('denied')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  if (status === 'checking') {
+    return <div className="route-loading">Checking session…</div>
+  }
+  if (status === 'denied') {
     return <Navigate to="/login" replace />
   }
-
-  const currentUser = getCurrentUser()
-  if (!currentUser) {
-    return <Navigate to="/login" replace />
-  }
-
-  if (role && currentUser.user_type !== role) {
+  if (role && verifiedUser?.user_type !== role) {
     return <Navigate to={getDefaultRouteForUser()} replace />
   }
-
   return children
 }
 
