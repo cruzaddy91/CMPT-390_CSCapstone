@@ -1967,8 +1967,20 @@
   margin-bottom: 1rem;
 }
 
+.athlete-drawer-stats-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.athlete-charts-intro {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin: 0 0 0.75rem;
+}
+
 @media (max-width: 768px) {
   .athlete-drawer-stats-grid { grid-template-columns: 1fr; }
+  .athlete-drawer-stats-grid--three { grid-template-columns: 1fr; }
 }
 
 .sinclair-result {

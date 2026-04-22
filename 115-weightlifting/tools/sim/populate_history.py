@@ -7,9 +7,8 @@ For every athlete in the roster this script generates:
     exercise in the past programs is marked completed with a realistic
     percent-of-1RM result, so the coach's per-program completion ring reads
     100% and the athlete's lifetime lift count is real.
-  - A daily workout log for the last 60 calendar days so the dashboard's
-    'workouts per week' bar chart has enough points to read and the streak
-    pill shows a long active run.
+  - A daily workout log for the last 60 calendar days so the streak pill and
+    workout history list look lived-in.
   - A PR progression for snatch, clean & jerk, and total spanning the same
     16-week window, shaped as a tier-appropriate linear climb with realistic
     noise. These feed the PR history line chart on the athlete dashboard and
@@ -28,6 +27,12 @@ per athlete. If you want a clean slate, wipe ProgramCompletion / PersonalRecord
 Run after ``seed.py`` has created the coach + athletes:
 
     python populate_history.py
+
+For ~3 years of PR + workout rows (bulk ORM, coach dashboard charts) from the
+Django repo root:
+
+    ./bin/zw seed-long-history --replace
+    # (from repo root; wraps manage.py seed_longterm_got_history)
 
 Credentials default to the seed-script defaults (Passw0rd!123, Coachone).
 """

@@ -27,6 +27,11 @@ import { getDayCompletionKey, normalizeProgramData } from '../utils/dataStructur
 import { formatApiError } from '../utils/errors'
 import { programTitleForDisplay } from '../utils/safeDisplay'
 import {
+  monthlyBestPrLineData,
+  quarterlyBestTotalBarData,
+  sixMonthRollingPeakTotalLine,
+} from '../utils/trainingCharts'
+import {
   computeLifetimeCompletions,
   computeStreak,
   crossedCompletionMilestone,
@@ -45,14 +50,6 @@ const chartGridColor = 'rgba(95, 228, 255, 0.14)'
 const chartBorderColor = 'rgba(95, 228, 255, 0.34)'
 
 const liftLabels = { snatch: 'Snatch', clean_jerk: 'Clean & Jerk', total: 'Total' }
-
-const getWeekBucket = (dateString) => {
-  const date = new Date(`${dateString}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return dateString
-  const day = (date.getDay() + 6) % 7
-  date.setDate(date.getDate() - day)
-  return date.toISOString().split('T')[0]
-}
 
 // Default-day selection for 'what's next today': match today's weekday name,
 // BUT if today is already fully done, advance to the next day with work left
@@ -429,57 +426,53 @@ const AthleteDashboard = () => {
     }
   }
 
-  const workoutFrequencyChart = useMemo(() => {
-    const grouped = workoutLogs.reduce((acc, log) => {
-      const bucket = getWeekBucket(log.date)
-      acc[bucket] = (acc[bucket] || 0) + 1
-      return acc
-    }, {})
-    const labels = Object.keys(grouped).sort()
-    return {
-      labels,
-      datasets: [{
-        label: 'Workouts per week',
-        data: labels.map((l) => grouped[l]),
-        backgroundColor: 'rgba(95, 228, 255, 0.5)',
-        borderColor: 'rgba(95, 228, 255, 0.95)',
-        borderWidth: 1,
-        borderRadius: 4,
-      }],
-    }
-  }, [workoutLogs])
+  const prHistoryChart = useMemo(
+    () => monthlyBestPrLineData(personalRecords),
+    [personalRecords],
+  )
 
-  const prHistoryChart = useMemo(() => {
-    const sorted = [...personalRecords].sort((a, b) => a.date.localeCompare(b.date))
-    const labels = sorted.map((r) => r.date)
-    return {
-      labels,
-      datasets: ['snatch', 'clean_jerk', 'total'].map((lift, i) => ({
-        label: liftLabels[lift],
-        data: sorted.map((r) => (r.lift_type === lift ? Number(r.weight) : null)),
-        borderColor: ['#5fe4ff', '#36f0c5', '#ffb23f'][i],
-        backgroundColor: ['rgba(95,228,255,0.14)', 'rgba(54,240,197,0.14)', 'rgba(255,178,63,0.14)'][i],
-        pointBackgroundColor: ['#a5ecff', '#7ff7dd', '#ffd489'][i],
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        tension: 0.28,
-        spanGaps: true,
-      })),
-    }
-  }, [personalRecords])
+  const quarterlyTotalChart = useMemo(
+    () => quarterlyBestTotalBarData(personalRecords),
+    [personalRecords],
+  )
+
+  const rollingPeakChart = useMemo(
+    () => sixMonthRollingPeakTotalLine(personalRecords),
+    [personalRecords],
+  )
 
   const sharedChartOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { labels: { color: '#f4f7fb', usePointStyle: true, boxWidth: 10, padding: 14, font: { size: 11, family: 'Inter, sans-serif' } } },
+      legend: {
+        labels: { color: '#f4f7fb', usePointStyle: true, boxWidth: 10, padding: 14, font: { size: 11, family: 'Inter, sans-serif' } },
+      },
       tooltip: { backgroundColor: 'rgba(4, 10, 20, 0.96)', titleColor: '#f4f7fb', bodyColor: '#c9d6e3', borderColor: 'rgba(95,228,255,0.28)', borderWidth: 1, padding: 10, cornerRadius: 6 },
     },
     scales: {
-      x: { ticks: { color: chartTickColor }, grid: { color: chartGridColor }, border: { color: chartBorderColor } },
-      y: { beginAtZero: true, ticks: { color: chartTickColor }, grid: { color: chartGridColor }, border: { color: chartBorderColor } },
+      x: {
+        ticks: {
+          color: chartTickColor,
+          maxRotation: 40,
+          minRotation: 0,
+          autoSkip: true,
+          maxTicksLimit: 18,
+        },
+        grid: { color: chartGridColor },
+        border: { color: chartBorderColor },
+      },
+      y: { beginAtZero: false, ticks: { color: chartTickColor }, grid: { color: chartGridColor }, border: { color: chartBorderColor } },
     },
   }), [])
+
+  const barChartOptions = useMemo(() => ({
+    ...sharedChartOptions,
+    scales: {
+      ...sharedChartOptions.scales,
+      y: { ...sharedChartOptions.scales.y, beginAtZero: true },
+    },
+  }), [sharedChartOptions])
 
   if (loading) {
     return (
@@ -712,9 +705,12 @@ const AthleteDashboard = () => {
         <section className="athlete-drawer section-card">
           <h3>Stats &amp; tools</h3>
 
-          <div className="athlete-drawer-stats-grid">
+          <p className="athlete-charts-intro">
+            Monthly bests from your PR log (click legend entries to hide or show a lift). Bars show quarter peaks; the green line is a six-month rolling peak on total — useful for macrocycle decisions.
+          </p>
+          <div className="athlete-drawer-stats-grid athlete-drawer-stats-grid--three">
             <div className="chart-card">
-              <h4>PR history</h4>
+              <h4>PR trend (monthly best)</h4>
               {personalRecords.length === 0 ? (
                 <div className="chart-empty">Log a PR to see your trend.</div>
               ) : (
@@ -722,11 +718,19 @@ const AthleteDashboard = () => {
               )}
             </div>
             <div className="chart-card">
-              <h4>Workouts per week</h4>
-              {workoutLogs.length === 0 ? (
-                <div className="chart-empty">Log a workout to see your cadence.</div>
+              <h4>Quarterly best total</h4>
+              {personalRecords.filter((r) => r.lift_type === 'total').length === 0 ? (
+                <div className="chart-empty">Log a competition total to see quarter peaks.</div>
               ) : (
-                <Bar data={workoutFrequencyChart} options={sharedChartOptions} />
+                <Bar data={quarterlyTotalChart} options={barChartOptions} />
+              )}
+            </div>
+            <div className="chart-card">
+              <h4>Rolling strength trend</h4>
+              {personalRecords.filter((r) => r.lift_type === 'total').length === 0 ? (
+                <div className="chart-empty">Log a total PR to see the rolling peak line.</div>
+              ) : (
+                <Line data={rollingPeakChart} options={sharedChartOptions} />
               )}
             </div>
           </div>

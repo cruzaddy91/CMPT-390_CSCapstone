@@ -403,3 +403,40 @@ class AccountDeletionTests(TestCase):
         )
         self.assertEqual(resp.status_code, 204)
         self.assertFalse(User.objects.filter(id=self.coach_empty.id).exists())
+
+
+class LongHistorySeedTests(TestCase):
+    """Bulk long-range demo PR/workout synthesis stays bounded and importable."""
+
+    def setUp(self):
+        # Username must match ATHLETE_PROFILES in long_history_seed for the command path.
+        self.athlete = User.objects.create_user(
+            username='arya_stark', password='longenoughpw1', user_type='athlete',
+        )
+
+    def test_build_pr_and_workout_rows_reasonable_volume(self):
+        import random
+
+        from apps.athletes.long_history_seed import ATHLETE_PROFILES, build_pr_and_workout_rows
+
+        rng = random.Random(42)
+        end = date(2026, 6, 1)
+        start = end - timedelta(days=365)
+        profile = ATHLETE_PROFILES['arya_stark']
+        prs, logs = build_pr_and_workout_rows(
+            athlete=self.athlete,
+            profile=profile,
+            history_start=start,
+            history_end=end,
+            rng=rng,
+        )
+        self.assertGreaterEqual(len(prs), 30)
+        self.assertLessEqual(len(prs), 200)
+        self.assertGreater(len(logs), 40)
+
+    def test_seed_longterm_command_runs_one_year(self):
+        from django.core.management import call_command
+
+        call_command('seed_longterm_got_history', '--replace', '--years', '1', '--athletes', 'arya_stark')
+        self.assertGreater(PersonalRecord.objects.filter(athlete=self.athlete).count(), 20)
+        self.assertGreater(WorkoutLog.objects.filter(athlete=self.athlete).count(), 30)
