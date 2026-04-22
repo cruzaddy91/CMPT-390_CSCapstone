@@ -13,6 +13,7 @@ import { Bar, Line } from 'react-chartjs-2'
 import AthleteExerciseCard from '../components/AthleteExerciseCard'
 import WeekStrip from '../components/WeekStrip'
 import {
+  calculateRobi,
   calculateSinclair,
   createPersonalRecord,
   createWorkoutLog,
@@ -127,6 +128,7 @@ const AthleteDashboard = () => {
   })
   const [sinclairForm, setSinclairForm] = useState({ bodyweight_kg: '', total_kg: '', gender: 'M' })
   const [sinclairResult, setSinclairResult] = useState(null)
+  const [robiResult, setRobiResult] = useState(null)
   const [sinclairLoading, setSinclairLoading] = useState(false)
 
   useEffect(() => {
@@ -399,19 +401,28 @@ const AthleteDashboard = () => {
       setSaveMessage('Enter both bodyweight and total.')
       return
     }
+    const payload = {
+      bodyweight_kg: Number(sinclairForm.bodyweight_kg),
+      total_kg: Number(sinclairForm.total_kg),
+      gender: sinclairForm.gender,
+    }
     try {
       setSinclairLoading(true)
-      const result = await calculateSinclair({
-        bodyweight_kg: Number(sinclairForm.bodyweight_kg),
-        total_kg: Number(sinclairForm.total_kg),
-        gender: sinclairForm.gender,
-      })
-      setSinclairResult(result)
-      setSaveMessage('Sinclair calculated.')
+      setSinclairResult(null)
+      setRobiResult(null)
+      // Sinclair + ROBI run off the same inputs -- fire them in parallel so the
+      // athlete sees both cross-category scores with one tap.
+      const [sinclair, robi] = await Promise.all([
+        calculateSinclair(payload),
+        calculateRobi(payload),
+      ])
+      setSinclairResult(sinclair)
+      setRobiResult(robi)
+      setSaveMessage('Calculated.')
       setTimeout(() => setSaveMessage(''), 2000)
     } catch (error) {
-      console.error('Error calculating Sinclair:', error)
-      setSaveMessage('Could not calculate Sinclair. Check inputs.')
+      console.error('Error calculating Sinclair/ROBI:', error)
+      setSaveMessage('Could not calculate. Check inputs.')
     } finally {
       setSinclairLoading(false)
     }
@@ -719,7 +730,7 @@ const AthleteDashboard = () => {
             </div>
           </div>
 
-          <h4 className="athlete-drawer-subhead">Sinclair calculator</h4>
+          <h4 className="athlete-drawer-subhead">Sinclair &amp; ROBI</h4>
           <div className="form-grid compact-grid">
             <label className="field-stacked">
               <span>Bodyweight (kg)</span>
@@ -742,13 +753,29 @@ const AthleteDashboard = () => {
           </div>
           <div className="athlete-drawer-actions">
             <button type="button" className="save-btn" onClick={handleSinclairSubmit} disabled={sinclairLoading}>
-              {sinclairLoading ? 'Calculating…' : 'Calculate Sinclair'}
+              {sinclairLoading ? 'Calculating…' : 'Calculate Sinclair & ROBI'}
             </button>
           </div>
           {sinclairResult && (
             <div className="sinclair-result">
               <span>Sinclair total: <span className="data">{sinclairResult.sinclair_total}</span></span>
               <span>Coefficient: <span className="data">{sinclairResult.coefficient}</span></span>
+              {robiResult && (
+                <>
+                  <div className="sinclair-result-robi-hero">
+                    <span className="sinclair-result-robi-label">ROBI</span>
+                    <span className="sinclair-result-robi-value data">{robiResult.robi}</span>
+                  </div>
+                  <span>
+                    Weight class:{' '}
+                    <span className="data">{robiResult.weight_class} kg</span>
+                  </span>
+                  <span>
+                    World record total:{' '}
+                    <span className="data">{robiResult.world_record_total} kg</span>
+                  </span>
+                </>
+              )}
             </div>
           )}
         </section>

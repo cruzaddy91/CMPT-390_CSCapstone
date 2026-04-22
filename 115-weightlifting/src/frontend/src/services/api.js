@@ -219,3 +219,8 @@ export const calculateSinclair = async (payload) => {
   const { data } = await apiClient.post('/api/analytics/sinclair/', payload)
   return data
 }
+
+export const calculateRobi = async (payload) => {
+  const { data } = await apiClient.post('/api/analytics/robi/', payload)
+  return data
+}

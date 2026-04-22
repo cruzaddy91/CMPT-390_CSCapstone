@@ -1989,6 +1989,30 @@
   font-weight: 700;
 }
 
+.sinclair-result-robi-hero {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding-top: 0.55rem;
+  margin-top: 0.35rem;
+  border-top: 1px solid var(--line);
+}
+
+.sinclair-result-robi-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.sinclair-result-robi-value {
+  font-size: 1.7rem;
+  font-family: var(--font-mono);
+  line-height: 1.12;
+}
+
 /* --------------------------------------------------------------------------
    Coach home: roster panel on /
    -------------------------------------------------------------------------- */
