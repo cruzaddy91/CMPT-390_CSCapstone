@@ -270,8 +270,14 @@ const AthleteDashboard = () => {
     const dayKey = getDayCompletionKey(day, dayIndex)
     const program = programs.find((p) => p.id === programId)
 
+    // Snapshot the pre-save state so we can revert cleanly if the server
+    // rejects the update (e.g., coach reassigned the program mid-save and
+    // the athlete is no longer allowed to write). Without this, the card
+    // would stay visually 'done' after a failed save and mislead the athlete.
+    const priorCompletion = completionsRef.current[programId]
+
     // Optimistic local update, computed against the freshest state.
-    const currentCompletion = completionsRef.current[programId] || { entries: {} }
+    const currentCompletion = priorCompletion || { entries: {} }
     const nextEntries = {
       ...(currentCompletion.entries || {}),
       [dayKey]: {
@@ -326,6 +332,19 @@ const AthleteDashboard = () => {
           setTimeout(() => setSaveMessage(''), 2200)
         } catch (error) {
           console.error('Error saving exercise result:', error)
+          // Revert the optimistic update so the card reflects server truth
+          // instead of staying falsely 'done'. Only revert if the ref still
+          // holds OUR optimistic value (no later save has touched it).
+          if (completionsRef.current[programId] === submittedSnapshot) {
+            const reverted = { ...completionsRef.current }
+            if (priorCompletion === undefined) {
+              delete reverted[programId]
+            } else {
+              reverted[programId] = priorCompletion
+            }
+            completionsRef.current = reverted
+            setCompletions(reverted)
+          }
           setSaveMessage(formatApiError(error, 'Could not save result.'))
         }
       })

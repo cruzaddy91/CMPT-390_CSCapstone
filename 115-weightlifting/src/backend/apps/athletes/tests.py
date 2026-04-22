@@ -260,3 +260,146 @@ class CrossTenantAuthorizationTests(TestCase):
             format='json',
         )
         self.assertEqual(c.get(f'/api/athletes/program-completion/{self.program_ax.id}/').status_code, 200)
+
+    # -- UAT #2: Coach demoted mid-session ---------------------------------
+
+    def test_demoted_coach_is_immediately_denied_coach_endpoints(self):
+        """Flipping user_type -> 'athlete' must take effect on the very next
+        request, without needing to invalidate the access token. The backend
+        reads user_type off request.user each call; this test guards against
+        any future caching that would let a demoted coach keep reading data.
+        """
+        c = self._as(self.coach_a)
+        # Happy path first: coach can view their athlete's data.
+        self.assertEqual(c.get(f'/api/athletes/prs/?athlete_id={self.athlete_x.id}').status_code, 200)
+        # Demotion: flip user_type in the DB.
+        self.coach_a.user_type = 'athlete'
+        self.coach_a.save(update_fields=['user_type'])
+        # Same session, same client: coach endpoints should now 403 / 400.
+        # prs: athletes do not send athlete_id (endpoint treats request as
+        # athlete-self-scoped) -- 200 is allowed because the response is
+        # scoped to the demoted user, with zero records leaked.
+        resp = c.get(f'/api/athletes/prs/?athlete_id={self.athlete_x.id}')
+        self.assertIn(resp.status_code, (200, 403))
+        if resp.status_code == 200:
+            for pr in resp.json():
+                self.assertEqual(pr['athlete'], self.coach_a.id,
+                                 'demoted coach leaked another user\'s PR')
+        # Program edit: coach-only path, must now be denied.
+        resp = c.patch(f'/api/programs/{self.program_ax.id}/', {'name': 'x'}, format='json')
+        self.assertEqual(resp.status_code, 403)
+        # Program create: also denied.
+        resp = c.post('/api/programs/', {
+            'name': 'new', 'athlete_id': self.athlete_x.id,
+            'start_date': '2026-04-01', 'program_data': {},
+        }, format='json')
+        self.assertEqual(resp.status_code, 403)
+
+    # -- UAT #5: Past-athlete retention ------------------------------------
+
+    def test_coach_loses_access_after_reassigning_away_all_programs(self):
+        """Data is scoped to *current* coaching relationship. A coach who
+        reassigns their last program for an athlete must no longer be able
+        to read that athlete's workout logs / PRs via the athlete_id scope.
+        """
+        c = self._as(self.coach_a)
+        # With the program in place, access is granted.
+        self.assertEqual(c.get(f'/api/athletes/prs/?athlete_id={self.athlete_x.id}').status_code, 200)
+        # Reassign the program to athlete_y so coach_a no longer coaches x.
+        self.program_ax.athlete = self.athlete_y
+        self.program_ax.save(update_fields=['athlete'])
+        # Access to x's data is now revoked.
+        self.assertEqual(c.get(f'/api/athletes/prs/?athlete_id={self.athlete_x.id}').status_code, 403)
+        self.assertEqual(c.get(f'/api/athletes/workouts/?athlete_id={self.athlete_x.id}').status_code, 403)
+        # But access to y's data -- the athlete now on the coach's roster --
+        # must now be granted.
+        self.assertEqual(c.get(f'/api/athletes/prs/?athlete_id={self.athlete_y.id}').status_code, 200)
+
+    # -- UAT #9: Reassign mid-save race ------------------------------------
+
+    def test_reassign_then_athlete_patch_returns_404_not_silent_success(self):
+        """If the coach reassigns a program away from an athlete while that
+        athlete has a PATCH in flight, the backend must reject with 404 --
+        never silently write to the new athlete's completion row.
+        """
+        # Coach reassigns the program from X to Y.
+        self.program_ax.athlete = self.athlete_y
+        self.program_ax.save(update_fields=['athlete'])
+        # X's late PATCH must be refused.
+        resp = self._as(self.athlete_x).patch(
+            f'/api/athletes/program-completion/{self.program_ax.id}/',
+            {'completion_data': {'entries': {'d0': {'0': {'completed': True, 'result': 'racegap'}}}}},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, 404)
+        # And athlete_y (the new owner) gets a clean slate -- no leaked row.
+        completion_rows = ProgramCompletion.objects.filter(program=self.program_ax)
+        for row in completion_rows:
+            self.assertNotIn('racegap', str(row.completion_data))
+
+
+class AccountDeletionTests(TestCase):
+    """Deleting your own account: password-confirmed; coach-with-programs blocked."""
+
+    def setUp(self):
+        self.athlete = User.objects.create_user(
+            username='del_athlete', password='longenoughpw1', user_type='athlete',
+        )
+        # One PR + one workout log so we can confirm cascade.
+        PersonalRecord.objects.create(
+            athlete=self.athlete, lift_type='snatch', weight=120, date=date(2026, 4, 1),
+        )
+        WorkoutLog.objects.create(athlete=self.athlete, date=date(2026, 4, 1), notes='')
+        self.coach_empty = User.objects.create_user(
+            username='del_coach_empty', password='longenoughpw1', user_type='coach',
+        )
+        self.coach_full = User.objects.create_user(
+            username='del_coach_full', password='longenoughpw1', user_type='coach',
+        )
+        TrainingProgram.objects.create(
+            coach=self.coach_full, athlete=self.athlete,
+            name='held block', start_date=date(2026, 1, 1),
+        )
+
+    def _as(self, user):
+        c = APIClient()
+        c.force_authenticate(user=user)
+        return c
+
+    def test_delete_without_password_is_rejected(self):
+        resp = self._as(self.athlete).delete('/api/auth/me/')
+        self.assertEqual(resp.status_code, 400)
+        self.assertTrue(User.objects.filter(id=self.athlete.id).exists())
+
+    def test_delete_with_wrong_password_is_rejected(self):
+        resp = self._as(self.athlete).delete('/api/auth/me/', {'password': 'wrong'}, format='json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertTrue(User.objects.filter(id=self.athlete.id).exists())
+
+    def test_athlete_delete_cascades_prs_and_logs(self):
+        athlete_id = self.athlete.id
+        resp = self._as(self.athlete).delete(
+            '/api/auth/me/', {'password': 'longenoughpw1'}, format='json',
+        )
+        self.assertEqual(resp.status_code, 204)
+        self.assertFalse(User.objects.filter(id=athlete_id).exists())
+        self.assertEqual(PersonalRecord.objects.filter(athlete_id=athlete_id).count(), 0)
+        self.assertEqual(WorkoutLog.objects.filter(athlete_id=athlete_id).count(), 0)
+        # Programs assigned to the athlete are also cascade-deleted.
+        self.assertEqual(TrainingProgram.objects.filter(athlete_id=athlete_id).count(), 0)
+        # The coach who had a program for this athlete still exists.
+        self.assertTrue(User.objects.filter(id=self.coach_full.id).exists())
+
+    def test_coach_with_active_programs_cannot_delete(self):
+        resp = self._as(self.coach_full).delete(
+            '/api/auth/me/', {'password': 'longenoughpw1'}, format='json',
+        )
+        self.assertEqual(resp.status_code, 409)
+        self.assertTrue(User.objects.filter(id=self.coach_full.id).exists())
+
+    def test_coach_without_programs_can_delete(self):
+        resp = self._as(self.coach_empty).delete(
+            '/api/auth/me/', {'password': 'longenoughpw1'}, format='json',
+        )
+        self.assertEqual(resp.status_code, 204)
+        self.assertFalse(User.objects.filter(id=self.coach_empty.id).exists())

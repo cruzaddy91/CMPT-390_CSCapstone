@@ -97,6 +97,47 @@ class CurrentUserView(APIView):
         serializer = CurrentUserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    def delete(self, request):
+        """Delete the current user's own account.
+
+        Cascade policy (enforced here explicitly; the DB cascade would otherwise
+        fire without the safety net):
+
+          - ATHLETES: straight delete. DB CASCADE removes the athlete's
+            PersonalRecord / WorkoutLog / ProgramCompletion rows AND any
+            TrainingProgram assigned to them (a program without an athlete is
+            meaningless). Other coaches' programs for other athletes are
+            untouched because each program has its own coach FK.
+          - COACHES: REFUSED if the coach still has programs. A bulk cascade
+            would vaporize every assigned athlete's training history. Coach
+            must reassign their programs away (or delete them) first. This
+            is a capstone-grade safeguard; a production system would offer
+            bulk-transfer UI before deletion.
+
+        Requires the account password in the request body as a confirmation
+        step so a stolen access token alone cannot erase an account.
+        """
+        user = request.user
+        password = request.data.get('password')
+        if not password or not user.check_password(password):
+            return Response(
+                {'password': ['Password confirmation is required to delete an account.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if user.user_type == 'coach':
+            from apps.programs.models import TrainingProgram
+            active = TrainingProgram.objects.filter(coach=user).count()
+            if active > 0:
+                return Response(
+                    {'detail': f'You still have {active} program(s). Reassign or delete them before closing your coach account.'},
+                    status=status.HTTP_409_CONFLICT,
+                )
+        user.delete()
+        response = Response(status=status.HTTP_204_NO_CONTENT)
+        # Best-effort clear any refresh cookie the user still holds.
+        _clear_refresh_cookie(response)
+        return response
+
 
 class LogoutView(APIView):
     """Blacklist the supplied refresh token so it cannot be reused.
