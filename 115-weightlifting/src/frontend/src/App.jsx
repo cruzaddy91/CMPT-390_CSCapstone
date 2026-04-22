@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter as Router, Navigate, Route, Routes, Link, useLocation } from 'react-router-dom'
 import AthleteDashboard from './pages/AthleteDashboard'
 import CoachDashboard from './pages/CoachDashboard'
+import HeadCoachDashboard from './pages/HeadCoachDashboard'
 import Login from './pages/Login'
 import ErrorBoundary from './components/ErrorBoundary'
 import { getAthletes, getCurrentUserFromApi, getProgramsFromBackend, logout } from './services/api'
@@ -12,13 +13,27 @@ import { relativeTimeSince } from './utils/relativeTime'
 import { applyTheme, resolveInitialTheme, toggleTheme } from './utils/theme'
 import './App.css'
 
+/** Human-readable role for nav / status (API still uses snake_case `user_type`). */
+const roleDisplayLabel = (userType) => {
+  if (userType === 'head_coach') return 'Head coach'
+  if (userType === 'coach') return 'Coach'
+  if (userType === 'athlete') return 'Athlete'
+  return userType || ''
+}
+
+const defaultRouteForUserType = (userType) => {
+  if (userType === 'head_coach') return '/head'
+  if (userType === 'coach') return '/coach'
+  return '/athlete'
+}
+
 const getDefaultRouteForUser = () => {
   const currentUser = getCurrentUser()
   if (!currentUser) return '/login'
-  return currentUser.user_type === 'coach' ? '/coach' : '/athlete'
+  return defaultRouteForUserType(currentUser.user_type)
 }
 
-const ProtectedRoute = ({ role, children }) => {
+const ProtectedRoute = ({ role, roles, children }) => {
   const [status, setStatus] = useState(() => (getToken() ? 'checking' : 'denied'))
   const [verifiedUser, setVerifiedUser] = useState(null)
 
@@ -51,7 +66,8 @@ const ProtectedRoute = ({ role, children }) => {
   if (status === 'denied') {
     return <Navigate to="/login" replace />
   }
-  if (role && verifiedUser?.user_type !== role) {
+  const allowed = roles?.length ? roles : role ? [role] : null
+  if (allowed && !allowed.includes(verifiedUser?.user_type)) {
     return <Navigate to={getDefaultRouteForUser()} replace />
   }
   return children
@@ -91,7 +107,10 @@ const Navigation = () => {
         <div className="nav-actions">
           <div className="nav-links">
             {!currentUser && <Link to="/login" className={location.pathname === '/login' ? 'active' : ''}>Log in</Link>}
-            {currentUser?.user_type === 'coach' && (
+            {currentUser?.user_type === 'head_coach' && (
+              <Link to="/head" className={location.pathname === '/head' ? 'active' : ''}>Head</Link>
+            )}
+            {(currentUser?.user_type === 'coach' || currentUser?.user_type === 'head_coach') && (
               <Link to="/coach" className={location.pathname === '/coach' ? 'active' : ''}>Coach</Link>
             )}
             {currentUser?.user_type === 'athlete' && (
@@ -110,7 +129,7 @@ const Navigation = () => {
           {currentUser && (
             <>
               <span className="nav-user">
-                {currentUser.username} · {currentUser.user_type}
+                {currentUser.username} · {roleDisplayLabel(currentUser.user_type)}
                 {currentUser.user_type === 'athlete' && athleteProfileSuffix(currentUser) ? (
                   <span className="athlete-inline-meta nav-user-athlete-meta">{athleteProfileSuffix(currentUser)}</span>
                 ) : null}
@@ -124,8 +143,34 @@ const Navigation = () => {
   )
 }
 
+const HeadCoachHome = ({ currentUser }) => (
+  <div className="home-container coach-home">
+    <div className="home-grid">
+      <div className="home-copy">
+        <div className="home-eyebrow">Head coach · {currentUser.username}</div>
+        <h1>Welcome back.</h1>
+        <p className="home-description">
+          Review organization metrics for your staff, or use the coach workspace to program athletes directly.
+        </p>
+        <div className="home-buttons">
+          <Link to="/head" className="home-btn coach-btn">Organization summary</Link>
+          <Link to="/coach" className="home-btn coach-btn">Coach workspace</Link>
+        </div>
+      </div>
+      <div className="home-side">
+        <div className="home-panel">
+          <span className="home-panel-label">Next step</span>
+          <strong>Compare coaches</strong>
+          <p>Open the org summary to see roster and activity counts per line coach and for your own athletes.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+)
+
 const Home = () => {
   const currentUser = getCurrentUser()
+  if (currentUser?.user_type === 'head_coach') return <HeadCoachHome currentUser={currentUser} />
   if (currentUser?.user_type === 'coach') return <CoachHome currentUser={currentUser} />
   return <AnonymousHome currentUser={currentUser} />
 }
@@ -175,7 +220,7 @@ const AnonymousHome = ({ currentUser }) => {
             </div>
           </div>
           <div className="home-status">
-            <span className="status-pill">{currentUser ? `Signed in as ${currentUser.user_type}` : 'Ready for login or preview'}</span>
+            <span className="status-pill">{currentUser ? `Signed in as ${roleDisplayLabel(currentUser.user_type)}` : 'Ready for login or preview'}</span>
           </div>
         </div>
       </div>
@@ -328,8 +373,12 @@ function App() {
             element={isAuthenticated() ? <Navigate to={getDefaultRouteForUser()} replace /> : <Login />}
           />
           <Route
+            path="/head"
+            element={<ProtectedRoute roles={['head_coach']}><HeadCoachDashboard /></ProtectedRoute>}
+          />
+          <Route
             path="/coach"
-            element={<ProtectedRoute role="coach"><CoachDashboard /></ProtectedRoute>}
+            element={<ProtectedRoute roles={['coach', 'head_coach']}><CoachDashboard /></ProtectedRoute>}
           />
           <Route
             path="/athlete"

@@ -80,6 +80,26 @@ ATHLETE_PROFILES: dict[str, dict[str, Any]] = {
         "tier": "advanced", "bodyweight_kg": 71, "gender": "F",
         "snatch": (74, 86), "clean_jerk": (92, 106),
     },
+    "frodo_baggins": {
+        "tier": "pro", "bodyweight_kg": 58, "gender": "M",
+        "snatch": (88, 98), "clean_jerk": (108, 120),
+    },
+    "samwise_gamgee": {
+        "tier": "pro", "bodyweight_kg": 72, "gender": "M",
+        "snatch": (105, 118), "clean_jerk": (130, 145),
+    },
+    "merry_brandybuck": {
+        "tier": "advanced", "bodyweight_kg": 58, "gender": "M",
+        "snatch": (76, 86), "clean_jerk": (94, 106),
+    },
+    "pippin_took": {
+        "tier": "advanced", "bodyweight_kg": 56, "gender": "M",
+        "snatch": (74, 83), "clean_jerk": (92, 102),
+    },
+    "gandalf_grey": {
+        "tier": "world-class", "bodyweight_kg": 82, "gender": "M",
+        "snatch": (125, 150), "clean_jerk": (158, 185),
+    },
 }
 
 # Timeline knobs. 4 programs x 4 weeks = 16 weeks of history.

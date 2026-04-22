@@ -52,6 +52,8 @@ Safe defaults:
 
 - `./bin/zw clean` is preview-only unless you add `--yes`
 - `./bin/zw reset-demo` is preview-only unless you add `--yes`
+- `./bin/zw prune-demo` trims the database to **Adminone** (head coach), **Coachone + five GoT**, and **Coachtwo + five LotR** (line coaches report to Adminone; preview without `--yes`). Use `--scrub-events` with `--yes` to clear `var/reports/events/*.json`
+- `./bin/zw seed-coachtwo-lotr` creates **Coachtwo** and the first five **lord-of-the-rings** usernames, aligns bodyweights with `tools/sim/character_sim_profiles.py`, and bulk-seeds ~3 years of PR + workout logs (add `--with-programs` if the API is running and you want training programs too)
 
 Quick reference:
 

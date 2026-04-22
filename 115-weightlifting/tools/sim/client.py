@@ -134,6 +134,18 @@ class ApiClient:
         assert self.current_user is not None  # mypy/typing hint
         return self.current_user, created
 
+    def patch_me(self, payload: dict[str, Any]) -> dict:
+        """PATCH /api/auth/me/ (athlete profile: bodyweight_kg, gender)."""
+        resp = self.session.patch(
+            self._url("/api/auth/me/"),
+            json=payload,
+            headers=self._headers(),
+        )
+        resp.raise_for_status()
+        body = resp.json()
+        self.current_user = body
+        return body
+
     # -- resources ----------------------------------------------------------
 
     def list_athletes(self, scope: str = "all", q: str = "", page: int = 1) -> dict:

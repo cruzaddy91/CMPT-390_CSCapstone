@@ -28,6 +28,7 @@ from typing import Iterable
 
 import requests
 
+from character_sim_profiles import resolve_sim_profile
 from client import ApiClient, DEFAULT_API
 from themes import available_themes, roster
 
@@ -133,13 +134,21 @@ def main() -> int:
     # 2. Athletes
     roster_names = roster(args.theme, args.athletes)
     athletes_state: list[tuple[str, bool]] = []
-    for name in roster_names:
+    for index, name in enumerate(roster_names):
         _, created = ensure_user(
             api=args.api, username=name, password=args.password, user_type="athlete",
         )
         athletes_state.append((name, created))
         flag = "created" if created else "already existed"
         print(f"  athlete {name:<24} {flag}")
+        bw, gender = resolve_sim_profile(name, index)
+        client = ApiClient(args.api)
+        try:
+            client.login(name, args.password)
+            client.patch_me({"bodyweight_kg": bw, "gender": gender})
+            print(f"           {'':24} profile {bw} kg / {gender} → class set")
+        except Exception as exc:
+            print(f"           {'':24} WARN could not set profile: {exc}")
 
     created_count = sum(1 for _, c in athletes_state if c)
     existed_count = len(athletes_state) - created_count

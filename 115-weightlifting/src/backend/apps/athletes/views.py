@@ -1,7 +1,9 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from apps.accounts.roles import is_head_coach, staff_coach_queryset
 from apps.programs.models import TrainingProgram
 from .models import PersonalRecord, ProgramCompletion, WorkoutLog
 from .serializers import (
@@ -27,9 +29,17 @@ def _coached_athlete_ids(user, request=None):
         if cached is not None:
             return cached
 
-    athlete_ids = set(
-        TrainingProgram.objects.filter(coach=user).values_list('athlete_id', flat=True).distinct()
-    )
+    if is_head_coach(user):
+        staff_ids = list(staff_coach_queryset(user).values_list('id', flat=True))
+        athlete_ids = set(
+            TrainingProgram.objects.filter(Q(coach=user) | Q(coach_id__in=staff_ids))
+            .values_list('athlete_id', flat=True)
+            .distinct()
+        )
+    else:
+        athlete_ids = set(
+            TrainingProgram.objects.filter(coach=user).values_list('athlete_id', flat=True).distinct()
+        )
     if request is not None:
         setattr(request, _COACHED_IDS_CACHE_ATTR, athlete_ids)
     return athlete_ids
@@ -40,7 +50,7 @@ class WorkoutLogListCreate(APIView):
         user = request.user
         if user.user_type == 'athlete':
             logs = WorkoutLog.objects.filter(athlete=user).order_by('-date', '-created_at')
-        elif user.user_type == 'coach':
+        elif user.user_type in ('coach', 'head_coach'):
             athlete_id = request.query_params.get('athlete_id')
             if not athlete_id:
                 return Response({'detail': 'athlete_id is required for coach queries.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -74,7 +84,7 @@ class PersonalRecordListCreate(APIView):
         user = request.user
         if user.user_type == 'athlete':
             prs = PersonalRecord.objects.filter(athlete=user).order_by('-date', '-created_at')
-        elif user.user_type == 'coach':
+        elif user.user_type in ('coach', 'head_coach'):
             athlete_id = request.query_params.get('athlete_id')
             if not athlete_id:
                 return Response({'detail': 'athlete_id is required for coach queries.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -118,6 +128,14 @@ class ProgramCompletionDetail(APIView):
             if program.coach_id != request.user.id:
                 return Response(
                     {'detail': 'You can only view completion for your own programs.'},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            athlete = program.athlete
+        elif is_head_coach(request.user):
+            staff_ids = set(staff_coach_queryset(request.user).values_list('id', flat=True))
+            if program.coach_id != request.user.id and program.coach_id not in staff_ids:
+                return Response(
+                    {'detail': 'You can only view completion for programs in your organization.'},
                     status=status.HTTP_403_FORBIDDEN,
                 )
             athlete = program.athlete

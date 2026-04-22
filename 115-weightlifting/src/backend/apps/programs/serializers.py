@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
+from apps.accounts.roles import is_head_coach, staff_coach_queryset
 from apps.accounts.weight_class import competitive_weight_class_label
 
 from .models import TrainingProgram, default_program_data
@@ -140,10 +141,22 @@ class TrainingProgramSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if not request:
             return None
-        athlete_id = request.user.id if request.user.user_type == 'athlete' else obj.athlete_id
-        if obj.athlete_id != athlete_id and request.user.user_type != 'coach':
+        user = request.user
+        if user.user_type == 'athlete':
+            if obj.athlete_id != user.id:
+                return None
+            target_athlete = user.id
+        elif user.user_type == 'coach':
+            if obj.coach_id != user.id:
+                return None
+            target_athlete = obj.athlete_id
+        elif is_head_coach(user):
+            staff_ids = set(staff_coach_queryset(user).values_list('id', flat=True))
+            if obj.coach_id != user.id and obj.coach_id not in staff_ids:
+                return None
+            target_athlete = obj.athlete_id
+        else:
             return None
-        target_athlete = athlete_id if request.user.user_type == 'athlete' else obj.athlete_id
         for record in getattr(obj, 'completion_records').all() if hasattr(obj, 'completion_records') else []:
             if record.athlete_id == target_athlete:
                 return record.completion_data
@@ -178,7 +191,9 @@ class ProgramCreateSerializer(serializers.ModelSerializer):
         athlete_id = validated_data.pop('athlete_id')
         athlete = User.objects.get(id=athlete_id, user_type='athlete')
         coach = self.context['request'].user
-        return TrainingProgram.objects.create(coach=coach, athlete=athlete, **validated_data)
+        program = TrainingProgram.objects.create(coach=coach, athlete=athlete, **validated_data)
+        User.objects.filter(pk=athlete.id, user_type='athlete').update(primary_coach_id=coach.id)
+        return program
 
 
 class ProgramUpdateSerializer(serializers.ModelSerializer):
@@ -220,4 +235,8 @@ class ProgramUpdateSerializer(serializers.ModelSerializer):
             setattr(instance, field, value)
 
         instance.save()
+        if athlete_id is not None:
+            User.objects.filter(pk=instance.athlete_id, user_type='athlete').update(
+                primary_coach_id=instance.coach_id,
+            )
         return instance

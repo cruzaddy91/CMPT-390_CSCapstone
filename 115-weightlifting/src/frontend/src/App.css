@@ -1969,6 +1969,38 @@
   margin-top: 1.5rem !important;
 }
 
+.athlete-no-program-profile {
+  margin-top: 1.25rem;
+  max-width: 28rem;
+}
+
+.athlete-no-program-profile-copy {
+  margin-bottom: 0.75rem;
+}
+
+.athlete-no-program-profile-actions {
+  margin-top: 0.75rem;
+}
+
+.athlete-no-program-profile-message {
+  margin-top: 0.75rem;
+}
+
+.athlete-profile-nudge {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.athlete-stats-profile-lead {
+  margin-bottom: 0.75rem;
+  font-size: 0.88rem;
+}
+
 .athlete-drawer-actions {
   display: flex;
   justify-content: flex-end;

@@ -14,7 +14,12 @@ echo "Checking migrations..."
 backend_manage makemigrations --check
 
 echo "Running Django tests..."
-backend_manage test
+# Explicit app test modules (bare `test` discovers 0 tests in this repo layout).
+backend_manage test \
+  apps.accounts.tests \
+  apps.programs.tests \
+  apps.athletes.tests \
+  apps.analytics.tests
 
 echo "Building frontend..."
 frontend_npm run build

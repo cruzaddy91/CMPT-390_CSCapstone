@@ -10,6 +10,7 @@ import {
   getPersonalRecords,
   getProgramsFromBackend,
   getWorkoutLogs,
+  patchCurrentUserProfile,
   updateProgramCompletion,
 } from '../services/api'
 import { getCurrentUser } from '../utils/auth'
@@ -108,10 +109,33 @@ const AthleteDashboard = () => {
   const [sinclairResult, setSinclairResult] = useState(null)
   const [robiResult, setRobiResult] = useState(null)
   const [sinclairLoading, setSinclairLoading] = useState(false)
+  const [profileForm, setProfileForm] = useState({ bodyweight_kg: '', gender: 'M' })
+  const [profileSaving, setProfileSaving] = useState(false)
 
   useEffect(() => {
     loadDashboardData()
   }, [])
+
+  useEffect(() => {
+    if (drawerSection !== 'stats') return
+    const u = getCurrentUser()
+    if (!u) return
+    setProfileForm({
+      bodyweight_kg: u.bodyweight_kg != null && u.bodyweight_kg !== '' ? String(u.bodyweight_kg) : '',
+      gender: u.gender === 'F' ? 'F' : 'M',
+    })
+  }, [drawerSection])
+
+  useEffect(() => {
+    if (loading) return
+    if (programs.length > 0) return
+    const u = getCurrentUser()
+    if (!u) return
+    setProfileForm({
+      bodyweight_kg: u.bodyweight_kg != null && u.bodyweight_kg !== '' ? String(u.bodyweight_kg) : '',
+      gender: u.gender === 'F' ? 'F' : 'M',
+    })
+  }, [loading, programs.length])
 
   const loadDashboardData = async () => {
     try {
@@ -406,6 +430,32 @@ const AthleteDashboard = () => {
     }
   }
 
+  const handleCompetitionProfileSave = async () => {
+    if (!profileForm.bodyweight_kg) {
+      setSaveMessage('Enter bodyweight (kg) to save your competition profile.')
+      return
+    }
+    try {
+      setProfileSaving(true)
+      const data = await patchCurrentUserProfile({
+        bodyweight_kg: Number(profileForm.bodyweight_kg),
+        gender: profileForm.gender,
+      })
+      const programResponse = await getProgramsFromBackend()
+      setPrograms(programResponse)
+      const cls = data?.competitive_weight_class
+      setSaveMessage(
+        cls ? `Profile saved. IWF class: ${cls}.` : 'Profile saved.',
+      )
+      setTimeout(() => setSaveMessage(''), 4000)
+    } catch (error) {
+      console.error('Error saving competition profile:', error)
+      setSaveMessage(formatApiError(error, 'Could not save profile.'))
+    } finally {
+      setProfileSaving(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="dashboard-container">
@@ -428,6 +478,45 @@ const AthleteDashboard = () => {
           <p className="dashboard-description">
             Your coach hasn't assigned a program. Check back after they build one for you.
           </p>
+          <section className="section-card athlete-no-program-profile">
+            <h3 className="athlete-drawer-subhead">Competition profile</h3>
+            <p className="dashboard-description athlete-no-program-profile-copy">
+              Bodyweight and sex category set your IWF-style class for the nav bar and coach roster.
+            </p>
+            <div className="form-grid compact-grid">
+              <label className="field-stacked">
+                <span>Bodyweight (kg)</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  className="form-input data"
+                  value={profileForm.bodyweight_kg}
+                  onChange={(e) => setProfileForm((c) => ({ ...c, bodyweight_kg: e.target.value }))}
+                />
+              </label>
+              <label className="field-stacked">
+                <span>Category</span>
+                <select
+                  className="form-input"
+                  value={profileForm.gender}
+                  onChange={(e) => setProfileForm((c) => ({ ...c, gender: e.target.value }))}
+                >
+                  <option value="M">Male</option>
+                  <option value="F">Female</option>
+                </select>
+              </label>
+            </div>
+            <div className="athlete-drawer-actions athlete-no-program-profile-actions">
+              <button type="button" className="save-btn" onClick={handleCompetitionProfileSave} disabled={profileSaving}>
+                {profileSaving ? 'Saving…' : 'Save profile'}
+              </button>
+            </div>
+            {saveMessage && (
+              <div className={`save-message athlete-no-program-profile-message ${saveMessage.toLowerCase().includes('could') ? 'error' : 'success'}`}>
+                {saveMessage}
+              </div>
+            )}
+          </section>
         </div>
       </div>
     )
@@ -483,6 +572,18 @@ const AthleteDashboard = () => {
             <span className="encouragement-toast-kicker">Milestone</span>
             <span className="encouragement-toast-body">{encouragement}</span>
           </div>
+        )}
+        {!activeProfileSuffix && (
+          <p className="athlete-profile-nudge">
+            <span>Add your competition bodyweight in Stats &amp; tools to show your IWF class next to your name.</span>
+            <button
+              type="button"
+              className="text-btn"
+              onClick={() => setDrawerSection('stats')}
+            >
+              Open Stats &amp; tools
+            </button>
+          </p>
         )}
       </div>
 
@@ -650,6 +751,39 @@ const AthleteDashboard = () => {
       {drawerSection === 'stats' && (
         <section className="athlete-drawer section-card">
           <h3>Stats &amp; tools</h3>
+
+          <h4 className="athlete-drawer-subhead">Competition profile</h4>
+          <p className="dashboard-description athlete-stats-profile-lead">
+            Saved to your account. This drives the weight-class label in the nav bar, coach roster, and program header.
+          </p>
+          <div className="form-grid compact-grid">
+            <label className="field-stacked">
+              <span>Bodyweight (kg)</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                className="form-input data"
+                value={profileForm.bodyweight_kg}
+                onChange={(e) => setProfileForm((c) => ({ ...c, bodyweight_kg: e.target.value }))}
+              />
+            </label>
+            <label className="field-stacked">
+              <span>Category</span>
+              <select
+                className="form-input"
+                value={profileForm.gender}
+                onChange={(e) => setProfileForm((c) => ({ ...c, gender: e.target.value }))}
+              >
+                <option value="M">Male</option>
+                <option value="F">Female</option>
+              </select>
+            </label>
+          </div>
+          <div className="athlete-drawer-actions">
+            <button type="button" className="save-btn" onClick={handleCompetitionProfileSave} disabled={profileSaving}>
+              {profileSaving ? 'Saving…' : 'Save competition profile'}
+            </button>
+          </div>
 
           <AthleteTrainingTrendCharts personalRecords={personalRecords} />
 

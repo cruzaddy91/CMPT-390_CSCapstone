@@ -25,6 +25,8 @@ from .models import PersonalRecord, WorkoutLog
 User = get_user_model()
 
 # Mirrors tools/sim/populate_history.py so charts stay tier-distinct.
+# bodyweight_kg + gender for these usernames must match tools/sim/character_sim_profiles.py
+# (HTTP seed uses the same numbers for IWF class labels).
 ATHLETE_PROFILES: dict[str, dict] = {
     'jon_snow': {
         'tier': 'world-class', 'bodyweight_kg': 85, 'gender': 'M',
@@ -45,6 +47,28 @@ ATHLETE_PROFILES: dict[str, dict] = {
     'sansa_stark': {
         'tier': 'advanced', 'bodyweight_kg': 71, 'gender': 'F',
         'snatch': (58, 86), 'clean_jerk': (72, 106),
+    },
+    # Coachtwo / lord-of-the-rings roster (first five names). bodyweight_kg + gender
+    # must match tools/sim/character_sim_profiles.py.
+    'frodo_baggins': {
+        'tier': 'pro', 'bodyweight_kg': 58, 'gender': 'M',
+        'snatch': (82, 98), 'clean_jerk': (100, 120),
+    },
+    'samwise_gamgee': {
+        'tier': 'pro', 'bodyweight_kg': 72, 'gender': 'M',
+        'snatch': (98, 118), 'clean_jerk': (122, 145),
+    },
+    'merry_brandybuck': {
+        'tier': 'advanced', 'bodyweight_kg': 58, 'gender': 'M',
+        'snatch': (70, 86), 'clean_jerk': (88, 106),
+    },
+    'pippin_took': {
+        'tier': 'advanced', 'bodyweight_kg': 56, 'gender': 'M',
+        'snatch': (68, 83), 'clean_jerk': (85, 102),
+    },
+    'gandalf_grey': {
+        'tier': 'world-class', 'bodyweight_kg': 82, 'gender': 'M',
+        'snatch': (115, 150), 'clean_jerk': (145, 185),
     },
 }
 

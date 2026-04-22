@@ -9,6 +9,17 @@ cd /Users/addycruz/Workspace/CMPT-390_CSCapstone/115-weightlifting
 ./bin/zw help
 ```
 
+## Ship checklist (develop → validate → commit → push)
+
+Run in order before every push:
+
+```bash
+./bin/zw smoke-all   # API smoke, settings smoke, vitest + production build
+./bin/zw test        # Django checks, migration drift check, app tests, frontend build
+```
+
+Then commit and push from the repo root (`git status`, `git add`, `git commit`, `git push`).
+
 ## Core Project Control
 
 ```bash
@@ -50,15 +61,27 @@ var/reports/events/
 ./bin/zw seed-demo
 ./bin/zw reset-demo
 ./bin/zw reset-demo --yes
+./bin/zw prune-demo              # preview: keep Coachone+5 GoT and Coachtwo+5 LotR only
+./bin/zw prune-demo --yes        # apply (runs backup first), refreshes canonical passwords
+./bin/zw prune-demo --yes --scrub-events   # also delete var/reports/events/*.json
+./bin/zw seed-coachtwo-lotr      # Coachtwo + 5 LotR + 3y PR/workout history (ORM)
+./bin/zw seed-coachtwo-lotr --with-programs   # same + programs via HTTP (API up)
 ./bin/zw make-demo
 ./bin/zw smoke
 ```
 
-Demo credentials:
+Minimal smoke users (`seed-demo` / `reset-demo`):
 
 ```text
 coach_smoke   / DemoPass123!
 athlete_smoke / DemoPass123!
+```
+
+Canonical sim roster after `prune-demo --yes` (password `Passw0rd!123` unless you set `DEMO_PASSWORD`):
+
+```text
+Coachone, jon_snow, daenerys_targaryen, tyrion_lannister, arya_stark, sansa_stark
+Coachtwo, frodo_baggins, samwise_gamgee, merry_brandybuck, pippin_took, gandalf_grey
 ```
 
 ## Data Safety

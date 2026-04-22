@@ -42,6 +42,15 @@ python seed.py --coach Coachtwo --athletes 12 --theme lord-of-the-rings
 python seed.py --api https://wl.example.com --coach-signup-code "$PROD_CODE"
 ```
 
+From the **115-weightlifting** repo root you can also bootstrap Coachtwo + the
+first five LotR athletes (bodyweights from `character_sim_profiles.py`) and
+~3 years of PR + workout rows via Django (no HTTP register throttling):
+
+```bash
+./bin/zw seed-coachtwo-lotr
+./bin/zw seed-coachtwo-lotr --with-programs   # optional programs; API must be up
+```
+
 All seeded users share the same password (default `Passw0rd!123`, override
 with `--password`). Script is idempotent — re-running it logs into existing
 users instead of creating duplicates.

@@ -128,6 +128,13 @@ export const refreshCurrentUser = async () => {
   return currentUser
 }
 
+/** Athletes only: persists bodyweight + gender; response includes competitive_weight_class. */
+export const patchCurrentUserProfile = async (payload) => {
+  const { data } = await apiClient.patch('/api/auth/me/', payload)
+  setCurrentUser(data)
+  return data
+}
+
 export const logout = async () => {
   try {
     await axios.post(
@@ -161,6 +168,11 @@ export const assignProgram = async (programId, athleteId) => {
     `/api/programs/${programId}/assign/`,
     { athlete_id: athleteId }
   )
+  return data
+}
+
+export const getHeadOrgSummary = async () => {
+  const { data } = await apiClient.get('/api/auth/head/org-summary/')
   return data
 }
 

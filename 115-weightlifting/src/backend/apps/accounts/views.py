@@ -138,7 +138,7 @@ class CurrentUserView(APIView):
                 {'password': ['Password confirmation is required to delete an account.']},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if user.user_type == 'coach':
+        if user.user_type in ('coach', 'head_coach'):
             from apps.programs.models import TrainingProgram
             active = TrainingProgram.objects.filter(coach=user).count()
             if active > 0:
@@ -195,10 +195,12 @@ class AthleteListView(APIView):
     PAGE_SIZE = 50
 
     def get(self, request):
-        if request.user.user_type != 'coach':
-            return Response({'detail': 'Only coaches can list athletes.'}, status=status.HTTP_403_FORBIDDEN)
-
+        from apps.accounts.roles import is_head_coach, is_line_coach, staff_coach_queryset
         from apps.programs.models import TrainingProgram
+        from django.db.models import Q
+
+        if not is_line_coach(request.user):
+            return Response({'detail': 'Only coaches can list athletes.'}, status=status.HTTP_403_FORBIDDEN)
 
         scope = request.query_params.get('scope', 'mine').lower()
         query = (request.query_params.get('q') or '').strip()
@@ -209,9 +211,15 @@ class AthleteListView(APIView):
 
         base = User.objects.filter(user_type='athlete')
         if scope != 'all':
-            coached_ids = TrainingProgram.objects.filter(coach=request.user).values_list(
-                'athlete_id', flat=True
-            ).distinct()
+            if is_head_coach(request.user):
+                staff_ids = list(staff_coach_queryset(request.user).values_list('id', flat=True))
+                coached_ids = TrainingProgram.objects.filter(
+                    Q(coach=request.user) | Q(coach_id__in=staff_ids)
+                ).values_list('athlete_id', flat=True).distinct()
+            else:
+                coached_ids = TrainingProgram.objects.filter(coach=request.user).values_list(
+                    'athlete_id', flat=True
+                ).distinct()
             base = base.filter(id__in=list(coached_ids))
 
         if query:

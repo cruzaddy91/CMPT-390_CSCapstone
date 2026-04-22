@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
+from apps.accounts.weight_class import competitive_weight_class_label
+
 from .robi import (
     MEN_CATEGORIES,
     PROGRESSIVITY,
@@ -18,23 +20,31 @@ class RobiClassifyTests(TestCase):
     """Bodyweight -> IWF category mapping, including boundaries and overflow."""
 
     def test_exact_boundary_maps_to_that_class(self):
-        self.assertEqual(classify(60, 'M'), '60')
-        self.assertEqual(classify(48, 'F'), '48')
+        self.assertEqual(classify(61, 'M'), '61')
+        self.assertEqual(classify(49, 'F'), '49')
 
     def test_just_over_boundary_maps_to_next_class(self):
-        self.assertEqual(classify(60.01, 'M'), '65')
-        self.assertEqual(classify(48.1, 'F'), '53')
+        self.assertEqual(classify(61.01, 'M'), '73')
+        self.assertEqual(classify(49.01, 'F'), '59')
 
     def test_super_heavyweight_routes_to_open_bucket(self):
-        self.assertEqual(classify(115, 'M'), '+110')
-        self.assertEqual(classify(250, 'M'), '+110')
-        self.assertEqual(classify(90, 'F'), '+86')
-        self.assertEqual(classify(150, 'F'), '+86')
+        self.assertEqual(classify(115, 'M'), '+109')
+        self.assertEqual(classify(250, 'M'), '+109')
+        self.assertEqual(classify(90, 'F'), '+87')
+        self.assertEqual(classify(150, 'F'), '+87')
 
     def test_mid_weight_picks_smallest_fitting_class(self):
-        self.assertEqual(classify(72, 'M'), '79')
-        self.assertEqual(classify(80, 'M'), '88')
-        self.assertEqual(classify(75, 'F'), '77')
+        self.assertEqual(classify(72, 'M'), '73')
+        self.assertEqual(classify(80, 'M'), '89')
+        self.assertEqual(classify(75, 'F'), '81')
+
+    def test_robi_class_matches_profile_weight_class_label(self):
+        """ROBI routing must stay aligned with athlete roster / nav labels."""
+        bw, gender = 58.99, 'F'
+        key = classify(bw, gender)
+        label = competitive_weight_class_label(bw, gender)
+        self.assertEqual(key, '59')
+        self.assertEqual(label, '59 kg')
 
     def test_invalid_gender_raises(self):
         with self.assertRaises(ValueError):
@@ -51,12 +61,11 @@ class RobiScoreTests(TestCase):
     """Math of the ROBI score itself: WR hits 1000, power law scales by b."""
 
     def test_world_record_scores_exactly_1000(self):
-        # For men 88 kg, WR total is 387 (2025). A lifter at exactly 88 kg
-        # hitting 387 kg must receive ROBI = 1000.
-        result = robi_score(total_kg=387, bodyweight_kg=88, gender='M')
+        # Men 89 kg Olympic class: WR total 405 (Karlos Nasar, Dec 2024).
+        result = robi_score(total_kg=405, bodyweight_kg=88, gender='M')
         self.assertEqual(result['robi'], 1000.0)
-        self.assertEqual(result['weight_class'], '88')
-        self.assertEqual(result['world_record_total'], 387)
+        self.assertEqual(result['weight_class'], '89')
+        self.assertEqual(result['world_record_total'], 405)
 
     def test_every_class_WR_scores_1000_for_both_genders(self):
         # Generalized guarantee: update the table in robi.py, this still passes.
@@ -71,7 +80,7 @@ class RobiScoreTests(TestCase):
 
     def test_half_of_world_record_scores_100(self):
         # With b = log2(10), a total of WR/2 should produce ROBI ~= 100.
-        wr = world_record_total('M', '88')
+        wr = world_record_total('M', '89')
         result = robi_score(total_kg=wr / 2, bodyweight_kg=88, gender='M')
         self.assertAlmostEqual(result['robi'], 100.0, places=1)
 
@@ -132,13 +141,13 @@ class RobiEndpointTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         body = resp.json()
         self.assertEqual(body['gender'], 'M')
-        self.assertEqual(body['weight_class'], '88')
+        self.assertEqual(body['weight_class'], '89')
         self.assertIsInstance(body['robi'], (int, float))
 
     def test_world_record_hit_via_endpoint_is_exactly_1000(self):
         resp = self.client.post(self.url, {
             'bodyweight_kg': 88,
-            'total_kg': 387,
+            'total_kg': 405,
             'gender': 'M',
         }, format='json')
         self.assertEqual(resp.json()['robi'], 1000.0)

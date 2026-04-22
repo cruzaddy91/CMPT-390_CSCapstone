@@ -25,7 +25,10 @@ athlete.bodyweight_kg = Decimal('79.50')
 athlete.gender = 'M'
 athlete.save(update_fields=['bodyweight_kg', 'gender'])
 
-print('Seeded demo users: coach_smoke / DemoPass123!, athlete_smoke / DemoPass123! (athlete profile: 79.5 kg, M)')
+print(
+    'Seeded demo users: coach_smoke, athlete_smoke (same password for both). '
+    'Athlete profile: 79.5 kg, M. Password is documented in README; not echoed here.'
+)
 "
 
 log_event "demo_seed" "success" "seed_demo_users.sh" '{"users":["coach_smoke","athlete_smoke"]}'

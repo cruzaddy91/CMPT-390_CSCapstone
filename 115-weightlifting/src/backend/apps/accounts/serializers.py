@@ -18,6 +18,10 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         user_type = attrs.get('user_type')
+        if user_type == 'head_coach':
+            raise serializers.ValidationError({
+                'user_type': 'Head coach accounts cannot be created through public registration.',
+            })
         submitted_code = (attrs.get('coach_signup_code') or '').strip()
         if user_type == 'coach':
             expected = (os.getenv('COACH_SIGNUP_CODE') or '').strip()
@@ -43,6 +47,10 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 class CurrentUserSerializer(serializers.ModelSerializer):
     competitive_weight_class = serializers.SerializerMethodField()
+    reports_to_id = serializers.IntegerField(read_only=True, allow_null=True)
+    reports_to_username = serializers.SerializerMethodField()
+    primary_coach_id = serializers.IntegerField(read_only=True, allow_null=True)
+    primary_coach_username = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -53,10 +61,22 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             'bodyweight_kg',
             'gender',
             'competitive_weight_class',
+            'reports_to_id',
+            'reports_to_username',
+            'primary_coach_id',
+            'primary_coach_username',
         ]
 
     def get_competitive_weight_class(self, obj):
         return competitive_weight_class_label(obj.bodyweight_kg, obj.gender)
+
+    def get_reports_to_username(self, obj):
+        r = obj.reports_to
+        return r.username if r else None
+
+    def get_primary_coach_username(self, obj):
+        c = obj.primary_coach
+        return c.username if c else None
 
 
 class AthleteProfileUpdateSerializer(serializers.ModelSerializer):

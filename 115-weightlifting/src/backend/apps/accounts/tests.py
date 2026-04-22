@@ -71,6 +71,16 @@ class CoachRegistrationGateTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertTrue(User.objects.filter(username='a1', user_type='athlete').exists())
 
+    def test_head_coach_signup_rejected(self):
+        response = self.client.post(
+            self.url,
+            {'username': 'hc1', 'password': 'longenoughpw1', 'user_type': 'head_coach'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('user_type', response.json())
+        self.assertFalse(User.objects.filter(username='hc1').exists())
+
 
 class RefreshTokenBlacklistTests(TestCase):
     def setUp(self):
@@ -295,3 +305,40 @@ class AthleteProfilePatchTests(TestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.json()['access']}")
         r = self.client.patch(reverse('current-user'), {'bodyweight_kg': '80'}, format='json')
         self.assertEqual(r.status_code, 403)
+
+
+class HeadOrgSummaryTests(TestCase):
+    def setUp(self):
+        self.head = User.objects.create_user(
+            username='head_org', password='longenoughpw1', user_type='head_coach',
+        )
+        self.line = User.objects.create_user(
+            username='line_org', password='longenoughpw1', user_type='coach',
+        )
+        self.line.reports_to = self.head
+        self.line.save(update_fields=['reports_to'])
+        self.client = APIClient()
+
+    def test_coach_forbidden(self):
+        login = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': 'line_org', 'password': 'longenoughpw1'},
+            format='json',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.json()['access']}")
+        r = self.client.get(reverse('head-org-summary'))
+        self.assertEqual(r.status_code, 403)
+
+    def test_head_sees_staff_row(self):
+        login = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': 'head_org', 'password': 'longenoughpw1'},
+            format='json',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.json()['access']}")
+        r = self.client.get(reverse('head-org-summary'))
+        self.assertEqual(r.status_code, 200)
+        coaches = r.json()['coaches']
+        usernames = {c['username'] for c in coaches}
+        self.assertIn('head_org', usernames)
+        self.assertIn('line_org', usernames)

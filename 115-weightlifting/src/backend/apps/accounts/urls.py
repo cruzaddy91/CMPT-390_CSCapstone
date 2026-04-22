@@ -1,4 +1,5 @@
 from django.urls import path
+from .head_views import HeadOrgSummaryView
 from .views import (
     AthleteListView,
     CurrentUserView,
@@ -15,4 +16,5 @@ urlpatterns = [
     path('logout/', LogoutView.as_view(), name='logout'),
     path('me/', CurrentUserView.as_view(), name='current-user'),
     path('athletes/', AthleteListView.as_view(), name='athlete-list'),
+    path('head/org-summary/', HeadOrgSummaryView.as_view(), name='head-org-summary'),
 ]

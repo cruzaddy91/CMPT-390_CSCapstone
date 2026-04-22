@@ -19,8 +19,10 @@ Commands:
   migrate          Apply Django migrations
   seed-demo        Seed demo coach/athlete users
   reset-demo       Reset demo users and demo-owned data
+  prune-demo       Remove stale coach/athlete users; keep Coachone + default GoT roster
   make-demo        Build a richer demo scenario with seeded app data
   seed-long-history  Bulk ~3y PR + workout demo rows for GoT athletes (ORM)
+  seed-coachtwo-lotr Coachtwo + 5 LotR athletes + 3y PR/workout history (optional --with-programs)
   build            Build the frontend bundle
   dev              Run local development servers (Vite dev + Django runserver)
   host-local       Manage the local self-host stack
@@ -69,11 +71,17 @@ case "$command" in
   reset-demo)
     exec "$ROOT_DIR/scripts/reset_demo.sh" "$@"
     ;;
+  prune-demo)
+    exec "$ROOT_DIR/scripts/prune_demo_database.sh" "$@"
+    ;;
   make-demo)
     exec "$ROOT_DIR/scripts/make_demo.sh" "$@"
     ;;
   seed-long-history)
     exec "$ROOT_DIR/scripts/seed_longterm_got_history.sh" "$@"
+    ;;
+  seed-coachtwo-lotr)
+    exec "$ROOT_DIR/scripts/seed_coachtwo_lotr_demo.sh" "$@"
     ;;
   build)
     exec "$ROOT_DIR/scripts/build_all.sh" "$@"

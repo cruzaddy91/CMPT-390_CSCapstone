@@ -6,8 +6,9 @@ from apps.athletes.long_history_seed import ATHLETE_PROFILES, seed_longterm_for_
 class Command(BaseCommand):
     help = (
         'Bulk-insert ~3 years of PersonalRecord + WorkoutLog demo history for '
-        'seeded GoT athletes (jon_snow, arya_stark, …). Uses bulk_create in '
-        'chunks; pass --replace to clear prior PR/workout rows for those users first.'
+        'athletes listed in long_history_seed.ATHLETE_PROFILES (GoT + LotR). '
+        'Uses bulk_create in chunks; pass --replace to clear prior PR/workout '
+        'rows for those users first.'
     )
 
     def add_arguments(self, parser):

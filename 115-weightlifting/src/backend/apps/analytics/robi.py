@@ -26,9 +26,10 @@ Sources
 Formula description: https://iwf.sport/results/robi-points/
 Current world-record totals: the IWF maintains the canonical list at
     https://iwf.sport/results/world-records/
-The table below was cross-checked against the post-2025-World-Championships
-(Forde, Norway, October 2025) records summary on Wikipedia's
-List_of_world_records_in_Olympic_weightlifting.
+Anchors below follow the **Paris-cycle Olympic bodyweight categories**
+(upper bounds 61 / 73 / … and 49 / 59 / …) so they stay consistent with
+``apps.accounts.weight_class``; WR figures should be refreshed when the IWF
+publishes new senior totals for those classes.
 
 Policy for 'world standards'
 ----------------------------
@@ -54,31 +55,31 @@ PROGRESSIVITY: float = 3.3219281
 assert abs(PROGRESSIVITY - log2(10)) < 1e-6  # sanity: stays in sync with the math
 
 # (category_key, upper_bound_kg, world_record_total_kg)
-# - category_key is the human-friendly label surfaced in API responses.
-# - upper_bound_kg is the CEILING (inclusive) for routing by bodyweight;
-#   the heaviest class uses None so any heavier athlete maps to it.
-# - WR totals as of the 2025 World Championships; update when IWF publishes a
-#   new record or world standard.
+# - category_key matches the numeric part of the Olympic class labels used in
+#   ``apps.accounts.weight_class.competitive_weight_class_label`` (61/73/… and
+#   49/59/…, plus +109 / +87 for superheavy).
+# - upper_bound_kg is the inclusive bodyweight ceiling for that class (same
+#   cutoffs as weight_class.py). Pre-2024 ROBI tables used older buckets
+#   (60/65/71/… and 48/53/58/…), which routed e.g. 59 kg women into a "63"
+#   anchor — one class high vs the rest of the app.
+# - WR totals: IWF senior world records / standards commonly cited for the
+#   Paris-cycle Olympic categories (update when IWF publishes new marks).
 MEN_CATEGORIES: list[tuple[str, Union[float, None], int]] = [
-    ('60',   60,   307),
-    ('65',   65,   324),
-    ('71',   71,   347),
-    ('79',   79,   365),
-    ('88',   88,   387),   # Yeison Lopez (COL), 2025 Worlds
-    ('94',   94,   396),
-    ('110',  110,  428),
-    ('+110', None, 477),
+    ('61',   61,   318),   # Li Fabin (CHN), total, Apr 2024
+    ('73',   73,   365),   # Rizki Juniansyah (INA), Dec 2025
+    ('89',   89,   405),   # Karlos Nasar (BUL), Dec 2024
+    ('102',  102,  413),   # Liu Huanhua (CHN), Apr 2024
+    ('109',  109,  428),   # Akbar Djuraev (UZB)
+    ('+109', None, 477),   # Lasha Talakhadze-era superheavy anchor (IWF list)
 ]
 
 WOMEN_CATEGORIES: list[tuple[str, Union[float, None], int]] = [
-    ('48',   48,   213),
-    ('53',   53,   223),
-    ('58',   58,   236),
-    ('63',   63,   253),
-    ('69',   69,   270),   # Song Kuk-hyang (PRK), 2025 Worlds
-    ('77',   77,   278),   # Olivia Reeves (USA), 2025 Worlds
-    ('86',   86,   289),
-    ('+86',  None, 325),
+    ('49',   49,   221),   # Ri Song-gum (PRK) / Hou Zhihui-era 49 class totals
+    ('59',   59,   249),   # Kim Il-gyong (PRK), Dec 2024 Worlds
+    ('71',   71,   270),   # Song Kuk-hyang (PRK) class anchor
+    ('81',   81,   278),   # Olivia Reeves (USA), 2025 Worlds era
+    ('87',   87,   289),
+    ('+87',  None, 325),
 ]
 
 
@@ -92,11 +93,10 @@ def _table_for(gender: str) -> list[tuple[str, Union[float, None], int]]:
 
 
 def classify(bodyweight_kg: float, gender: str) -> str:
-    """Map bodyweight -> IWF category key ('60', '65', ..., '+110' or '+86').
+    """Map bodyweight -> Olympic class key ('61', '73', …, '+109' or '+87').
 
-    An athlete exactly at the boundary (e.g., 60.00 kg male) maps to the
-    class they just make weight for (60). Anyone above the heaviest finite
-    class goes to the +heavy bucket.
+    Boundaries match ``competitive_weight_class_label`` so ROBI routing and
+    profile / roster labels never disagree by one class.
     """
     if bodyweight_kg is None or bodyweight_kg <= 0:
         raise ValueError('bodyweight_kg must be positive')

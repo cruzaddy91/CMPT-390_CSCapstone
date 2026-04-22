@@ -139,6 +139,14 @@ assert post_logout_refresh.status_code == 401, (
     'logout should blacklist refresh token'
 )
 
+# List + prefetch checks need at least one owned program; a cold DB has none
+# until the explicit create later, so seed once when empty.
+_pre_list = coach_client.get('/api/programs/')
+assert _pre_list.status_code == 200, _pre_list.content
+if len(_pre_list.data) == 0:
+    _seed = coach_client.post('/api/programs/', program_payload, format='json')
+    assert _seed.status_code == 201, _seed.content
+
 from django.db import connection as _conn
 from django.test.utils import CaptureQueriesContext as _Cap
 with _Cap(_conn) as _ctx:
@@ -268,7 +276,11 @@ assert unassigned_username not in scoped_usernames, (
     'scope=mine leaked an athlete the coach has no program for'
 )
 
-all_athletes = coach_client.get('/api/auth/athletes/', {'scope': 'all'}).json()
+# scope=all is paginated (50/page); a busy dev DB may push this user off page 1.
+# Filter by username to assert the global pool still lists them.
+all_athletes = coach_client.get(
+    '/api/auth/athletes/', {'scope': 'all', 'q': unassigned_username},
+).json()
 all_usernames = {a['username'] for a in all_athletes['results']}
 assert unassigned_username in all_usernames, 'scope=all should include every athlete'
 

@@ -6,6 +6,7 @@ from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
 
+from apps.accounts.roles import is_head_coach, is_line_coach, staff_coach_queryset
 from apps.athletes.models import ProgramCompletion
 from .models import TrainingProgram
 from .serializers import ProgramCreateSerializer, ProgramUpdateSerializer, TrainingProgramSerializer
@@ -21,9 +22,14 @@ class ProgramListCreate(APIView):
         # Single-query version of coach-or-athlete filter, with prefetched
         # completion records so TrainingProgramSerializer.get_completion_data
         # does not issue a SELECT per program (N+1 kill).
+        if is_head_coach(user):
+            staff_ids = list(staff_coach_queryset(user).values_list('id', flat=True))
+            visibility = Q(coach=user) | Q(coach_id__in=staff_ids) | Q(athlete=user)
+        else:
+            visibility = Q(coach=user) | Q(athlete=user)
         programs = (
             TrainingProgram.objects
-            .filter(Q(coach=user) | Q(athlete=user))
+            .filter(visibility)
             .select_related('coach', 'athlete')
             .prefetch_related(Prefetch('completion_records', queryset=ProgramCompletion.objects.all()))
             .distinct()
@@ -33,7 +39,7 @@ class ProgramListCreate(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        if request.user.user_type != 'coach':
+        if not is_line_coach(request.user):
             return Response({'detail': 'Only coaches can create programs.'}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = ProgramCreateSerializer(data=request.data, context={'request': request})
@@ -48,7 +54,7 @@ class ProgramDetail(APIView):
     """Update an existing structured training program."""
 
     def patch(self, request, program_id):
-        if request.user.user_type != 'coach':
+        if not is_line_coach(request.user):
             return Response({'detail': 'Only coaches can edit programs.'}, status=status.HTTP_403_FORBIDDEN)
 
         program = get_object_or_404(TrainingProgram, id=program_id, coach=request.user)
@@ -63,7 +69,7 @@ class ProgramAssign(APIView):
     """Reassign an existing program to a different athlete."""
 
     def patch(self, request, program_id):
-        if request.user.user_type != 'coach':
+        if not is_line_coach(request.user):
             return Response({'detail': 'Only coaches can assign programs.'}, status=status.HTTP_403_FORBIDDEN)
 
         program = get_object_or_404(TrainingProgram, id=program_id, coach=request.user)
@@ -82,5 +88,6 @@ class ProgramAssign(APIView):
         with transaction.atomic():
             program.athlete = athlete
             program.save(update_fields=['athlete', 'updated_at'])
+            User.objects.filter(pk=athlete.id, user_type='athlete').update(primary_coach_id=program.coach_id)
         serializer = TrainingProgramSerializer(program)
         return Response(serializer.data, status=status.HTTP_200_OK)

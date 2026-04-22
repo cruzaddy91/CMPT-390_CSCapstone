@@ -23,7 +23,9 @@ const Login = () => {
 
     try {
       const response = await login(username, password)
-      navigate(response.user?.user_type === 'coach' ? '/coach' : '/athlete', { replace: true })
+      const ut = response.user?.user_type
+      const dest = ut === 'head_coach' ? '/head' : ut === 'coach' ? '/coach' : '/athlete'
+      navigate(dest, { replace: true })
     } catch (err) {
       setError(formatApiError(err, 'Login failed.'))
     } finally {
