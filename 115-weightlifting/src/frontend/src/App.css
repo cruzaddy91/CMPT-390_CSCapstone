@@ -1284,6 +1284,408 @@
   margin-top: 0.25rem;
 }
 
+/* ============================================================================
+   Athlete dashboard v2 — today-first, quick-log per exercise, stats in a drawer.
+   Replaces the previous 'all days stacked + charts + inline logs' layout.
+   ============================================================================ */
+.athlete-hero {
+  margin-bottom: 1.25rem;
+}
+
+.athlete-hero-title {
+  margin-top: 0.75rem;
+  font-size: clamp(1.8rem, 1.4rem + 1.6vw, 2.6rem);
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.athlete-hero-meta {
+  margin-top: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.athlete-hero-meta .data {
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.athlete-hero-dayname {
+  color: var(--neon-cyan);
+  font-weight: 600;
+}
+
+.program-chip-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.program-chip {
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.program-chip:hover { border-color: var(--line-strong); color: var(--text-primary); }
+.program-chip.is-active {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  background: var(--bg-panel-2);
+}
+
+/* Week strip --------------------------------------------------------------- */
+.week-strip {
+  display: flex;
+  gap: 0.55rem;
+  overflow-x: auto;
+  padding: 0.25rem 0 0.75rem;
+  margin-bottom: 1.25rem;
+  scroll-snap-type: x proximity;
+}
+
+.week-strip-cell {
+  flex: 0 0 auto;
+  min-width: 78px;
+  padding: 0.75rem 0.5rem;
+  border-radius: var(--radius-data);
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  scroll-snap-align: start;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.week-strip-cell:hover { border-color: var(--line-strong); color: var(--text-primary); }
+.week-strip-cell.is-active {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  background: var(--bg-panel-2);
+  box-shadow: var(--glow-ring);
+}
+.week-strip-cell.is-full { color: var(--success); }
+.week-strip-cell.is-full.is-active { color: var(--neon-cyan); }
+
+.week-strip-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.week-strip-ring { display: block; }
+
+.week-strip-ratio {
+  font-size: 0.82rem;
+  color: inherit;
+}
+
+/* Today's day: title + exercise list --------------------------------------- */
+.athlete-day-section {
+  margin-bottom: 1.5rem;
+}
+
+.athlete-day-title {
+  margin: 0.25rem 0 0.85rem;
+  font-size: 1.1rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.athlete-exercise-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.athlete-exercise-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-data);
+  background: var(--bg-panel);
+  overflow: hidden;
+  transition: border-color var(--transition-fast);
+}
+
+.athlete-exercise-card.is-done {
+  border-color: rgba(54, 240, 197, 0.35);
+  background: linear-gradient(180deg, rgba(54, 240, 197, 0.04), var(--bg-panel));
+}
+
+.athlete-exercise-head {
+  width: 100%;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.athlete-exercise-head:hover { background: var(--bg-panel-2); }
+
+.athlete-exercise-status {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  font-weight: 700;
+  font-size: 0.9rem;
+  background: var(--bg-deep);
+}
+
+.athlete-exercise-status.is-done {
+  border-color: var(--success);
+  color: var(--success);
+  background: rgba(54, 240, 197, 0.1);
+}
+
+.athlete-exercise-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.athlete-exercise-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.athlete-exercise-prescription {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+}
+
+.athlete-exercise-extra { color: var(--text-muted); }
+
+.athlete-exercise-summary {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  margin-top: 0.15rem;
+}
+
+.athlete-exercise-summary .data { color: var(--text-primary); font-weight: 700; }
+
+.athlete-exercise-chevron {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.athlete-exercise-body {
+  padding: 0.85rem 1rem 1rem;
+  border-top: 1px solid var(--line);
+  background: var(--bg-deep);
+}
+
+.athlete-exercise-coach-note {
+  padding: 0.65rem 0.8rem;
+  border-radius: var(--radius-data);
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  margin-bottom: 0.75rem;
+}
+
+.athlete-exercise-coach-note strong {
+  color: var(--neon-cyan);
+  margin-right: 0.25rem;
+}
+
+.athlete-quicklog {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.athlete-quicklog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.athlete-quicklog-field > span {
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.feel-pills {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.feel-pill {
+  flex: 1;
+  min-width: 72px;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.feel-pill:hover { border-color: var(--line-strong); color: var(--text-primary); }
+
+.feel-pill.is-active {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  background: var(--bg-panel-2);
+  box-shadow: var(--glow-ring);
+}
+
+.athlete-quicklog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.athlete-quicklog-save { min-width: 140px; }
+
+/* Bottom bar + drawer ------------------------------------------------------ */
+.athlete-bottom-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.athlete-bottom-btn {
+  flex: 1;
+  min-width: 130px;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-data);
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.athlete-bottom-btn:hover { border-color: var(--line-strong); color: var(--text-primary); }
+
+.athlete-bottom-btn.is-active {
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+  background: var(--bg-panel-2);
+  box-shadow: var(--glow-ring);
+}
+
+.athlete-drawer {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+}
+
+.athlete-drawer h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.athlete-drawer h4 {
+  margin: 1rem 0 0.35rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.athlete-drawer-subhead {
+  margin-top: 1.5rem !important;
+}
+
+.athlete-drawer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.athlete-drawer-history { margin-top: 1rem; }
+.athlete-drawer-history ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+}
+.athlete-drawer-history li {
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--radius-data);
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+}
+
+.athlete-drawer-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .athlete-drawer-stats-grid { grid-template-columns: 1fr; }
+}
+
+.sinclair-result {
+  margin-top: 0.85rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-data);
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+}
+
+.sinclair-result .data {
+  color: var(--neon-cyan);
+  font-weight: 700;
+}
+
 /* --------------------------------------------------------------------------
    Coach home: roster panel on /
    -------------------------------------------------------------------------- */
