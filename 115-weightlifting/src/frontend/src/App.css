@@ -135,6 +135,16 @@
   font-size: 0.82rem;
   text-transform: capitalize;
   padding: 0.35rem 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.1rem 0.35rem;
+  max-width: min(420px, 42vw);
+  justify-content: flex-end;
+}
+
+.nav-user-athlete-meta {
+  text-transform: none;
 }
 
 /* --------------------------------------------------------------------------

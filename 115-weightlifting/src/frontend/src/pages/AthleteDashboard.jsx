@@ -415,10 +415,15 @@ const AthleteDashboard = () => {
   }
 
   if (!activeProgram) {
+    const me = getCurrentUser()
+    const noProgramSuffix = athleteProfileSuffix(me || {})
     return (
       <div className="dashboard-container athlete-dashboard">
         <div className="dashboard-header">
-          <div className="dashboard-kicker">Athlete</div>
+          <div className="dashboard-kicker">
+            Athlete · {me?.username || '—'}
+            {noProgramSuffix ? <span className="athlete-inline-meta">{noProgramSuffix}</span> : null}
+          </div>
           <h1>No program yet.</h1>
           <p className="dashboard-description">
             Your coach hasn't assigned a program. Check back after they build one for you.
@@ -490,6 +495,11 @@ const AthleteDashboard = () => {
               role="tab"
               aria-selected={program.id === activeProgram.id}
               className={`program-chip ${program.id === activeProgram.id ? 'is-active' : ''}`}
+              title={
+                [program.athlete_username, athleteProfileSuffix(program).replace(/^ · /, '')]
+                  .filter(Boolean)
+                  .join(' · ') || undefined
+              }
               onClick={() => { setActiveProgramId(program.id); setSelectedDayId(null) }}
             >
               {programTitleForDisplay(program.name) || 'Program'}

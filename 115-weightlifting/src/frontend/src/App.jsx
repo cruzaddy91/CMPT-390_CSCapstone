@@ -109,7 +109,12 @@ const Navigation = () => {
           </button>
           {currentUser && (
             <>
-              <span className="nav-user">{currentUser.username} · {currentUser.user_type}</span>
+              <span className="nav-user">
+                {currentUser.username} · {currentUser.user_type}
+                {currentUser.user_type === 'athlete' && athleteProfileSuffix(currentUser) ? (
+                  <span className="athlete-inline-meta nav-user-athlete-meta">{athleteProfileSuffix(currentUser)}</span>
+                ) : null}
+              </span>
               <button type="button" className="nav-button" onClick={handleLogout}>Log out</button>
             </>
           )}
