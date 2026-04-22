@@ -1024,6 +1024,237 @@
 }
 
 /* --------------------------------------------------------------------------
+   WorkoutDay: single card per day, sparse exercise rows separated by thin
+   dividers. No nested cards -- each exercise is a row inside the day card.
+   Supports the full 11-column xlsx schema.
+   -------------------------------------------------------------------------- */
+.workout-day {
+  padding: 0;
+  overflow: hidden;
+}
+
+.workout-day .day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-panel-2);
+}
+
+.workout-day .day-heading-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.day-collapse-btn {
+  min-height: 32px;
+  width: 32px;
+  padding: 0;
+  min-width: 0;
+  font-size: 0.9rem;
+  color: var(--neon-cyan);
+}
+
+.day-exercise-count {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.day-exercise-count .data {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.workout-day .day-content {
+  display: block;
+  padding: 0;
+}
+
+.day-empty {
+  margin: 1rem;
+  text-align: center;
+}
+
+/* Each exercise lives as a row inside the day card, separated by thin rules.
+   No inner card chrome -- the day card is the single container. */
+.exercise-row {
+  padding: 0.9rem 1rem;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.exercise-row-first {
+  border-top: none;
+}
+
+.exercise-row-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.exercise-name-input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-data);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  min-height: 40px;
+}
+
+.exercise-name-input:focus {
+  outline: none;
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 0 3px rgba(95, 228, 255, 0.14);
+}
+
+.exercise-remove-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-data);
+  border: 1px solid var(--line);
+  background: var(--bg-deep);
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.exercise-remove-btn:hover {
+  border-color: rgba(255, 90, 110, 0.5);
+  color: var(--danger);
+  background: var(--bg-panel-2);
+}
+
+/* Prescription grid: sets / reps / % 1RM / RPE / weight / tempo / rest all
+   visible at once. Uses auto-fit so narrow screens wrap gracefully. */
+.exercise-prescription-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: flex-end;
+}
+
+.field-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1 1 auto;
+}
+
+.field-inline > span {
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.field-inline-input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-data);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+}
+
+.field-inline-input:focus {
+  outline: none;
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 0 2px rgba(95, 228, 255, 0.14);
+}
+
+.exercise-notes {
+  min-height: 54px;
+  font-size: 0.88rem;
+  padding: 0.55rem 0.7rem;
+  resize: vertical;
+}
+
+.add-exercise-btn {
+  margin: 0.9rem auto;
+  display: block;
+  width: calc(100% - 2rem);
+  padding: 0.6rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-data);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.add-exercise-btn:hover {
+  border-color: var(--line-strong);
+  color: var(--neon-cyan);
+  background: var(--bg-deep);
+}
+
+/* --------------------------------------------------------------------------
+   Athlete exercise row -- read-only prescription with completed + result.
+   -------------------------------------------------------------------------- */
+.athlete-row .athlete-exercise-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.athlete-row.exercise-row-completed {
+  background: rgba(54, 240, 197, 0.04);
+}
+
+.athlete-prescription {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  padding: 0.5rem 0;
+}
+
+.prescription-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.prescription-cell .label {
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.prescription-cell .value {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.athlete-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-top: 0.25rem;
+}
+
+/* --------------------------------------------------------------------------
    Route loading state + ErrorBoundary fallback
    -------------------------------------------------------------------------- */
 .route-loading {
