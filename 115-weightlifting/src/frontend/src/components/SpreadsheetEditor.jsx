@@ -174,22 +174,33 @@ const SpreadsheetEditor = ({ programData, onChange, intensityMode = 'percent_1rm
             </tr>
           </thead>
           <tbody>
-            {displayRows.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {columns.map((col, columnIndex) => (
-                  <td key={col.key}>
-                    <input
-                      data-cell
-                      type="text"
-                      value={row[col.key] ?? ''}
-                      onChange={(event) => handleCellChange(rowIndex, col.key, event.target.value)}
-                      onKeyDown={(event) => handleKeyDown(event, rowIndex, columnIndex)}
-                      placeholder={col.key === 'day' && rowIndex >= baseRows.length ? 'Monday' : ''}
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
+            {displayRows.map((row, rowIndex) => {
+              // Group rows by day: the first row of a day-run keeps its label
+              // visible and gets a top-border accent; subsequent rows blank
+              // their day label via CSS. The underlying input stays editable
+              // (focus reveals the value) so keyboard nav and editing are
+              // unaffected. Serialization treats each row independently.
+              const prevDay = rowIndex > 0 ? displayRows[rowIndex - 1].day : null
+              const currentDay = row.day || ''
+              const isDayRepeat = !!currentDay && currentDay === prevDay
+              const isDayStart = !!currentDay && !isDayRepeat
+              return (
+                <tr key={rowIndex} className={`${isDayStart ? 'is-day-start' : ''} ${isDayRepeat ? 'is-day-repeat-row' : ''}`.trim()}>
+                  {columns.map((col, columnIndex) => (
+                    <td key={col.key} className={col.key === 'day' && isDayRepeat ? 'is-day-repeat' : ''}>
+                      <input
+                        data-cell
+                        type="text"
+                        value={row[col.key] ?? ''}
+                        onChange={(event) => handleCellChange(rowIndex, col.key, event.target.value)}
+                        onKeyDown={(event) => handleKeyDown(event, rowIndex, columnIndex)}
+                        placeholder={col.key === 'day' && rowIndex >= baseRows.length ? 'Monday' : ''}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

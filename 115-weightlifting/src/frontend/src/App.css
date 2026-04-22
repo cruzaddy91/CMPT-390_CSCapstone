@@ -2218,6 +2218,39 @@
   background: rgba(95, 228, 255, 0.02);
 }
 
+/* Grouped-by-day view: every row still lives in the same grid, but the day
+   label only renders on the first row of a run. Subsequent rows' day cells
+   blank the text until focused (so keyboard nav and editing still work).
+   A thin cyan rule above each day-start row gives the group visual anchor. */
+.spreadsheet-editor-table tr.is-day-start > td {
+  border-top: 2px solid rgba(95, 228, 255, 0.28);
+}
+
+.spreadsheet-editor-table tr.is-day-start > td:first-child,
+.spreadsheet-editor-table tr.is-day-start > td:nth-child(2) input {
+  /* Day column on the day-start row reads as the group header. */
+  color: var(--neon-cyan);
+  font-weight: 700;
+}
+
+.spreadsheet-editor-table td.is-day-repeat input {
+  /* Hide the repeated day label until the cell is focused. The value stays
+     in the input so the coach can edit it; it's just visually suppressed
+     while another cell has focus. */
+  color: transparent;
+  caret-color: var(--neon-cyan);
+}
+
+.spreadsheet-editor-table td.is-day-repeat input:focus {
+  color: var(--text-primary);
+}
+
+.spreadsheet-editor-table td.is-day-repeat {
+  /* Subtle left guideline down each day-group so the eye tracks 'these three
+     rows belong to Monday'. */
+  box-shadow: inset 2px 0 0 rgba(95, 228, 255, 0.16);
+}
+
 /* --------------------------------------------------------------------------
    Responsive: 1024 / 768 / 640 breakpoints. The 640 block preserves the
    mobile retrofit landed earlier.
