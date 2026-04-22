@@ -51,14 +51,39 @@ athletes will show up under the athlete-search box in the program editor
 (scope=all). They'll move into the coach's personal roster (scope=mine) as
 soon as programs are assigned to them.
 
+## Create programs for a seeded roster
+
+```bash
+# Default: Coachone, 1 classic-accumulation program per GoT athlete
+python build_programs.py
+
+# Two back-to-back 4-week blocks per athlete (current + prior)
+python build_programs.py --programs-per-athlete 2
+
+# Different coach + theme, bigger roster, 8-week blocks
+python build_programs.py --coach Coachtwo --theme lord-of-the-rings \
+  --athletes 10 --block-weeks 8
+```
+
+Each program ships with the full xlsx schema: 5 days (Mon-Fri), ~14
+exercises, realistic % 1RM / RPE / weight / tempo / rest values, and a
+saved `intensity_mode = percent_1rm` preference so reopening the program
+keeps the coach's display mode.
+
+The generator lightly randomizes intensities per athlete (±2%) so the
+roster does not look copy-pasted; randomness is seeded from the athlete
+username so re-running the tool produces the same program for the same
+athlete (useful for reproducible fixtures).
+
+Note: this script is **additive**. Re-running creates more programs; it
+does not upsert. Use the Django admin or a reset script to clear.
+
 ## What's coming next
 
-- `build_programs.py` — realistic weekly programs per athlete, using the
-  xlsx-template schema
-- `simulate_completion.py` — athletes "execute" programs, log actual
-  results + PRs
+- `simulate_completion.py` — athletes "execute" programs over time,
+  log actual results + PRs + workout entries
 - `stress_test.py` — parallel-client load harness (asyncio + aiohttp)
   to probe throttle limits, connection pool behavior, N+1 at scale
 
-Each new entry point will live in this directory and reuse `client.py` +
-`themes.py`.
+Each new entry point will live in this directory and reuse `client.py`,
+`themes.py`, and `program_generators.py`.
