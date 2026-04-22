@@ -7,7 +7,9 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        // 127.0.0.1 explicitly so Node does not resolve localhost to ::1 and
+        // hit ECONNREFUSED when Django only binds IPv4 (Django's default).
+        target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       }
     }
