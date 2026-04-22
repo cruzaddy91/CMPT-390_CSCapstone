@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter as Router, Navigate, Route, Routes, Link, useLocation, useNavigate } from 'react-router-dom'
+import { BrowserRouter as Router, Navigate, Route, Routes, Link, useLocation } from 'react-router-dom'
 import AthleteDashboard from './pages/AthleteDashboard'
 import CoachDashboard from './pages/CoachDashboard'
 import Login from './pages/Login'
@@ -57,12 +57,19 @@ const ProtectedRoute = ({ role, children }) => {
 
 const Navigation = () => {
   const location = useLocation()
-  const navigate = useNavigate()
   const currentUser = getCurrentUser()
 
+  // Hard reload on logout. SPA-style navigate('/login', replace) used to
+  // trigger a render loop between /athlete's ProtectedRoute (Navigate to
+  // /login) and whichever in-flight effect/request re-entered /athlete --
+  // the browser eventually threw "SecurityError: Attempt to use
+  // history.replaceState() more than 100 times per 10 seconds" and the
+  // ErrorBoundary caught it. Forcing a full page reload is the right call
+  // for logout anyway: it drops in-flight requests, resets module state,
+  // and lands Login on a clean React tree.
   const handleLogout = async () => {
     await logout()
-    navigate('/login', { replace: true })
+    window.location.assign('/login')
   }
 
   return (
