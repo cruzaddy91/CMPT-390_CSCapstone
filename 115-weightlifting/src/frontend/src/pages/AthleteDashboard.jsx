@@ -25,6 +25,7 @@ import {
 import { getCurrentUser } from '../utils/auth'
 import { getDayCompletionKey, normalizeProgramData } from '../utils/dataStructure'
 import { formatApiError } from '../utils/errors'
+import { programTitleForDisplay } from '../utils/safeDisplay'
 import {
   computeLifetimeCompletions,
   computeStreak,
@@ -562,7 +563,7 @@ const AthleteDashboard = () => {
               className={`program-chip ${program.id === activeProgram.id ? 'is-active' : ''}`}
               onClick={() => { setActiveProgramId(program.id); setSelectedDayId(null) }}
             >
-              {program.name}
+              {programTitleForDisplay(program.name) || 'Program'}
             </button>
           ))}
         </div>

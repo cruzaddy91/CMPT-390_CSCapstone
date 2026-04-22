@@ -5,6 +5,18 @@ from .models import TrainingProgram, default_program_data
 User = get_user_model()
 
 
+def _plain_text_no_markup(value, field_label):
+    """Reject angle brackets in user-facing text fields (XSS / UI confusion)."""
+    if value in (None, ''):
+        return value
+    text = str(value)
+    if '<' in text or '>' in text:
+        raise serializers.ValidationError(
+            f'{field_label} cannot contain "<" or ">".'
+        )
+    return text
+
+
 def normalize_program_data(value):
     if value in (None, ''):
         value = default_program_data()
@@ -137,6 +149,12 @@ class ProgramCreateSerializer(serializers.ModelSerializer):
     def validate_program_data(self, value):
         return normalize_program_data(value)
 
+    def validate_name(self, value):
+        return _plain_text_no_markup(value, 'Program name')
+
+    def validate_description(self, value):
+        return _plain_text_no_markup(value, 'Description')
+
     def create(self, validated_data):
         athlete_id = validated_data.pop('athlete_id')
         athlete = User.objects.get(id=athlete_id, user_type='athlete')
@@ -167,6 +185,12 @@ class ProgramUpdateSerializer(serializers.ModelSerializer):
 
     def validate_program_data(self, value):
         return normalize_program_data(value)
+
+    def validate_name(self, value):
+        return _plain_text_no_markup(value, 'Program name')
+
+    def validate_description(self, value):
+        return _plain_text_no_markup(value, 'Description')
 
     def update(self, instance, validated_data):
         athlete_id = validated_data.pop('athlete_id', None)

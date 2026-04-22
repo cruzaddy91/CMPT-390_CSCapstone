@@ -222,6 +222,65 @@ class ProgramDataDayIdTests(TestCase):
         self.assertEqual([d['id'] for d in days], ['d0', 'd1'])
 
 
+class ProgramNameMarkupRejectedTests(TestCase):
+    """Program name/description must stay plain text at the API boundary."""
+
+    def setUp(self):
+        self.coach = User.objects.create_user(
+            username='xss_coach', password='pw', user_type='coach'
+        )
+        self.athlete = User.objects.create_user(
+            username='xss_athlete', password='pw', user_type='athlete'
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.coach)
+
+    def _minimal_create_body(self, **overrides):
+        base = {
+            'name': 'Clean block',
+            'description': '',
+            'athlete_id': self.athlete.id,
+            'start_date': '2026-04-21',
+            'end_date': None,
+            'program_data': {
+                'week_start_date': '2026-04-21',
+                'days': [{'id': 'd0', 'day': 'Monday', 'exercises': []}],
+            },
+        }
+        base.update(overrides)
+        return base
+
+    def test_create_rejects_angle_brackets_in_name(self):
+        response = self.client.post(
+            reverse('program-list-create'),
+            self._minimal_create_body(name="<script>alert(1)</script>"),
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_create_rejects_angle_brackets_in_description(self):
+        response = self.client.post(
+            reverse('program-list-create'),
+            self._minimal_create_body(description='<img onerror=1>'),
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_patch_rejects_markup_in_name(self):
+        program = TrainingProgram.objects.create(
+            coach=self.coach,
+            athlete=self.athlete,
+            name='Legit',
+            start_date=date(2026, 1, 1),
+        )
+        response = self.client.patch(
+            reverse('program-detail', kwargs={'program_id': program.id}),
+            {'name': '</style><script>1</script>'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 400)
+
+
 class SettingsHardeningTests(TestCase):
     """Prod boot should refuse insecure SECRET_KEY defaults."""
 

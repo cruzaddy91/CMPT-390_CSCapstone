@@ -10,6 +10,7 @@ import { downloadTemplateXlsx, parseProgramFile } from '../utils/programTemplate
 import { clearDraft, readDraft, saveDraft } from '../utils/programDraft'
 import { BLOCK_PRESETS, endDateForBlock, inferBlockKey } from '../utils/blockLength'
 import { relativeTimeSince } from '../utils/relativeTime'
+import { programTitleForDisplay } from '../utils/safeDisplay'
 
 const getDefaultForm = () => ({
   name: '',
@@ -457,7 +458,7 @@ const ProgramRow = ({ program, athletes, assignmentDrafts, onAssignDraftChange, 
           <span className="program-row-ring-pct data">{pct}%</span>
         </div>
         <span className="program-row-head-main">
-          <span className="program-row-title">{program.name}</span>
+          <span className="program-row-title">{programTitleForDisplay(program.name) || 'Program'}</span>
           <span className="program-row-dates">
             <span className="data">{program.start_date}</span>
             {program.end_date && (

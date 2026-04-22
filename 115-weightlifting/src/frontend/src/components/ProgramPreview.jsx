@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import WorkoutDay from './WorkoutDay'
+import { programTitleForDisplay } from '../utils/safeDisplay'
 
 // Read-only render of what the athlete sees. Uses the existing WorkoutDay in
 // non-coach mode but disables the completion + result writes so the modal is
@@ -29,7 +30,7 @@ const ProgramPreview = ({ programData, programName, athleteUsername, onClose }) 
         <div className="preview-topbar">
           <div>
             <div className="preview-kicker">Athlete preview</div>
-            <h2 className="preview-title">{programName || 'Untitled program'}</h2>
+            <h2 className="preview-title">{programTitleForDisplay(programName) || 'Untitled program'}</h2>
             {athleteUsername && (
               <div className="preview-subtitle">for {athleteUsername}</div>
             )}
