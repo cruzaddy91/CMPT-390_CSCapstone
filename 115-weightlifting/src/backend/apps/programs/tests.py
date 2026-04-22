@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test import TestCase
 from django.test.utils import CaptureQueriesContext
+from django.core.management import call_command
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -279,6 +280,35 @@ class ProgramNameMarkupRejectedTests(TestCase):
             format='json',
         )
         self.assertEqual(response.status_code, 400)
+
+
+class PurgeMarkupProgramNamesCommandTests(TestCase):
+    """Management command removes legacy probe rows that bypassed validation."""
+
+    def setUp(self):
+        self.coach = User.objects.create_user(
+            username='purge_coach', password='pw', user_type='coach'
+        )
+        self.athlete = User.objects.create_user(
+            username='purge_athlete', password='pw', user_type='athlete'
+        )
+
+    def test_purge_apply_deletes_only_markup_rows(self):
+        bad = TrainingProgram.objects.create(
+            coach=self.coach,
+            athlete=self.athlete,
+            name="<script>x</script>",
+            start_date=date(2026, 1, 1),
+        )
+        good = TrainingProgram.objects.create(
+            coach=self.coach,
+            athlete=self.athlete,
+            name='Clean block',
+            start_date=date(2026, 2, 1),
+        )
+        call_command('purge_markup_program_names', '--apply', verbosity=0)
+        self.assertFalse(TrainingProgram.objects.filter(pk=bad.pk).exists())
+        self.assertTrue(TrainingProgram.objects.filter(pk=good.pk).exists())
 
 
 class SettingsHardeningTests(TestCase):

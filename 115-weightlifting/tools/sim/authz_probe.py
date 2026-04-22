@@ -367,22 +367,20 @@ def main() -> int:
     })
 
     # ======================================================================
-    # UAT #7: XSS payload in a free-text field round-trips unescaped on backend
-    # (so the frontend owns escaping; React already does). Prove the backend
-    # doesn't silently mangle user content.
+    # UAT #7: Program names cannot carry HTML-shaped markup (API rejects).
+    # The old probe stored a <script> title for manual UI checks; that polluted
+    # athlete dashboards every run. Validation now blocks angle brackets.
     # ======================================================================
     xss_payload_name = '<script>alert(\'xss\')</script> Sneaky'
-    xss_program = coach_a.create_program({
-        **throwaway_payload,
-        'name': xss_payload_name,
-        'athlete_id': jon['id'],
-    })
-    refetched = [p for p in coach_a.list_programs() if p['id'] == xss_program['id']]
-    stored_name = refetched[0]['name'] if refetched else None
+    r_xss = coach_a.session.post(
+        f'{base}/api/programs/',
+        json={**throwaway_payload, 'name': xss_payload_name},
+        headers={'Authorization': f'Bearer {tok_a}', 'Content-Type': 'application/json'},
+    )
     results.append({
-        "check": "XSS: <script> payload stores verbatim (backend doesn't mangle; React escapes on render)",
-        "stored": stored_name,
-        "pass": stored_name == xss_payload_name,
+        "check": "Program create: name with angle brackets -> 400 (no stored XSS title)",
+        "status": r_xss.status_code,
+        "pass": r_xss.status_code == 400,
     })
 
     # ======================================================================
