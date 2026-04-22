@@ -5,7 +5,7 @@ import CoachDashboard from './pages/CoachDashboard'
 import Login from './pages/Login'
 import ErrorBoundary from './components/ErrorBoundary'
 import { getCurrentUserFromApi, logout } from './services/api'
-import { clearAuth, getCurrentUser, getToken, setCurrentUser } from './utils/auth'
+import { clearAuth, getCurrentUser, getToken, isAuthenticated, setCurrentUser } from './utils/auth'
 import './App.css'
 
 const getDefaultRouteForUser = () => {
