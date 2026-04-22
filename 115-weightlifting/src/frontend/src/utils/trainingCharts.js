@@ -3,6 +3,8 @@
  * Keeps AthleteDashboard lean and unit-testable without rendering.
  */
 
+import { CHART_PALETTE_FALLBACK } from './chartTheme'
+
 const LIFT_LABELS = { snatch: 'Snatch', clean_jerk: 'Clean & Jerk', total: 'Total' }
 
 const monthKey = (isoDate) => isoDate.slice(0, 7)
@@ -28,7 +30,11 @@ const addMonthsKey = (key, delta) => {
 }
 
 /** Monthly best per lift — smooths multi-year PR logs for readable line charts. */
-export function monthlyBestPrLineData(records, liftTypes = ['snatch', 'clean_jerk', 'total']) {
+export function monthlyBestPrLineData(
+  records,
+  liftTypes = ['snatch', 'clean_jerk', 'total'],
+  palette = CHART_PALETTE_FALLBACK,
+) {
   const byLiftMonth = new Map()
   const months = new Set()
   for (const r of records) {
@@ -43,9 +49,9 @@ export function monthlyBestPrLineData(records, liftTypes = ['snatch', 'clean_jer
   }
   const labels = [...months].sort()
   const colors = [
-    { border: '#5fe4ff', fill: 'rgba(95,228,255,0.14)', point: '#a5ecff' },
-    { border: '#36f0c5', fill: 'rgba(54,240,197,0.14)', point: '#7ff7dd' },
-    { border: '#ffb23f', fill: 'rgba(255,178,63,0.14)', point: '#ffd489' },
+    { border: palette.snBorder, fill: palette.snFill, point: palette.snPoint },
+    { border: palette.cjBorder, fill: palette.cjFill, point: palette.cjPoint },
+    { border: palette.totBorder, fill: palette.totFill, point: palette.totPoint },
   ]
   return {
     labels,
@@ -70,7 +76,7 @@ export function monthlyBestPrLineData(records, liftTypes = ['snatch', 'clean_jer
  * Quarter-by-quarter max competition total as a filled line (area).
  * Reads better than bars for long multi-year macrocycle trends.
  */
-export function quarterlyBestTotalLineData(records) {
+export function quarterlyBestTotalLineData(records, palette = CHART_PALETTE_FALLBACK) {
   const totals = records.filter((r) => r.lift_type === 'total')
   const buckets = new Map()
   for (const r of totals) {
@@ -95,14 +101,14 @@ export function quarterlyBestTotalLineData(records) {
     datasets: [{
       label: 'Best competition total (kg)',
       data: labels.map((k) => buckets.get(k)),
-      borderColor: 'rgba(95, 228, 255, 0.95)',
-      backgroundColor: 'rgba(95, 228, 255, 0.18)',
+      borderColor: palette.quarterBorder,
+      backgroundColor: palette.quarterFill,
       borderWidth: 2,
       fill: true,
       tension: 0.22,
       pointRadius: 4,
       pointHoverRadius: 6,
-      pointBackgroundColor: '#a5ecff',
+      pointBackgroundColor: palette.quarterPoint,
       spanGaps: true,
     }],
   }
@@ -112,7 +118,7 @@ export function quarterlyBestTotalLineData(records) {
  * Line: rolling 6-calendar-month peak competition total (month-end series).
  * Highlights long-horizon strength trend separate from noisy meet-day totals.
  */
-export function sixMonthRollingPeakTotalLine(records) {
+export function sixMonthRollingPeakTotalLine(records, palette = CHART_PALETTE_FALLBACK) {
   const totals = records
     .filter((r) => r.lift_type === 'total')
     .map((r) => ({ d: r.date, w: Number(r.weight) }))
@@ -155,9 +161,9 @@ export function sixMonthRollingPeakTotalLine(records) {
     datasets: [{
       label: '6-mo rolling peak total (kg)',
       data,
-      borderColor: '#36f0c5',
-      backgroundColor: 'rgba(54,240,197,0.12)',
-      pointBackgroundColor: '#7ff7dd',
+      borderColor: palette.rollingBorder,
+      backgroundColor: palette.rollingFill,
+      pointBackgroundColor: palette.rollingPoint,
       pointRadius: 3,
       pointHoverRadius: 5,
       tension: 0.35,

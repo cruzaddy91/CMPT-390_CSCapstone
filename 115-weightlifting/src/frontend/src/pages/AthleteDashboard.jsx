@@ -23,6 +23,7 @@ import {
 } from '../services/api'
 import { getCurrentUser } from '../utils/auth'
 import { getDayCompletionKey, normalizeProgramData } from '../utils/dataStructure'
+import { buildChartJsCommonOptions, useChartPalette } from '../utils/chartTheme'
 import { formatApiError } from '../utils/errors'
 import { programTitleForDisplay } from '../utils/safeDisplay'
 import {
@@ -43,10 +44,6 @@ import {
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend)
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-
-const chartTickColor = '#b3d4ee'
-const chartGridColor = 'rgba(95, 228, 255, 0.14)'
-const chartBorderColor = 'rgba(95, 228, 255, 0.34)'
 
 const liftLabels = { snatch: 'Snatch', clean_jerk: 'Clean & Jerk', total: 'Total' }
 
@@ -90,6 +87,7 @@ const pickDefaultDayId = (days, entriesByDayId) =>
   _pickDefaultDayId(days, entriesByDayId, WEEKDAY_NAMES[new Date().getDay()])
 
 const AthleteDashboard = () => {
+  const chartPalette = useChartPalette()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
@@ -426,44 +424,24 @@ const AthleteDashboard = () => {
   }
 
   const prHistoryChart = useMemo(
-    () => monthlyBestPrLineData(personalRecords),
-    [personalRecords],
+    () => monthlyBestPrLineData(personalRecords, ['snatch', 'clean_jerk', 'total'], chartPalette),
+    [personalRecords, chartPalette],
   )
 
   const quarterlyTotalChart = useMemo(
-    () => quarterlyBestTotalLineData(personalRecords),
-    [personalRecords],
+    () => quarterlyBestTotalLineData(personalRecords, chartPalette),
+    [personalRecords, chartPalette],
   )
 
   const rollingPeakChart = useMemo(
-    () => sixMonthRollingPeakTotalLine(personalRecords),
-    [personalRecords],
+    () => sixMonthRollingPeakTotalLine(personalRecords, chartPalette),
+    [personalRecords, chartPalette],
   )
 
-  const sharedChartOptions = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        labels: { color: '#f4f7fb', usePointStyle: true, boxWidth: 10, padding: 14, font: { size: 11, family: 'Inter, sans-serif' } },
-      },
-      tooltip: { backgroundColor: 'rgba(4, 10, 20, 0.96)', titleColor: '#f4f7fb', bodyColor: '#c9d6e3', borderColor: 'rgba(95,228,255,0.28)', borderWidth: 1, padding: 10, cornerRadius: 6 },
-    },
-    scales: {
-      x: {
-        ticks: {
-          color: chartTickColor,
-          maxRotation: 40,
-          minRotation: 0,
-          autoSkip: true,
-          maxTicksLimit: 18,
-        },
-        grid: { color: chartGridColor },
-        border: { color: chartBorderColor },
-      },
-      y: { beginAtZero: false, ticks: { color: chartTickColor }, grid: { color: chartGridColor }, border: { color: chartBorderColor } },
-    },
-  }), [])
+  const sharedChartOptions = useMemo(
+    () => buildChartJsCommonOptions(chartPalette),
+    [chartPalette],
+  )
 
   if (loading) {
     return (
@@ -697,7 +675,7 @@ const AthleteDashboard = () => {
           <h3>Stats &amp; tools</h3>
 
           <p className="athlete-charts-intro">
-            Monthly bests from your PR log (click legend entries to hide or show a lift). The cyan area is best competition total by quarter; the green line is a six-month rolling peak on total — both support macrocycle decisions.
+            Monthly bests from your PR log (click legend entries to hide or show a lift). The filled line is best competition total by quarter; the other line is a six-month rolling peak on total — both read clearly in light or dark mode.
           </p>
           <div className="athlete-drawer-stats-grid athlete-drawer-stats-grid--three">
             <div className="chart-card">

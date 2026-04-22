@@ -787,7 +787,7 @@
 .login-card select:focus,
 .login-card textarea:focus {
   border-color: var(--neon-cyan);
-  box-shadow: 0 0 0 3px rgba(95, 228, 255, 0.14);
+  box-shadow: var(--focus-ring);
 }
 
 .day-title-input {
@@ -1395,7 +1395,7 @@
 .exercise-name-input:focus {
   outline: none;
   border-color: var(--neon-cyan);
-  box-shadow: 0 0 0 3px rgba(95, 228, 255, 0.14);
+  box-shadow: var(--focus-ring);
 }
 
 .exercise-remove-btn {
@@ -1455,7 +1455,7 @@
 .field-inline-input:focus {
   outline: none;
   border-color: var(--neon-cyan);
-  box-shadow: 0 0 0 2px rgba(95, 228, 255, 0.14);
+  box-shadow: var(--focus-ring);
 }
 
 .exercise-notes {
@@ -1920,6 +1920,7 @@
   font-size: 0.95rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+  color: var(--text-primary);
 }
 
 .athlete-drawer h4 {

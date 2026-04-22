@@ -115,6 +115,32 @@
      touching every button rule. */
   --btn-bg:       linear-gradient(180deg, #102a48, #081426);
   --btn-bg-hover: linear-gradient(180deg, #143455, #0a1a2e);
+
+  /* Focus ring + Chart.js (read in JS via chartTheme.js) */
+  --focus-ring: 0 0 0 3px rgba(95, 228, 255, 0.14);
+  --chart-axis-tick: #b3d4ee;
+  --chart-grid: rgba(95, 228, 255, 0.14);
+  --chart-border: rgba(95, 228, 255, 0.34);
+  --chart-sn-border: #5fe4ff;
+  --chart-sn-fill: rgba(95, 228, 255, 0.14);
+  --chart-sn-point: #a5ecff;
+  --chart-cj-border: #36f0c5;
+  --chart-cj-fill: rgba(54, 240, 197, 0.14);
+  --chart-cj-point: #7ff7dd;
+  --chart-tot-border: #ffb23f;
+  --chart-tot-fill: rgba(255, 178, 63, 0.14);
+  --chart-tot-point: #ffd489;
+  --chart-quarter-border: rgba(95, 228, 255, 0.95);
+  --chart-quarter-fill: rgba(95, 228, 255, 0.18);
+  --chart-quarter-point: #a5ecff;
+  --chart-rolling-border: #36f0c5;
+  --chart-rolling-fill: rgba(54, 240, 197, 0.12);
+  --chart-rolling-point: #7ff7dd;
+  --chart-tooltip-bg: rgba(4, 10, 20, 0.96);
+  --chart-tooltip-title: #f4f7fb;
+  --chart-tooltip-body: #c9d6e3;
+  --chart-tooltip-border: rgba(95, 228, 255, 0.28);
+  --chart-legend: #f4f7fb;
 }
 
 /* ==========================================================================
@@ -175,6 +201,31 @@
 
   --btn-bg:       linear-gradient(180deg, #0086b3, #00688c);
   --btn-bg-hover: linear-gradient(180deg, #00a5d4, #007fa8);
+
+  --focus-ring: 0 0 0 3px rgba(0, 134, 179, 0.22);
+  --chart-axis-tick: #4a667a;
+  --chart-grid: rgba(0, 102, 140, 0.12);
+  --chart-border: rgba(0, 102, 140, 0.28);
+  --chart-sn-border: #0086b3;
+  --chart-sn-fill: rgba(0, 134, 179, 0.12);
+  --chart-sn-point: #0f90b8;
+  --chart-cj-border: #0e9e7e;
+  --chart-cj-fill: rgba(14, 158, 126, 0.12);
+  --chart-cj-point: #0a7d64;
+  --chart-tot-border: #b06200;
+  --chart-tot-fill: rgba(176, 98, 0, 0.12);
+  --chart-tot-point: #c47a12;
+  --chart-quarter-border: #0086b3;
+  --chart-quarter-fill: rgba(0, 134, 179, 0.14);
+  --chart-quarter-point: #0a6ac2;
+  --chart-rolling-border: #0e9e7e;
+  --chart-rolling-fill: rgba(14, 158, 126, 0.1);
+  --chart-rolling-point: #0a7d64;
+  --chart-tooltip-bg: rgba(255, 255, 255, 0.98);
+  --chart-tooltip-title: #0b1324;
+  --chart-tooltip-body: #394d65;
+  --chart-tooltip-border: rgba(0, 102, 140, 0.22);
+  --chart-legend: #0b1324;
 }
 
 * {
