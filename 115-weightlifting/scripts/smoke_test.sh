@@ -13,6 +13,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
+from apps.athletes.models import ProgramCompletion
 from apps.programs.models import TrainingProgram
 
 if 'testserver' not in settings.ALLOWED_HOSTS:
@@ -28,6 +29,11 @@ athlete, _ = User.objects.get_or_create(username='athlete_smoke', defaults={'use
 athlete.user_type = 'athlete'
 athlete.set_password('DemoPass123!')
 athlete.save()
+
+athlete_b, _ = User.objects.get_or_create(username='athlete_smoke_b', defaults={'user_type': 'athlete'})
+athlete_b.user_type = 'athlete'
+athlete_b.set_password('DemoPass123!')
+athlete_b.save()
 
 program_payload = {
     'name': 'Smoke Test Week',
@@ -57,7 +63,24 @@ program_payload = {
 coach_client = APIClient()
 coach_login = coach_client.post('/api/auth/token/', {'username': 'coach_smoke', 'password': 'DemoPass123!'}, format='json')
 assert coach_login.status_code == 200, coach_login.content
-coach_client.credentials(HTTP_AUTHORIZATION=f"Bearer {coach_login.json()['access']}")
+coach_tokens = coach_login.json()
+assert 'access' in coach_tokens and 'refresh' in coach_tokens, f"expected access+refresh, got {coach_tokens}"
+coach_client.credentials(HTTP_AUTHORIZATION=f"Bearer {coach_tokens['access']}")
+
+unauth_client = APIClient()
+anon_me = unauth_client.get('/api/auth/me/')
+assert anon_me.status_code == 401, f"unauth /me should be 401, got {anon_me.status_code}"
+
+refresh_response = APIClient().post(
+    '/api/auth/token/refresh/', {'refresh': coach_tokens['refresh']}, format='json'
+)
+assert refresh_response.status_code == 200, refresh_response.content
+refreshed_access = refresh_response.json()['access']
+assert refreshed_access and refreshed_access != coach_tokens['access'], 'refresh did not rotate access token'
+rotated_client = APIClient()
+rotated_client.credentials(HTTP_AUTHORIZATION=f"Bearer {refreshed_access}")
+rotated_me = rotated_client.get('/api/auth/me/')
+assert rotated_me.status_code == 200, rotated_me.content
 
 me_response = coach_client.get('/api/auth/me/')
 assert me_response.status_code == 200, me_response.content
@@ -104,10 +127,29 @@ sinclair_response = athlete_client.post(
 )
 assert sinclair_response.status_code == 200, sinclair_response.content
 
+completion_count_before = ProgramCompletion.objects.filter(program_id=program_id).count()
+assert completion_count_before >= 1, 'expected at least 1 completion record before reassignment'
+
+reassign_response = coach_client.patch(
+    f'/api/programs/{program_id}/assign/',
+    {'athlete_id': athlete_b.id},
+    format='json',
+)
+assert reassign_response.status_code == 200, reassign_response.content
+assert reassign_response.json()['athlete_id'] == athlete_b.id, 'athlete swap did not persist'
+
+prior_records = ProgramCompletion.objects.filter(program_id=program_id, athlete=athlete)
+assert prior_records.count() == completion_count_before, (
+    f'prior athlete history lost: before={completion_count_before}, after={prior_records.count()}'
+)
+
 print(json.dumps({
     'program_id': program_id,
     'sinclair': sinclair_response.json(),
     'coach_program_count': TrainingProgram.objects.filter(coach=coach).count(),
+    'refresh_rotated': True,
+    'unauth_me_status': anon_me.status_code,
+    'reassignment_preserved_completions': prior_records.count(),
 }))
 PY
 )"

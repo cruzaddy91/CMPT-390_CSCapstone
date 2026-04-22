@@ -29,7 +29,10 @@ Commands:
   import-data      Import fixture data from JSON
   restore          Restore the database from a backup
   report           Generate Markdown and HTML operations reports
-  smoke            Run the end-to-end smoke test
+  smoke            Run the end-to-end backend API smoke
+  smoke-settings   Smoke: settings.py refuses insecure SECRET_KEY in prod
+  smoke-frontend   Smoke: frontend vitest + production build
+  smoke-all        Run every smoke (backend + settings + frontend)
   test             Run backend checks/tests and frontend production build
   uat              Run localhost user acceptance tests against the live stack
   release          Run the controlled pre-deploy release flow
@@ -97,6 +100,15 @@ case "$command" in
     ;;
   smoke)
     exec "$ROOT_DIR/scripts/smoke_test.sh" "$@"
+    ;;
+  smoke-settings)
+    exec "$ROOT_DIR/scripts/smoke_settings.sh" "$@"
+    ;;
+  smoke-frontend)
+    exec "$ROOT_DIR/scripts/smoke_frontend.sh" "$@"
+    ;;
+  smoke-all)
+    exec "$ROOT_DIR/scripts/smoke_all.sh" "$@"
     ;;
   test)
     exec "$ROOT_DIR/scripts/test_all.sh" "$@"
