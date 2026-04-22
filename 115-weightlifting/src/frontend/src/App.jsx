@@ -8,6 +8,7 @@ import { getAthletes, getCurrentUserFromApi, getProgramsFromBackend, logout } fr
 import { clearAuth, getCurrentUser, getToken, isAuthenticated, setCurrentUser } from './utils/auth'
 import { countExercises, normalizeProgramData } from './utils/dataStructure'
 import { relativeTimeSince } from './utils/relativeTime'
+import { applyTheme, resolveInitialTheme, toggleTheme } from './utils/theme'
 import './App.css'
 
 const getDefaultRouteForUser = () => {
@@ -58,6 +59,12 @@ const ProtectedRoute = ({ role, children }) => {
 const Navigation = () => {
   const location = useLocation()
   const currentUser = getCurrentUser()
+  const [theme, setThemeState] = useState(resolveInitialTheme)
+
+  // Apply on mount (covers first visit -- index.css defaults to dark until
+  // this runs, so light-preference users see a one-frame flicker; acceptable
+  // trade for keeping the toggle state in React instead of an inline script).
+  useEffect(() => { applyTheme(theme) }, [theme])
 
   // Hard reload on logout. SPA-style navigate('/login', replace) used to
   // trigger a render loop between /athlete's ProtectedRoute (Navigate to
@@ -70,6 +77,10 @@ const Navigation = () => {
   const handleLogout = async () => {
     await logout()
     window.location.assign('/login')
+  }
+
+  const handleThemeToggle = () => {
+    setThemeState(toggleTheme(theme))
   }
 
   return (
@@ -86,6 +97,15 @@ const Navigation = () => {
               <Link to="/athlete" className={location.pathname === '/athlete' ? 'active' : ''}>Athlete</Link>
             )}
           </div>
+          <button
+            type="button"
+            className="nav-button nav-theme-toggle"
+            onClick={handleThemeToggle}
+            aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+            title={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+          >
+            {theme === 'light' ? 'Dark' : 'Light'}
+          </button>
           {currentUser && (
             <>
               <span className="nav-user">{currentUser.username} · {currentUser.user_type}</span>

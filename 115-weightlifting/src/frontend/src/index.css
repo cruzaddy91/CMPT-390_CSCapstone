@@ -110,6 +110,71 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-display: 'Exo 2', 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+
+  /* Primary-button gradient. Token-ized so light mode can swap without
+     touching every button rule. */
+  --btn-bg:       linear-gradient(180deg, #102a48, #081426);
+  --btn-bg-hover: linear-gradient(180deg, #143455, #0a1a2e);
+}
+
+/* ==========================================================================
+   Light theme override. Opt-in only: user flips via the nav toggle
+   (utils/theme.js writes data-theme="light" onto <html>). Dark stays the
+   default — prefers-color-scheme is respected on first visit in theme.js.
+   Tokens are re-colored for readability on a near-white base while keeping
+   the cyan/amber brand identity. Everything else inherits unchanged.
+   ========================================================================== */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  /* Neons re-tuned for contrast on white. Cyan desaturates to a deep teal;
+     amber darkens. */
+  --neon-cyan:  #0086b3;
+  --neon-blue:  #0a6ac2;
+  --neon-ice:   #0f90b8;
+  --neon-amber: #b06200;
+
+  --bg-void:    #f4f7fb;
+  --bg-deep:    #eaf0f7;
+  --bg-panel:   #ffffff;
+  --bg-panel-2: #f1f5fa;
+  --bg-input:   #f8fafc;
+
+  --text-primary:   #0b1324;
+  --text-secondary: #394d65;
+  --text-muted:     #5d7388;
+  --text-dim:       #8a9db0;
+
+  --danger:  #c03040;
+  --success: #0e9e7e;
+  --warning: var(--neon-amber);
+  --danger-soft:  rgba(192, 48, 64, 0.10);
+  --success-soft: rgba(14, 158, 126, 0.10);
+  --warning-soft: rgba(176, 98, 0, 0.10);
+
+  --accent-soft:       rgba(0, 134, 179, 0.08);
+  --accent-soft-blue:  rgba(10, 106, 194, 0.08);
+  --accent-soft-amber: rgba(176, 98, 0, 0.10);
+
+  --line:        rgba(15, 60, 90, 0.14);
+  --line-strong: rgba(15, 60, 90, 0.42);
+  --line-hot:    rgba(176, 98, 0, 0.40);
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.10);
+  --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.14);
+
+  --glow-ring: 0 0 0 1px rgba(0, 134, 179, 0.28);
+  --glow-ring-hot: 0 0 0 1px rgba(176, 98, 0, 0.34);
+  --glow-chip: 0 0 0 1px rgba(0, 134, 179, 0.14);
+
+  --inner-glow: inset 0 0 0 1px rgba(0, 134, 179, 0.06);
+  --inner-hot:  inset 0 0 0 1px rgba(176, 98, 0, 0.08);
+
+  --scanlines: none;
+
+  --btn-bg:       linear-gradient(180deg, #0086b3, #00688c);
+  --btn-bg-hover: linear-gradient(180deg, #00a5d4, #007fa8);
 }
 
 * {
@@ -140,6 +205,13 @@ body {
   overflow-x: hidden;
 }
 
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(0, 134, 179, 0.05), transparent 28%),
+    radial-gradient(circle at 88% 6%, rgba(10, 106, 194, 0.04), transparent 26%),
+    linear-gradient(180deg, #f4f7fb 0%, #eaf0f7 50%, #f4f7fb 100%);
+}
+
 /* Subtle grid pattern on the backdrop — one of the few "Tron" cues that stays.
    Fades out toward the edges so content area reads cleanly. */
 body::before {
@@ -155,6 +227,14 @@ body::before {
   -webkit-mask-image: radial-gradient(circle at center, black 30%, transparent 90%);
   mask-image: radial-gradient(circle at center, black 30%, transparent 90%);
   opacity: 0.32;
+}
+
+:root[data-theme="light"] body::before {
+  /* Quieter grid on light — keep the blueprint cue but at ~1/3 visibility. */
+  background-image:
+    linear-gradient(rgba(0, 86, 120, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 86, 120, 0.04) 1px, transparent 1px);
+  opacity: 0.6;
 }
 
 h1,

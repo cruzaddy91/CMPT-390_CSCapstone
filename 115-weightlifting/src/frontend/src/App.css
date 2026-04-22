@@ -39,6 +39,15 @@
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
 }
 
+/* Light-mode nav: swap to a translucent white strip that matches the rest
+   of the page. Keeps the blur + thin border so the sticky bar still feels
+   like a distinct chrome layer, not part of the content. */
+:root[data-theme="light"] .main-nav {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(245, 248, 253, 0.82));
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+}
+
 .nav-container {
   padding: 1rem 0;
   display: flex;
@@ -226,7 +235,7 @@
 .login-btn {
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-pill);
-  background: linear-gradient(180deg, #102a48, #081426);
+  background: var(--btn-bg);
   color: var(--text-primary);
   font-weight: 600;
   font-size: 0.95rem;
@@ -238,11 +247,20 @@
   box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
+/* Light-mode primary buttons get white-on-cyan text -- the cyan gradient
+   is saturated enough that the default --text-primary (near-black) would
+   lose contrast. */
+:root[data-theme="light"] .home-btn,
+:root[data-theme="light"] .save-btn,
+:root[data-theme="light"] .login-btn {
+  color: #ffffff;
+}
+
 .home-btn:hover,
 .save-btn:hover:not(:disabled),
 .login-btn:hover:not(:disabled) {
   border-color: var(--neon-cyan);
-  background: linear-gradient(180deg, #143455, #0a1a2e);
+  background: var(--btn-bg-hover);
   box-shadow: var(--shadow-md), 0 0 0 1px var(--neon-cyan);
 }
 
@@ -590,6 +608,34 @@
   color: #ff8ea6;
   border-color: rgba(255, 90, 110, 0.34);
   background: var(--danger-soft);
+}
+
+/* Non-color cues on every status surface so the state is readable for
+   anyone whose vision doesn't distinguish red from green (deuteranopia/
+   protanopia, most common colorblindness). Glyphs are ASCII-adjacent to
+   keep the monochrome/no-emoji aesthetic of the rest of the app. */
+.save-message.success::before,
+.login-success::before {
+  content: '\2713 \00a0';  /* ✓ + nbsp */
+  font-weight: 700;
+  margin-right: 0.2rem;
+}
+
+.save-message.error::before,
+.login-error::before {
+  content: '!\00a0';
+  font-weight: 700;
+  margin-right: 0.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  height: 1.1em;
+  border-radius: 999px;
+  border: 1.5px solid currentColor;
+  font-size: 0.8em;
+  line-height: 1;
+  vertical-align: -1px;
 }
 
 /* Encouragement toast: separate channel from save-message so the dry status
