@@ -189,3 +189,51 @@
     order: 1;
   }
 }
+
+@media (max-width: 640px) {
+  .login-container {
+    padding: 1rem 0.5rem;
+    min-height: calc(100vh - 60px);
+  }
+
+  .login-grid {
+    width: 100%;
+    gap: 0.75rem;
+  }
+
+  .login-intro,
+  .login-card {
+    padding: 1rem;
+    min-height: 0;
+  }
+
+  .login-card-frame {
+    padding: 1rem;
+  }
+
+  .login-card input,
+  .login-card select,
+  .login-card textarea {
+    width: 100%;
+    min-height: 48px;
+    font-size: 16px; /* prevent iOS zoom-on-focus */
+  }
+
+  .login-btn {
+    width: 100%;
+    min-height: 48px;
+  }
+
+  h1 {
+    font-size: 1.6rem;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  .login-intro-list {
+    gap: 0.5rem;
+  }
+}
