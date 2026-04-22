@@ -1979,6 +1979,18 @@
   margin: 0 0 0.75rem;
 }
 
+.athlete-chart-footnote {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.athlete-chart-footnote li + li {
+  margin-top: 0.35rem;
+}
+
 @media (max-width: 768px) {
   .athlete-drawer-stats-grid { grid-template-columns: 1fr; }
   .athlete-drawer-stats-grid--three { grid-template-columns: 1fr; }

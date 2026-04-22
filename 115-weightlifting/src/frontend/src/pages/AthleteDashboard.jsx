@@ -28,7 +28,7 @@ import { formatApiError } from '../utils/errors'
 import { programTitleForDisplay } from '../utils/safeDisplay'
 import {
   monthlyBestPrLineData,
-  quarterlyBestTotalLineData,
+  peakPerformanceForecastChart,
   sixMonthRollingPeakTotalLine,
 } from '../utils/trainingCharts'
 import {
@@ -428,8 +428,8 @@ const AthleteDashboard = () => {
     [personalRecords, chartPalette],
   )
 
-  const quarterlyTotalChart = useMemo(
-    () => quarterlyBestTotalLineData(personalRecords, chartPalette),
+  const peakForecast = useMemo(
+    () => peakPerformanceForecastChart(personalRecords, chartPalette),
     [personalRecords, chartPalette],
   )
 
@@ -675,7 +675,7 @@ const AthleteDashboard = () => {
           <h3>Stats &amp; tools</h3>
 
           <p className="athlete-charts-intro">
-            Monthly bests from your PR log (click legend entries to hide or show a lift). The filled line is best competition total by quarter; the other line is a six-month rolling peak on total — both read clearly in light or dark mode.
+            Monthly bests from your PR log (click legend entries to hide or show a lift). The middle chart marks competition-total peaks and a simple rhythm-based next-window estimate; the rolling line is a six-month peak on total. Treat projections as planning hints, not guarantees.
           </p>
           <div className="athlete-drawer-stats-grid athlete-drawer-stats-grid--three">
             <div className="chart-card">
@@ -687,11 +687,20 @@ const AthleteDashboard = () => {
               )}
             </div>
             <div className="chart-card">
-              <h4>Quarterly best total</h4>
-              {personalRecords.filter((r) => r.lift_type === 'total').length === 0 ? (
-                <div className="chart-empty">Log a competition total to see quarter peaks.</div>
+              <h4>Peak rhythm &amp; forecast</h4>
+              {peakForecast.labels.length === 0 ? (
+                <div className="chart-empty">Log a competition total to see peak timing and a forecast.</div>
               ) : (
-                <Line data={quarterlyTotalChart} options={sharedChartOptions} />
+                <>
+                  <Line data={{ labels: peakForecast.labels, datasets: peakForecast.datasets }} options={sharedChartOptions} />
+                  {peakForecast.insights.length > 0 && (
+                    <ul className="athlete-chart-footnote" aria-label="Chart notes">
+                      {peakForecast.insights.map((text) => (
+                        <li key={text}>{text}</li>
+                      ))}
+                    </ul>
+                  )}
+                </>
               )}
             </div>
             <div className="chart-card">

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   monthlyBestPrLineData,
-  quarterlyBestTotalLineData,
+  peakPerformanceForecastChart,
   sixMonthRollingPeakTotalLine,
 } from '../utils/trainingCharts'
 
@@ -24,14 +24,24 @@ describe('trainingCharts', () => {
     expect(sn.data).toEqual([102, 105])
   })
 
-  it('quarterlyBestTotalLineData buckets by quarter for area line', () => {
-    const { labels, datasets } = quarterlyBestTotalLineData(sample)
-    expect(labels).toContain('2024 Q1')
-    expect(labels).toContain('2024 Q2')
-    expect(datasets[0].data.length).toBe(labels.length)
-    expect(datasets[0].fill).toBe(true)
-    const q2 = labels.indexOf('2024 Q2')
-    expect(datasets[0].data[q2]).toBe(235)
+  it('peakPerformanceForecastChart builds monthly totals and optional forecast', () => {
+    const { labels, datasets, insights } = peakPerformanceForecastChart(sample)
+    expect(labels).toContain('2024-01')
+    expect(labels).toContain('2024-04')
+    const monthly = datasets.find((d) => d.label.includes('Monthly'))
+    expect(monthly).toBeTruthy()
+    expect(monthly.fill).toBe(true)
+    const apr = labels.indexOf('2024-04')
+    expect(monthly.data[apr]).toBe(235)
+    expect(datasets.length).toBeGreaterThanOrEqual(1)
+    expect(insights.length).toBeGreaterThan(0)
+  })
+
+  it('peakPerformanceForecastChart omits dashed forecast until two peaks exist', () => {
+    const oneMonth = [{ date: '2024-05-01', lift_type: 'total', weight: '200' }]
+    const { datasets, insights } = peakPerformanceForecastChart(oneMonth)
+    expect(datasets.length).toBe(1)
+    expect(insights[0]).toMatch(/more months/i)
   })
 
   it('sixMonthRollingPeakTotalLine returns a filled month range', () => {

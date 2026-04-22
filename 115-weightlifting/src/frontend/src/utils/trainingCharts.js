@@ -72,46 +72,195 @@ export function monthlyBestPrLineData(
   }
 }
 
-/**
- * Quarter-by-quarter max competition total as a filled line (area).
- * Reads better than bars for long multi-year macrocycle trends.
- */
-export function quarterlyBestTotalLineData(records, palette = CHART_PALETTE_FALLBACK) {
-  const totals = records.filter((r) => r.lift_type === 'total')
-  const buckets = new Map()
-  for (const r of totals) {
-    const d = r.date
-    const y = Number(d.slice(0, 4))
-    const mo = Number(d.slice(5, 7))
-    if (!y || !mo) continue
-    const q = Math.floor((mo - 1) / 3) + 1
-    const key = `${y} Q${q}`
-    const w = Number(r.weight)
-    if (Number.isNaN(w)) continue
-    const cur = buckets.get(key)
-    if (cur == null || w > cur) buckets.set(key, w)
+function _monthlyMaxTotalsSeries(records) {
+  const totals = records
+    .filter((r) => r.lift_type === 'total')
+    .map((r) => ({ d: r.date, w: Number(r.weight) }))
+    .filter((r) => !Number.isNaN(r.w))
+    .sort((a, b) => a.d.localeCompare(b.d))
+  if (totals.length === 0) return { labels: [], values: [] }
+
+  const monthKeys = totals.map((r) => monthKey(r.d))
+  let cur = monthKeys.reduce((a, b) => (a < b ? a : b))
+  const end = monthKeys.reduce((a, b) => (a > b ? a : b))
+  const labels = []
+  while (cur <= end) {
+    labels.push(cur)
+    cur = addMonthsKey(cur, 1)
   }
-  const labels = [...buckets.keys()].sort((a, b) => {
-    const [ya, qa] = a.split(' Q').map(Number)
-    const [yb, qb] = b.split(' Q').map(Number)
-    return ya - yb || qa - qb
+  const maxInMonth = (mk) => {
+    let m = -Infinity
+    for (const r of totals) {
+      if (monthKey(r.d) === mk && r.w > m) m = r.w
+    }
+    return m
+  }
+  const values = labels.map((mk) => {
+    const v = maxInMonth(mk)
+    return v === -Infinity ? null : Math.round(v * 10) / 10
   })
-  return {
-    labels,
-    datasets: [{
-      label: 'Best competition total (kg)',
-      data: labels.map((k) => buckets.get(k)),
-      borderColor: palette.quarterBorder,
-      backgroundColor: palette.quarterFill,
+  return { labels, values }
+}
+
+function _detectPeakIndices(values, radius = 2, prominenceKg = 1.5) {
+  const peaks = []
+  for (let i = 0; i < values.length; i += 1) {
+    const v = values[i]
+    if (v == null || !Number.isFinite(v)) continue
+    let higherNeighbor = false
+    for (let j = i - radius; j <= i + radius; j += 1) {
+      if (j < 0 || j >= values.length || j === i) continue
+      const w = values[j]
+      if (w != null && Number.isFinite(w) && w > v) {
+        higherNeighbor = true
+        break
+      }
+    }
+    if (higherNeighbor) continue
+    let sum = 0
+    let n = 0
+    for (let j = i - radius; j <= i + radius; j += 1) {
+      if (j < 0 || j >= values.length || j === i) continue
+      const w = values[j]
+      if (w != null && Number.isFinite(w)) {
+        sum += w
+        n += 1
+      }
+    }
+    if (n > 0 && v < sum / n + prominenceKg) continue
+    peaks.push(i)
+  }
+  const sorted = [...new Set(peaks)].sort((a, b) => a - b)
+  const deduped = []
+  for (const idx of sorted) {
+    if (deduped.length && idx - deduped[deduped.length - 1] <= 1) {
+      const prev = deduped[deduped.length - 1]
+      if ((values[idx] ?? 0) >= (values[prev] ?? 0)) deduped[deduped.length - 1] = idx
+    } else {
+      deduped.push(idx)
+    }
+  }
+  return deduped
+}
+
+function _linRegSlopeIntercept(points) {
+  const n = points.length
+  if (n < 2) return { slope: 0, intercept: points[0]?.y ?? 0 }
+  const mx = points.reduce((s, p) => s + p.x, 0) / n
+  const my = points.reduce((s, p) => s + p.y, 0) / n
+  let num = 0
+  let den = 0
+  for (const p of points) {
+    num += (p.x - mx) * (p.y - my)
+    den += (p.x - mx) ** 2
+  }
+  const slope = den > 1e-9 ? num / den : 0
+  const intercept = my - slope * mx
+  return { slope, intercept }
+}
+
+/**
+ * Monthly competition-total bests, local maxima highlighted as peaks, and a
+ * cadence + regression estimate for the next high window. Block names are not
+ * stored on PRs — copy nudges the athlete + coach to map peaks to their program.
+ */
+export function peakPerformanceForecastChart(records, palette = CHART_PALETTE_FALLBACK) {
+  const { labels: baseLabels, values: baseValues } = _monthlyMaxTotalsSeries(records)
+  if (baseLabels.length === 0) {
+    return { labels: [], datasets: [], insights: [] }
+  }
+
+  const labels = [...baseLabels]
+  const values = [...baseValues]
+
+  const peakIndices = _detectPeakIndices(values)
+  const peakSet = new Set(peakIndices)
+
+  const insights = []
+  let forecastData = labels.map(() => null)
+
+  if (peakIndices.length < 2) {
+    insights.push(
+      'Log competition totals across more months so peak spacing and a next-window estimate can appear.',
+    )
+  } else {
+    const gaps = []
+    for (let i = 1; i < peakIndices.length; i += 1) {
+      gaps.push(peakIndices[i] - peakIndices[i - 1])
+    }
+    const recent = gaps.slice(-3)
+    const avgGapMonths = recent.reduce((a, b) => a + b, 0) / recent.length
+    const gapWeeks = Math.round(avgGapMonths * 4.345)
+    insights.push(
+      `Recent peaks sit about ${gapWeeks} weeks apart on average (${avgGapMonths.toFixed(1)} mo). Peaks are usually held only 1–2 weeks — compare this rhythm to your block calendar and meet dates.`,
+    )
+
+    const lastPk = peakIndices[peakIndices.length - 1]
+    const projIdx = lastPk + Math.max(1, Math.round(avgGapMonths))
+
+    while (labels.length <= projIdx) {
+      labels.push(addMonthsKey(labels[labels.length - 1], 1))
+      values.push(null)
+    }
+
+    const pts = peakIndices.slice(-4).map((i) => ({ x: i, y: values[i] }))
+    const { slope, intercept } = _linRegSlopeIntercept(pts)
+    let projY = slope * projIdx + intercept
+    const lastKg = values[lastPk] ?? 0
+    if (!Number.isFinite(projY) || projY < lastKg * 0.94) projY = lastKg * 0.995
+    if (projY > lastKg * 1.06) projY = lastKg * 1.02
+    projY = Math.round(Math.max(40, projY) * 10) / 10
+
+    forecastData = labels.map((_, i) => {
+      if (i === lastPk) return values[lastPk]
+      if (i === projIdx) return projY
+      return null
+    })
+
+    insights.push(
+      `Estimated next high window around ${labels[projIdx]} (~${projY} kg). Plan a taper to finish 1–2 weeks before a target meet if this lines up.`,
+    )
+    insights.push(
+      'Program block names are not on PR rows — tag meets in notes or compare this curve with your coach’s block sheet to see which phases set up the biggest jumps.',
+    )
+  }
+
+  const pointRadii = labels.map((_, i) => (peakSet.has(i) ? 11 : 3))
+  const pointColors = labels.map((_, i) => (peakSet.has(i) ? palette.peakMarker : palette.totPoint))
+
+  const datasets = [
+    {
+      label: 'Monthly best total (kg)',
+      data: values,
+      borderColor: palette.monthlyTotalLine,
+      backgroundColor: palette.monthlyTotalFill,
       borderWidth: 2,
       fill: true,
-      tension: 0.22,
-      pointRadius: 4,
-      pointHoverRadius: 6,
-      pointBackgroundColor: palette.quarterPoint,
+      tension: 0.28,
+      pointRadius: pointRadii,
+      pointHoverRadius: labels.map((_, i) => (peakSet.has(i) ? 14 : 5)),
+      pointBackgroundColor: pointColors,
       spanGaps: true,
-    }],
+    },
+  ]
+
+  if (peakIndices.length >= 2) {
+    datasets.push({
+      label: 'Next peak (estimate)',
+      data: forecastData,
+      borderColor: palette.forecastLine,
+      backgroundColor: 'transparent',
+      fill: false,
+      borderWidth: 2,
+      borderDash: [7, 5],
+      pointRadius: labels.map((_, i) => (forecastData[i] != null ? 5 : 0)),
+      pointBackgroundColor: labels.map((_, i) => (forecastData[i] != null ? palette.forecastPoint : 'transparent')),
+      tension: 0.2,
+      spanGaps: true,
+    })
   }
+
+  return { labels, datasets, insights }
 }
 
 /**
