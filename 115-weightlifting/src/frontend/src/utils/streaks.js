@@ -122,6 +122,34 @@ export const crossedCompletionMilestone = (prev, next) =>
 export const crossedStreakMilestone = (prev, next) =>
   findCrossedMilestone(prev, next, STREAK_MILESTONES)
 
+// Persisted "already fired" set, keyed per-user so one athlete's celebrations
+// don't suppress another's on the same browser. We refuse to re-fire a
+// milestone the athlete has already seen, which matters when they unmark and
+// remark an exercise (lifetime 1 -> 0 -> 1 would otherwise trigger the
+// 'First lift logged' humor twice).
+const storageKey = (userId) => `wl_milestones_fired:${userId || 'anon'}`
+
+export const loadFiredMilestones = (userId, storage = globalThis.localStorage) => {
+  try {
+    const raw = storage?.getItem(storageKey(userId))
+    if (!raw) return new Set()
+    const parsed = JSON.parse(raw)
+    return Array.isArray(parsed) ? new Set(parsed) : new Set()
+  } catch {
+    return new Set()
+  }
+}
+
+export const markMilestoneFired = (userId, kind, count, storage = globalThis.localStorage) => {
+  const set = loadFiredMilestones(userId, storage)
+  set.add(`${kind}:${count}`)
+  try { storage?.setItem(storageKey(userId), JSON.stringify([...set])) } catch { /* quota, ignore */ }
+  return set
+}
+
+export const hasMilestoneFired = (userId, kind, count, storage = globalThis.localStorage) =>
+  loadFiredMilestones(userId, storage).has(`${kind}:${count}`)
+
 // Suppress the unused export lint for todayUtcMidnight while leaving it around
 // as an internal helper test seams can import if they want to freeze time.
 export const __test = { toUtcMidnight, todayUtcMidnight, uniqueLogDates }

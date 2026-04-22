@@ -21,6 +21,7 @@ import {
   getWorkoutLogs,
   updateProgramCompletion,
 } from '../services/api'
+import { getCurrentUser } from '../utils/auth'
 import { getDayCompletionKey, normalizeProgramData } from '../utils/dataStructure'
 import { formatApiError } from '../utils/errors'
 import {
@@ -28,6 +29,8 @@ import {
   computeStreak,
   crossedCompletionMilestone,
   crossedStreakMilestone,
+  hasMilestoneFired,
+  markMilestoneFired,
 } from '../utils/streaks'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend)
@@ -79,6 +82,15 @@ const AthleteDashboard = () => {
   // status and the emotional milestone humor don't overwrite each other when
   // both fire in the same save cycle.
   const [encouragement, setEncouragement] = useState('')
+
+  // completionsRef holds the latest completions synchronously so rapid-tap
+  // handleSaveResult calls don't each read a stale closure-captured copy.
+  // saveChainRef serializes PATCHes per program: each save awaits the
+  // previous one, so server-side state stays consistent even if responses
+  // would otherwise arrive out of order.
+  const completionsRef = useRef(completions)
+  const saveChainRef = useRef(Promise.resolve())
+  useEffect(() => { completionsRef.current = completions }, [completions])
 
   const [logForm, setLogForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -188,15 +200,27 @@ const AthleteDashboard = () => {
   const prevLifetimeRef = useRef(null)
   const prevStreakRef = useRef(null)
 
+  // Get the current athlete id once so we can key milestone persistence by
+  // user. Anonymous fallback keeps local dev / unauthenticated paths sane.
+  const currentUserId = useMemo(() => getCurrentUser()?.id ?? 'anon', [])
+
+  // Fire a milestone at most once per athlete per threshold -- persisting the
+  // set in localStorage so unmark/remark (lifetime 1 -> 0 -> 1) can't trigger
+  // the same celebration twice.
+  const fireMilestoneOnce = (kind, crossed) => {
+    if (!crossed) return
+    if (hasMilestoneFired(currentUserId, kind, crossed.count)) return
+    markMilestoneFired(currentUserId, kind, crossed.count)
+    setEncouragement(crossed.message)
+    setTimeout(() => setEncouragement(''), 5000)
+  }
+
   useEffect(() => {
     if (loading) return
     if (prevLifetimeRef.current === null) { prevLifetimeRef.current = lifetimeCompleted; return }
     const crossed = crossedCompletionMilestone(prevLifetimeRef.current, lifetimeCompleted)
     prevLifetimeRef.current = lifetimeCompleted
-    if (crossed) {
-      setEncouragement(crossed.message)
-      setTimeout(() => setEncouragement(''), 5000)
-    }
+    fireMilestoneOnce('completion', crossed)
   }, [lifetimeCompleted, loading])
 
   useEffect(() => {
@@ -204,20 +228,26 @@ const AthleteDashboard = () => {
     if (prevStreakRef.current === null) { prevStreakRef.current = streak; return }
     const crossed = crossedStreakMilestone(prevStreakRef.current, streak)
     prevStreakRef.current = streak
-    if (crossed) {
-      setEncouragement(crossed.message)
-      setTimeout(() => setEncouragement(''), 5000)
-    }
+    fireMilestoneOnce('streak', crossed)
   }, [streak, loading])
 
-  // Persist a single exercise's result. Writes locally, then PATCHes to the
-  // backend. Avoids the 'Save Program Progress' explicit button -- every
-  // Mark done autosaves, which matches how athletes actually work.
+  // Persist a single exercise's result. Writes locally (optimistic), then
+  // PATCHes to the backend. Two safeguards against rapid-tap data loss:
+  //
+  //   1. Read from completionsRef, not from the closure-captured state, so
+  //      a second save fired in the same render cycle sees the first save's
+  //      optimistic update.
+  //   2. Chain the PATCH onto saveChainRef so PATCHes are serialized per
+  //      the order they were issued. If PATCH N finishes after PATCH N+1,
+  //      the server wouldn't otherwise see N+1's work; serializing guarantees
+  //      each request lands after the previous response has been applied.
   const handleSaveResult = async (programId, day, dayIndex, exerciseIndex, newResult) => {
     if (!programId) return
     const dayKey = getDayCompletionKey(day, dayIndex)
     const program = programs.find((p) => p.id === programId)
-    const currentCompletion = completions[programId] || { entries: {} }
+
+    // Optimistic local update, computed against the freshest state.
+    const currentCompletion = completionsRef.current[programId] || { entries: {} }
     const nextEntries = {
       ...(currentCompletion.entries || {}),
       [dayKey]: {
@@ -226,18 +256,60 @@ const AthleteDashboard = () => {
       },
     }
     const nextCompletion = { entries: nextEntries }
-    setCompletions((prev) => ({ ...prev, [programId]: nextCompletion }))
+    completionsRef.current = { ...completionsRef.current, [programId]: nextCompletion }
+    setCompletions(completionsRef.current)
+
+    setSaving(true)
+    const exName = program?.program_data?.days?.[dayIndex]?.exercises?.[exerciseIndex]?.name || 'Exercise'
+
+    // Reference identity of the optimistic state at submit time. If a later
+    // save has replaced completionsRef.current[programId] before the response
+    // arrives, we leave local state alone so we don't overwrite newer work
+    // with stale server data.
+    const submittedSnapshot = completionsRef.current[programId]
+
+    // Streak is derived from workoutLogs, so marking an exercise done without
+    // also logging a workout means the athlete's streak silently breaks even
+    // though they trained. On the first completed=true of today, auto-POST a
+    // minimal workout log so the streak stays true to behavior. No-ops if a
+    // log for today already exists, or if we're merely unmarking done.
+    const shouldAutoLogToday = newResult.completed && !workoutLogs.some(
+      (log) => String(log.date).slice(0, 10) === new Date().toISOString().slice(0, 10),
+    )
+
+    // Queue the PATCH behind any in-flight save so responses can't arrive
+    // out of order relative to their requests.
+    saveChainRef.current = saveChainRef.current
+      .catch(() => {}) // don't let a prior failure stop this save
+      .then(async () => {
+        try {
+          const response = await updateProgramCompletion(programId, nextCompletion)
+          if (completionsRef.current[programId] === submittedSnapshot) {
+            completionsRef.current = { ...completionsRef.current, [programId]: response.completion_data }
+            setCompletions(completionsRef.current)
+          }
+          if (shouldAutoLogToday) {
+            try {
+              const created = await createWorkoutLog({
+                date: new Date().toISOString().slice(0, 10),
+                notes: '',
+              })
+              setWorkoutLogs((prev) => [created, ...prev])
+            } catch (e) {
+              // Don't fail the save just because the auto-log write failed.
+              console.warn('auto-log skipped:', e?.message)
+            }
+          }
+          setSaveMessage(newResult.completed ? `Logged — ${exName}` : `Updated — ${exName}`)
+          setTimeout(() => setSaveMessage(''), 2200)
+        } catch (error) {
+          console.error('Error saving exercise result:', error)
+          setSaveMessage(formatApiError(error, 'Could not save result.'))
+        }
+      })
 
     try {
-      setSaving(true)
-      const response = await updateProgramCompletion(programId, nextCompletion)
-      setCompletions((prev) => ({ ...prev, [programId]: response.completion_data }))
-      const exName = program?.program_data?.days?.[dayIndex]?.exercises?.[exerciseIndex]?.name || 'Exercise'
-      setSaveMessage(newResult.completed ? `Logged — ${exName}` : `Updated — ${exName}`)
-      setTimeout(() => setSaveMessage(''), 2200)
-    } catch (error) {
-      console.error('Error saving exercise result:', error)
-      setSaveMessage(formatApiError(error, 'Could not save result.'))
+      await saveChainRef.current
     } finally {
       setSaving(false)
     }

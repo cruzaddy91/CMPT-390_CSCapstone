@@ -6,7 +6,22 @@ import {
   computeStreak,
   crossedCompletionMilestone,
   crossedStreakMilestone,
+  hasMilestoneFired,
+  loadFiredMilestones,
+  markMilestoneFired,
 } from '../utils/streaks'
+
+// Minimal in-memory Storage stand-in so the persistence tests don't depend on
+// jsdom's localStorage state leaking between tests.
+const makeMemoryStorage = () => {
+  const data = new Map()
+  return {
+    getItem: (k) => (data.has(k) ? data.get(k) : null),
+    setItem: (k, v) => { data.set(k, String(v)) },
+    removeItem: (k) => { data.delete(k) },
+    clear: () => data.clear(),
+  }
+}
 
 const atUTC = (iso) => new Date(`${iso}T12:00:00Z`)
 
@@ -109,5 +124,43 @@ describe('milestone crossing', () => {
     for (const stop of [...COMPLETION_MILESTONES, ...STREAK_MILESTONES]) {
       expect(stop.message.trim().length).toBeGreaterThan(0)
     }
+  })
+})
+
+describe('fired-milestone persistence', () => {
+  it('returns empty set when storage has nothing for this user', () => {
+    const storage = makeMemoryStorage()
+    expect(loadFiredMilestones(42, storage).size).toBe(0)
+    expect(hasMilestoneFired(42, 'completion', 1, storage)).toBe(false)
+  })
+
+  it('marks and recalls a fired milestone', () => {
+    const storage = makeMemoryStorage()
+    markMilestoneFired(42, 'completion', 1, storage)
+    expect(hasMilestoneFired(42, 'completion', 1, storage)).toBe(true)
+    // Only the exact kind:count combo fires once
+    expect(hasMilestoneFired(42, 'streak', 1, storage)).toBe(false)
+    expect(hasMilestoneFired(42, 'completion', 10, storage)).toBe(false)
+  })
+
+  it('keys fired milestones per-user so athletes sharing a browser do not suppress each other', () => {
+    const storage = makeMemoryStorage()
+    markMilestoneFired(42, 'completion', 1, storage)
+    expect(hasMilestoneFired(42, 'completion', 1, storage)).toBe(true)
+    expect(hasMilestoneFired(99, 'completion', 1, storage)).toBe(false)
+  })
+
+  it('gracefully handles corrupted storage payloads (returns empty set, does not throw)', () => {
+    const storage = makeMemoryStorage()
+    storage.setItem('wl_milestones_fired:42', '{not valid json')
+    expect(loadFiredMilestones(42, storage).size).toBe(0)
+  })
+
+  it('marking the same milestone twice is idempotent', () => {
+    const storage = makeMemoryStorage()
+    markMilestoneFired(42, 'completion', 1, storage)
+    markMilestoneFired(42, 'completion', 1, storage)
+    markMilestoneFired(42, 'completion', 1, storage)
+    expect(loadFiredMilestones(42, storage).size).toBe(1)
   })
 })
