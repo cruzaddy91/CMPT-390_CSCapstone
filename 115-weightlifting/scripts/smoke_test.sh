@@ -9,8 +9,10 @@ ensure_backend_env
 smoke_json="$(backend_manage shell <<'PY'
 import json
 from datetime import date
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 from rest_framework.test import APIClient
 
 from apps.athletes.models import ProgramCompletion
@@ -152,6 +154,16 @@ create_program_response = coach_client.post('/api/programs/', program_payload, f
 assert create_program_response.status_code == 201, create_program_response.content
 program_id = create_program_response.json()['id']
 
+markup_name_payload = {
+    **program_payload,
+    'name': '<script>smoke-probe</script>',
+    'athlete_id': athlete.id,
+}
+markup_create = coach_client.post('/api/programs/', markup_name_payload, format='json')
+assert markup_create.status_code == 400, (
+    f'program name with angle brackets must 400, got {markup_create.status_code}: {markup_create.content}'
+)
+
 athlete_client = APIClient()
 athlete_login = athlete_client.post('/api/auth/token/', {'username': 'athlete_smoke', 'password': 'DemoPass123!'}, format='json')
 assert athlete_login.status_code == 200, athlete_login.content
@@ -270,6 +282,18 @@ assert prior_records.count() == completion_count_before, (
     f'prior athlete history lost: before={completion_count_before}, after={prior_records.count()}'
 )
 
+markup_program_qs = TrainingProgram.objects.filter(
+    Q(name__contains='<')
+    | Q(name__contains='>')
+    | Q(description__contains='<')
+    | Q(description__contains='>')
+)
+markup_program_sample = list(markup_program_qs.values_list('id', 'athlete_id', 'name')[:25])
+assert not markup_program_sample, (
+    'Programs with angle brackets in name/description would show on athlete dashboards for '
+    f'whoever owns them; purge or fix: {markup_program_sample!r}'
+)
+
 print(json.dumps({
     'program_id': program_id,
     'sinclair': sinclair_response.json(),
@@ -288,6 +312,8 @@ print(json.dumps({
     'refresh_cookie_set_on_login': refresh_cookie_present,
     'cookie_only_refresh_ok': cookie_only_refresh.status_code == 200,
     'programs_list_is_prefetched': len(_completion_queries) <= 1,
+    'program_markup_create_rejected': markup_create.status_code == 400,
+    'markup_program_rows_in_db': markup_program_qs.count(),
 }))
 PY
 )"
