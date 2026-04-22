@@ -12,10 +12,27 @@ from .serializers import (
 )
 
 
-def _coached_athlete_ids(user):
-    return set(
+_COACHED_IDS_CACHE_ATTR = '_coached_athlete_ids_cache'
+
+
+def _coached_athlete_ids(user, request=None):
+    """Return athlete ids coached by *user*, cached for the lifetime of *request*.
+
+    Every authZ check on this view set calls the helper, and without caching
+    it re-queries TrainingProgram per call. The cache is attached to the
+    incoming request object so each HTTP request pays at most one query.
+    """
+    if request is not None:
+        cached = getattr(request, _COACHED_IDS_CACHE_ATTR, None)
+        if cached is not None:
+            return cached
+
+    athlete_ids = set(
         TrainingProgram.objects.filter(coach=user).values_list('athlete_id', flat=True).distinct()
     )
+    if request is not None:
+        setattr(request, _COACHED_IDS_CACHE_ATTR, athlete_ids)
+    return athlete_ids
 
 
 class WorkoutLogListCreate(APIView):
@@ -31,7 +48,7 @@ class WorkoutLogListCreate(APIView):
                 athlete_id_int = int(athlete_id)
             except ValueError:
                 return Response({'detail': 'athlete_id must be an integer.'}, status=status.HTTP_400_BAD_REQUEST)
-            if athlete_id_int not in _coached_athlete_ids(user):
+            if athlete_id_int not in _coached_athlete_ids(user, request=request):
                 return Response({'detail': 'You can only view logs for your assigned athletes.'}, status=status.HTTP_403_FORBIDDEN)
             logs = WorkoutLog.objects.filter(athlete_id=athlete_id_int).order_by('-date', '-created_at')
         else:
@@ -65,7 +82,7 @@ class PersonalRecordListCreate(APIView):
                 athlete_id_int = int(athlete_id)
             except ValueError:
                 return Response({'detail': 'athlete_id must be an integer.'}, status=status.HTTP_400_BAD_REQUEST)
-            if athlete_id_int not in _coached_athlete_ids(user):
+            if athlete_id_int not in _coached_athlete_ids(user, request=request):
                 return Response({'detail': 'You can only view PRs for your assigned athletes.'}, status=status.HTTP_403_FORBIDDEN)
             prs = PersonalRecord.objects.filter(athlete_id=athlete_id_int).order_by('-date', '-created_at')
         else:

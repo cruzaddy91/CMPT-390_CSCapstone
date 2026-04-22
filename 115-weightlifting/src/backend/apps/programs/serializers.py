@@ -59,6 +59,7 @@ class TrainingProgramSerializer(serializers.ModelSerializer):
     coach_username = serializers.CharField(source='coach.username', read_only=True)
     athlete_id = serializers.IntegerField(source='athlete.id', read_only=True)
     athlete_username = serializers.CharField(source='athlete.username', read_only=True)
+    completion_data = serializers.SerializerMethodField()
 
     class Meta:
         model = TrainingProgram
@@ -69,6 +70,7 @@ class TrainingProgramSerializer(serializers.ModelSerializer):
             'start_date',
             'end_date',
             'program_data',
+            'completion_data',
             'coach_id',
             'coach_username',
             'athlete_id',
@@ -76,6 +78,19 @@ class TrainingProgramSerializer(serializers.ModelSerializer):
             'created_at',
             'updated_at',
         ]
+
+    def get_completion_data(self, obj):
+        request = self.context.get('request')
+        if not request:
+            return None
+        athlete_id = request.user.id if request.user.user_type == 'athlete' else obj.athlete_id
+        if obj.athlete_id != athlete_id and request.user.user_type != 'coach':
+            return None
+        target_athlete = athlete_id if request.user.user_type == 'athlete' else obj.athlete_id
+        for record in getattr(obj, 'completion_records').all() if hasattr(obj, 'completion_records') else []:
+            if record.athlete_id == target_athlete:
+                return record.completion_data
+        return None
 
 
 class ProgramCreateSerializer(serializers.ModelSerializer):

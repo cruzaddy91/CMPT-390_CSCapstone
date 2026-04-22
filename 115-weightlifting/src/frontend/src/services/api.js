@@ -1,14 +1,16 @@
 import axios from 'axios'
 import {
   clearAuth,
-  getRefreshToken,
+  clearRefreshToken,
   getToken,
   setCurrentUser,
-  setRefreshToken,
   setToken,
 } from '../utils/auth'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// Empty baseURL means requests go to the current origin, which in dev is the
+// Vite proxy (see vite.config.js) and in prod is wherever the app is served.
+// This lets the httpOnly refresh cookie flow without SameSite=None hacks.
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? import.meta.env.VITE_API_URL ?? ''
 
 export const getApiBase = () => API_BASE
 
@@ -17,7 +19,7 @@ export const getAuthHeaders = () => {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
-export const apiClient = axios.create({ baseURL: API_BASE })
+export const apiClient = axios.create({ baseURL: API_BASE, withCredentials: true })
 
 apiClient.interceptors.request.use((config) => {
   const token = getToken()
@@ -32,14 +34,11 @@ let refreshInFlight = null
 
 const refreshAccessToken = async () => {
   if (refreshInFlight) return refreshInFlight
-  const refresh = getRefreshToken()
-  if (!refresh) throw new Error('no refresh token')
 
   refreshInFlight = axios
-    .post(`${API_BASE}/api/auth/token/refresh/`, { refresh })
+    .post(`${API_BASE}/api/auth/token/refresh/`, {}, { withCredentials: true })
     .then(({ data }) => {
       setToken(data.access)
-      if (data.refresh) setRefreshToken(data.refresh)
       return data.access
     })
     .finally(() => {
@@ -91,27 +90,36 @@ export const getCurrentUserFromApi = async () => {
 }
 
 export const login = async (username, password) => {
-  const { data } = await axios.post(`${API_BASE}/api/auth/token/`, { username, password })
+  clearRefreshToken()
+  const { data } = await axios.post(
+    `${API_BASE}/api/auth/token/`,
+    { username, password },
+    { withCredentials: true }
+  )
   setToken(data.access)
-  if (data.refresh) setRefreshToken(data.refresh)
 
   try {
     const currentUser = await getCurrentUserFromApi()
     setCurrentUser(currentUser)
     return { ...data, user: currentUser }
   } catch (error) {
-    clearAuth()
+    // Only tear down auth on hard 401/403; transient server errors (5xx,
+    // network flakes) should leave the freshly-acquired tokens in place so
+    // the user can retry without re-entering their password.
+    const status = error?.response?.status
+    if (status === 401 || status === 403) {
+      clearAuth()
+    }
     throw error
   }
 }
 
 export const register = async (username, password, user_type, extraFields = {}) => {
-  await axios.post(`${API_BASE}/api/auth/register/`, {
-    username,
-    password,
-    user_type,
-    ...extraFields,
-  })
+  await axios.post(
+    `${API_BASE}/api/auth/register/`,
+    { username, password, user_type, ...extraFields },
+    { withCredentials: true }
+  )
 }
 
 export const refreshCurrentUser = async () => {
@@ -121,17 +129,14 @@ export const refreshCurrentUser = async () => {
 }
 
 export const logout = async () => {
-  const refresh = getRefreshToken()
-  if (refresh) {
-    try {
-      await axios.post(
-        `${API_BASE}/api/auth/logout/`,
-        { refresh },
-        { headers: getAuthHeaders() }
-      )
-    } catch (_error) {
-      /* ignore: local clear still happens below */
-    }
+  try {
+    await axios.post(
+      `${API_BASE}/api/auth/logout/`,
+      {},
+      { headers: getAuthHeaders(), withCredentials: true }
+    )
+  } catch (_error) {
+    /* ignore: local clear still happens below */
   }
   clearAuth()
 }
@@ -163,7 +168,16 @@ export const getAthletes = async ({ scope = 'mine', q = '', page = 1 } = {}) => 
   const { data } = await apiClient.get('/api/auth/athletes/', {
     params: { scope, q, page },
   })
-  return Array.isArray(data) ? data : data.results || []
+  if (Array.isArray(data)) {
+    return { results: data, count: data.length, page: 1, page_size: data.length, scope }
+  }
+  return {
+    results: data.results || [],
+    count: data.count ?? 0,
+    page: data.page ?? page,
+    page_size: data.page_size ?? (data.results || []).length,
+    scope: data.scope ?? scope,
+  }
 }
 
 export const getProgramCompletion = async (programId) => {

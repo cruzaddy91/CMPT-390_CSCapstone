@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import WorkoutDay from '../components/WorkoutDay'
 import { assignProgram, createProgram, getAthletes, getProgramsFromBackend, updateProgram } from '../services/api'
 import { countExercises, createEmptyDay, createEmptyWeek, normalizeProgramData } from '../utils/dataStructure'
+import { formatApiError } from '../utils/errors'
 
 const getDefaultForm = () => ({
   name: '',
@@ -18,6 +19,8 @@ const CoachDashboard = () => {
   const [apiError, setApiError] = useState(null)
   const [programs, setPrograms] = useState([])
   const [athletes, setAthletes] = useState([])
+  const [athleteSearch, setAthleteSearch] = useState('')
+  const [athleteTotal, setAthleteTotal] = useState(0)
   const [editingProgramId, setEditingProgramId] = useState(null)
   const [assignmentDrafts, setAssignmentDrafts] = useState({})
   const [formData, setFormData] = useState(getDefaultForm())
@@ -27,6 +30,14 @@ const CoachDashboard = () => {
     loadDashboardData()
   }, [])
 
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      refreshAthletes(athleteSearch)
+    }, 300)
+    return () => clearTimeout(handle)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [athleteSearch])
+
   const upcomingSummary = useMemo(() => ({
     dayCount: programData.days.length,
     exerciseCount: countExercises(programData)
@@ -35,18 +46,25 @@ const CoachDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true)
-      const [programDataResponse, athletesResponse] = await Promise.all([
-        getProgramsFromBackend(),
-        getAthletes({ scope: 'all' })
-      ])
+      const programDataResponse = await getProgramsFromBackend()
       setPrograms(programDataResponse)
-      setAthletes(athletesResponse)
+      await refreshAthletes(athleteSearch)
       setApiError(null)
     } catch (error) {
       console.error('Error loading coach dashboard:', error)
-      setApiError(error.response?.data?.detail || error.message)
+      setApiError(formatApiError(error, 'Could not load dashboard.'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const refreshAthletes = async (term = '') => {
+    try {
+      const { results, count } = await getAthletes({ scope: 'all', q: term })
+      setAthletes(results)
+      setAthleteTotal(count ?? results.length)
+    } catch (error) {
+      console.error('Error fetching athletes:', error)
     }
   }
 
@@ -136,7 +154,7 @@ const CoachDashboard = () => {
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (error) {
       console.error('Error saving program:', error)
-      setSaveMessage('Error saving program. Check the fields and try again.')
+      setSaveMessage(formatApiError(error, 'Error saving program. Check the fields and try again.'))
     } finally {
       setSaving(false)
     }
@@ -156,7 +174,7 @@ const CoachDashboard = () => {
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (error) {
       console.error('Error reassigning program:', error)
-      setSaveMessage('Error reassigning program. Please try again.')
+      setSaveMessage(formatApiError(error, 'Error reassigning program. Please try again.'))
     }
   }
 
@@ -217,6 +235,14 @@ const CoachDashboard = () => {
               value={formData.name}
               onChange={(event) => handleFormChange('name', event.target.value)}
               className="exercise-input"
+            />
+            <input
+              type="search"
+              placeholder={`Filter athletes (${athleteTotal} total)`}
+              value={athleteSearch}
+              onChange={(event) => setAthleteSearch(event.target.value)}
+              className="form-input"
+              aria-label="Search athletes"
             />
             <select
               value={formData.athlete_id}

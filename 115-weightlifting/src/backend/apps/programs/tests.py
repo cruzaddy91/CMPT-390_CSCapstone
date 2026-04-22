@@ -1,7 +1,9 @@
 from datetime import date
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -67,6 +69,50 @@ class ProgramAssignPreservesHistoryTests(TestCase):
             ProgramCompletion.objects.filter(program=self.program).count(),
             2,
             'new athletes record should coexist with prior athletes history',
+        )
+
+
+class ProgramsListNPlusOneTests(TestCase):
+    """Listing N programs must not issue O(N) SELECTs for completion records."""
+
+    def setUp(self):
+        self.coach = User.objects.create_user(
+            username='np1_coach', password='pw', user_type='coach'
+        )
+        self.athletes = [
+            User.objects.create_user(
+                username=f'np1_athlete_{i}', password='pw', user_type='athlete'
+            )
+            for i in range(8)
+        ]
+        for i, athlete in enumerate(self.athletes):
+            program = TrainingProgram.objects.create(
+                coach=self.coach, athlete=athlete,
+                name=f'Week {i}', start_date=date(2026, 1, 1),
+            )
+            ProgramCompletion.objects.create(
+                program=program, athlete=athlete,
+                completion_data={'entries': {'0': {'0': {'completed': True}}}},
+            )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.coach)
+
+    def test_programs_list_issues_constant_completion_queries(self):
+        with CaptureQueriesContext(connection) as ctx:
+            response = self.client.get(reverse('program-list-create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 8)
+        self.assertTrue(
+            all('completion_data' in item for item in response.data),
+            'programs list response is missing completion_data',
+        )
+        queries_touching_completion = [
+            q for q in ctx.captured_queries if 'programcompletion' in q['sql'].lower()
+        ]
+        self.assertLessEqual(
+            len(queries_touching_completion),
+            1,
+            f'expected <=1 completion query via prefetch, got {len(queries_touching_completion)}',
         )
 
 

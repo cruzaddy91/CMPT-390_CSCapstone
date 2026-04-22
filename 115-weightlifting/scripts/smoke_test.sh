@@ -107,14 +107,23 @@ assert replay_refresh.status_code == 401, (
     f'blacklisted refresh should 401, got {replay_refresh.status_code}: {replay_refresh.content}'
 )
 
-logout_login = APIClient().post(
+logout_client = APIClient()
+logout_login_raw = logout_client.post(
     '/api/auth/token/',
     {'username': 'coach_smoke', 'password': 'DemoPass123!'},
     format='json',
-).json()
-logout_client = APIClient()
+)
+refresh_cookie_present = 'wl_refresh' in logout_login_raw.cookies
+assert refresh_cookie_present, 'login did not set the httpOnly wl_refresh cookie'
+logout_login = logout_login_raw.json()
+
+cookie_only_refresh = logout_client.post('/api/auth/token/refresh/', {}, format='json')
+assert cookie_only_refresh.status_code == 200, (
+    f'cookie-only refresh should succeed, got {cookie_only_refresh.status_code}: {cookie_only_refresh.content}'
+)
+
 logout_client.credentials(HTTP_AUTHORIZATION=f"Bearer {logout_login['access']}")
-logout_response = logout_client.post('/api/auth/logout/', {'refresh': logout_login['refresh']}, format='json')
+logout_response = logout_client.post('/api/auth/logout/', {}, format='json')
 assert logout_response.status_code == 205, (
     f'expected 205 from logout, got {logout_response.status_code}: {logout_response.content}'
 )
@@ -123,6 +132,17 @@ post_logout_refresh = APIClient().post(
 )
 assert post_logout_refresh.status_code == 401, (
     'logout should blacklist refresh token'
+)
+
+from django.db import connection as _conn
+from django.test.utils import CaptureQueriesContext as _Cap
+with _Cap(_conn) as _ctx:
+    programs_resp = coach_client.get('/api/programs/')
+assert programs_resp.status_code == 200
+assert len(programs_resp.data) >= 1
+_completion_queries = [q for q in _ctx.captured_queries if 'programcompletion' in q['sql'].lower()]
+assert len(_completion_queries) <= 1, (
+    f'expected <=1 completion SELECT via prefetch, got {len(_completion_queries)}'
 )
 
 me_response = coach_client.get('/api/auth/me/')
@@ -265,6 +285,9 @@ print(json.dumps({
     'absurd_weight_rejected': absurd_pr.status_code == 400,
     'athlete_list_scope_mine_safe': unassigned_username not in scoped_usernames,
     'athlete_list_scope_all_available': unassigned_username in all_usernames,
+    'refresh_cookie_set_on_login': refresh_cookie_present,
+    'cookie_only_refresh_ok': cookie_only_refresh.status_code == 200,
+    'programs_list_is_prefetched': len(_completion_queries) <= 1,
 }))
 PY
 )"

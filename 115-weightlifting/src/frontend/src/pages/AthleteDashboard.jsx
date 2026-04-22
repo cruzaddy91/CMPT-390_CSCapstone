@@ -16,12 +16,12 @@ import {
   createPersonalRecord,
   createWorkoutLog,
   getPersonalRecords,
-  getProgramCompletion,
   getProgramsFromBackend,
   getWorkoutLogs,
   updateProgramCompletion
 } from '../services/api'
 import { normalizeProgramData } from '../utils/dataStructure'
+import { formatApiError } from '../utils/errors'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Tooltip, Legend)
 
@@ -82,19 +82,10 @@ const AthleteDashboard = () => {
         getPersonalRecords()
       ])
 
-      const completionEntries = await Promise.all(
-        programResponse.map(async (program) => {
-          try {
-            const completion = await getProgramCompletion(program.id)
-            return [program.id, completion.completion_data]
-          } catch (error) {
-            if (error?.response?.status !== 404) {
-              console.error(`Error loading completion for program ${program.id}:`, error)
-            }
-            return [program.id, { entries: {} }]
-          }
-        })
-      )
+      const completionEntries = programResponse.map((program) => [
+        program.id,
+        program.completion_data || { entries: {} },
+      ])
 
       setPrograms(programResponse)
       setWorkoutLogs(workoutResponse)
@@ -103,7 +94,7 @@ const AthleteDashboard = () => {
       setSaveMessage('')
     } catch (error) {
       console.error('Error loading athlete dashboard:', error)
-      setSaveMessage('Could not load dashboard data.')
+      setSaveMessage(formatApiError(error, 'Could not load dashboard data.'))
     } finally {
       setLoading(false)
     }
@@ -237,7 +228,7 @@ const AthleteDashboard = () => {
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (error) {
       console.error('Error saving program completion:', error)
-      setSaveMessage('Error saving program completion. Please try again.')
+      setSaveMessage(formatApiError(error, 'Error saving program completion. Please try again.'))
     } finally {
       setCompletionSavingId(null)
     }
@@ -257,7 +248,7 @@ const AthleteDashboard = () => {
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (error) {
       console.error('Error saving workout log:', error)
-      setSaveMessage('Error saving workout log. Please try again.')
+      setSaveMessage(formatApiError(error, 'Error saving workout log. Please try again.'))
     } finally {
       setSaving(false)
     }
@@ -279,7 +270,7 @@ const AthleteDashboard = () => {
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (error) {
       console.error('Error saving personal record:', error)
-      setSaveMessage('Error saving personal record. Please try again.')
+      setSaveMessage(formatApiError(error, 'Error saving personal record. Please try again.'))
     } finally {
       setSaving(false)
     }

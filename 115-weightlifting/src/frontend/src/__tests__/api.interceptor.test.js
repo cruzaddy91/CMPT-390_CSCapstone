@@ -3,10 +3,8 @@ import axios from 'axios'
 
 import { apiClient, getProgramsFromBackend } from '../services/api'
 import {
-  getRefreshToken,
   getToken,
   setCurrentUser,
-  setRefreshToken,
   setToken,
 } from '../utils/auth'
 
@@ -23,7 +21,6 @@ describe('apiClient 401 interceptor', () => {
 
   beforeEach(() => {
     setToken('initial-access')
-    setRefreshToken('valid-refresh')
     setCurrentUser({ username: 'u', user_type: 'athlete' })
   })
 
@@ -60,9 +57,9 @@ describe('apiClient 401 interceptor', () => {
     expect(result).toEqual([{ id: 1, name: 'Program' }])
     expect(postSpy).toHaveBeenCalledOnce()
     expect(postSpy.mock.calls[0][0]).toMatch(/token\/refresh\/$/)
-    expect(postSpy.mock.calls[0][1]).toEqual({ refresh: 'valid-refresh' })
+    expect(postSpy.mock.calls[0][1]).toEqual({})
+    expect(postSpy.mock.calls[0][2]).toMatchObject({ withCredentials: true })
     expect(getToken()).toBe('new-access')
-    expect(getRefreshToken()).toBe('rotated-refresh')
     expect(callCount).toBe(2)
   })
 
@@ -82,7 +79,6 @@ describe('apiClient 401 interceptor', () => {
 
     await expect(getProgramsFromBackend()).rejects.toBeTruthy()
     expect(getToken()).toBeNull()
-    expect(getRefreshToken()).toBeNull()
     expect(assign).toHaveBeenCalledWith('/login')
   })
 

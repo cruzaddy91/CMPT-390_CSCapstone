@@ -125,12 +125,63 @@ class LogoutTests(TestCase):
         self.assertEqual(replay.status_code, 401)
 
     def test_logout_without_refresh_returns_400(self):
+        self.client.cookies.clear()
         response = self.client.post(reverse('logout'), {}, format='json')
         self.assertEqual(response.status_code, 400)
 
     def test_logout_with_garbage_refresh_returns_400(self):
+        self.client.cookies.clear()
         response = self.client.post(reverse('logout'), {'refresh': 'not-a-jwt'}, format='json')
         self.assertEqual(response.status_code, 400)
+
+
+class RefreshCookieTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='cookie_user', password='longenoughpw1', user_type='athlete'
+        )
+        self.client = APIClient()
+
+    def test_login_sets_httponly_refresh_cookie(self):
+        response = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': 'cookie_user', 'password': 'longenoughpw1'},
+            format='json',
+        )
+        self.assertEqual(response.status_code, 200)
+        cookie = response.cookies.get('wl_refresh')
+        self.assertIsNotNone(cookie, 'expected wl_refresh cookie on login')
+        self.assertTrue(cookie['httponly'])
+        self.assertEqual(cookie['path'], '/api/auth/')
+
+    def test_refresh_endpoint_accepts_cookie_only(self):
+        login = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': 'cookie_user', 'password': 'longenoughpw1'},
+            format='json',
+        )
+        self.client.cookies['wl_refresh'] = login.cookies['wl_refresh'].value
+
+        response = self.client.post(reverse('token_refresh'), {}, format='json')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('access', response.data)
+        self.assertIsNotNone(response.cookies.get('wl_refresh'))
+
+    def test_logout_accepts_cookie_only_and_clears_it(self):
+        login = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': 'cookie_user', 'password': 'longenoughpw1'},
+            format='json',
+        )
+        cookie_value = login.cookies['wl_refresh'].value
+        self.client.cookies['wl_refresh'] = cookie_value
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
+
+        response = self.client.post(reverse('logout'), {}, format='json')
+        self.assertEqual(response.status_code, 205)
+        cleared = response.cookies.get('wl_refresh')
+        self.assertIsNotNone(cleared)
+        self.assertEqual(cleared.value, '')
 
 
 class AthleteListScopingTests(TestCase):

@@ -3,7 +3,10 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
+
+from apps.athletes.models import ProgramCompletion
 from .models import TrainingProgram
 from .serializers import ProgramCreateSerializer, ProgramUpdateSerializer, TrainingProgramSerializer
 
@@ -15,12 +18,18 @@ class ProgramListCreate(APIView):
 
     def get(self, request):
         user = request.user
-        # Programs where user is coach or assigned athlete
-        programs = TrainingProgram.objects.filter(
-            coach=user
-        ) | TrainingProgram.objects.filter(athlete=user)
-        programs = programs.select_related('coach', 'athlete').distinct().order_by('-created_at')
-        serializer = TrainingProgramSerializer(programs, many=True)
+        # Single-query version of coach-or-athlete filter, with prefetched
+        # completion records so TrainingProgramSerializer.get_completion_data
+        # does not issue a SELECT per program (N+1 kill).
+        programs = (
+            TrainingProgram.objects
+            .filter(Q(coach=user) | Q(athlete=user))
+            .select_related('coach', 'athlete')
+            .prefetch_related(Prefetch('completion_records', queryset=ProgramCompletion.objects.all()))
+            .distinct()
+            .order_by('-created_at')
+        )
+        serializer = TrainingProgramSerializer(programs, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request):

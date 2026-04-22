@@ -1,13 +1,18 @@
 const AUTH_TOKEN_KEY = 'weightlifting_auth_token'
-const AUTH_REFRESH_KEY = 'weightlifting_refresh_token'
+const AUTH_REFRESH_KEY = 'weightlifting_refresh_token' // legacy; cleared on load
 const AUTH_USER_KEY = 'weightlifting_current_user'
 
 export const getToken = () => localStorage.getItem(AUTH_TOKEN_KEY)
 export const setToken = (token) => localStorage.setItem(AUTH_TOKEN_KEY, token)
 export const clearToken = () => localStorage.removeItem(AUTH_TOKEN_KEY)
 
-export const getRefreshToken = () => localStorage.getItem(AUTH_REFRESH_KEY)
-export const setRefreshToken = (token) => localStorage.setItem(AUTH_REFRESH_KEY, token)
+// Refresh tokens now live in an httpOnly cookie (wl_refresh) set by the
+// backend on /api/auth/token/ and /api/auth/token/refresh/. They intentionally
+// cannot be read from JavaScript, which eliminates the XSS exfil risk of
+// localStorage-stored refresh tokens. The helpers below are kept as no-ops /
+// legacy-cleaners so older clients still prune stale values.
+export const getRefreshToken = () => null
+export const setRefreshToken = () => {}
 export const clearRefreshToken = () => localStorage.removeItem(AUTH_REFRESH_KEY)
 
 export const getCurrentUser = () => {
