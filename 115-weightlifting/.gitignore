@@ -57,6 +57,9 @@ temp/
 *.tmp
 var/
 
+# Local sim stress output (default --out from auth_flow_stress.py)
+tools/sim/auth_flow_report.json
+
 # LaTeX
 *.aux
 *.fdb_latexmk
