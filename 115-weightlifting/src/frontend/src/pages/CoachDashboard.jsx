@@ -11,7 +11,7 @@ const getDefaultForm = () => ({
   description: '',
   athlete_id: '',
   start_date: new Date().toISOString().split('T')[0],
-  end_date: ''
+  end_date: '',
 })
 
 const CoachDashboard = () => {
@@ -28,6 +28,7 @@ const CoachDashboard = () => {
   const [formData, setFormData] = useState(getDefaultForm())
   const [programData, setProgramData] = useState(createEmptyWeek())
   const [editorMode, setEditorMode] = useState('form') // 'form' | 'spreadsheet'
+  const [view, setView] = useState('list') // 'list' | 'editor'
   const fileInputRef = useRef(null)
 
   useEffect(() => {
@@ -44,7 +45,7 @@ const CoachDashboard = () => {
 
   const upcomingSummary = useMemo(() => ({
     dayCount: programData.days.length,
-    exerciseCount: countExercises(programData)
+    exerciseCount: countExercises(programData),
   }), [programData])
 
   const loadDashboardData = async () => {
@@ -79,6 +80,31 @@ const CoachDashboard = () => {
     setProgramData(createEmptyWeek(freshForm.start_date))
   }
 
+  const openNewProgram = () => {
+    resetEditor()
+    setView('editor')
+    setSaveMessage('')
+  }
+
+  const openExistingProgram = (program) => {
+    setEditingProgramId(program.id)
+    setFormData({
+      name: program.name,
+      description: program.description || '',
+      athlete_id: String(program.athlete_id || ''),
+      start_date: program.start_date,
+      end_date: program.end_date || '',
+    })
+    setProgramData(normalizeProgramData(program.program_data, program.start_date))
+    setView('editor')
+    setSaveMessage('')
+  }
+
+  const backToList = () => {
+    setView('list')
+    setSaveMessage('')
+  }
+
   const handleFormChange = (field, value) => {
     setFormData((current) => ({ ...current, [field]: value }))
     if (field === 'start_date') {
@@ -89,28 +115,28 @@ const CoachDashboard = () => {
   const handleDayChange = (dayIndex, nextDayName) => {
     setProgramData((current) => ({
       ...current,
-      days: current.days.map((day, index) => index === dayIndex ? { ...day, day: nextDayName } : day)
+      days: current.days.map((day, index) => (index === dayIndex ? { ...day, day: nextDayName } : day)),
     }))
   }
 
   const handleExercisesChange = (dayIndex, nextExercises) => {
     setProgramData((current) => ({
       ...current,
-      days: current.days.map((day, index) => index === dayIndex ? { ...day, exercises: nextExercises } : day)
+      days: current.days.map((day, index) => (index === dayIndex ? { ...day, exercises: nextExercises } : day)),
     }))
   }
 
   const handleAddDay = () => {
     setProgramData((current) => ({
       ...current,
-      days: [...current.days, createEmptyDay(`Day ${current.days.length + 1}`)]
+      days: [...current.days, createEmptyDay(`Day ${current.days.length + 1}`)],
     }))
   }
 
   const handleRemoveDay = (dayIndex) => {
     setProgramData((current) => ({
       ...current,
-      days: current.days.filter((_, index) => index !== dayIndex)
+      days: current.days.filter((_, index) => index !== dayIndex),
     }))
   }
 
@@ -126,7 +152,6 @@ const CoachDashboard = () => {
 
   const handleTemplateFileChosen = async (event) => {
     const file = event.target.files?.[0]
-    // Reset the input so re-uploading the same filename still triggers change.
     event.target.value = ''
     if (!file) return
     try {
@@ -135,7 +160,7 @@ const CoachDashboard = () => {
       setProgramData(nextProgramData)
       const exercises = nextProgramData.days.reduce((t, d) => t + d.exercises.length, 0)
       setSaveMessage(
-        `Loaded ${nextProgramData.days.length} day(s) / ${exercises} exercise(s) from ${file.name}. Review and hit Create Program.`
+        `Loaded ${nextProgramData.days.length} day(s) / ${exercises} exercise(s) from ${file.name}. Review and hit Save.`
       )
       setTimeout(() => setSaveMessage(''), 6000)
     } catch (error) {
@@ -146,19 +171,6 @@ const CoachDashboard = () => {
 
   const toggleEditorMode = () => {
     setEditorMode((current) => (current === 'form' ? 'spreadsheet' : 'form'))
-  }
-
-  const handleEditProgram = (program) => {
-    setEditingProgramId(program.id)
-    setFormData({
-      name: program.name,
-      description: program.description || '',
-      athlete_id: String(program.athlete_id || ''),
-      start_date: program.start_date,
-      end_date: program.end_date || ''
-    })
-    setProgramData(normalizeProgramData(program.program_data, program.start_date))
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleSave = async () => {
@@ -173,8 +185,8 @@ const CoachDashboard = () => {
       end_date: formData.end_date || null,
       program_data: {
         ...programData,
-        week_start_date: formData.start_date
-      }
+        week_start_date: formData.start_date,
+      },
     }
 
     try {
@@ -182,14 +194,18 @@ const CoachDashboard = () => {
       setSaveMessage('')
       if (editingProgramId) {
         await updateProgram(editingProgramId, payload)
-        setSaveMessage('Program updated successfully.')
+        setSaveMessage('Program updated.')
       } else {
         await createProgram(payload)
-        setSaveMessage('Program created successfully.')
+        setSaveMessage('Program created.')
       }
-      resetEditor()
       await loadDashboardData()
-      setTimeout(() => setSaveMessage(''), 3000)
+      // Return to list after a successful save; coaches usually want to see
+      // the program on the roster, not stay in the editor.
+      setTimeout(() => {
+        setSaveMessage('')
+        backToList()
+      }, 900)
     } catch (error) {
       console.error('Error saving program:', error)
       setSaveMessage(formatApiError(error, 'Error saving program. Check the fields and try again.'))
@@ -204,10 +220,9 @@ const CoachDashboard = () => {
       setSaveMessage('Select an athlete before reassigning the program.')
       return
     }
-
     try {
       await assignProgram(programId, Number(athleteId))
-      setSaveMessage('Program reassigned successfully.')
+      setSaveMessage('Program reassigned.')
       await loadDashboardData()
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (error) {
@@ -219,145 +234,302 @@ const CoachDashboard = () => {
   if (loading) {
     return (
       <div className="dashboard-container">
-        <div className="loading">Loading coach workspace...</div>
+        <div className="loading">Loading coach workspace…</div>
       </div>
     )
   }
 
   return (
     <div className="dashboard-container coach-dashboard">
-      <div className="api-status">
-        {apiError ? <span className="api-error">API: {apiError}</span> : <span className="api-ok">Programs from API: {programs.length}</span>}
-      </div>
+      {apiError && (
+        <div className="api-status">
+          <span className="api-error">API: {apiError}</span>
+        </div>
+      )}
 
+      {view === 'list' ? (
+        <ListView
+          programs={programs}
+          athletes={athletes}
+          assignmentDrafts={assignmentDrafts}
+          onAssignDraftChange={(programId, value) =>
+            setAssignmentDrafts((current) => ({ ...current, [programId]: value }))
+          }
+          onAssignSubmit={handleAssign}
+          onNewProgram={openNewProgram}
+          onEditProgram={openExistingProgram}
+          saveMessage={saveMessage}
+        />
+      ) : (
+        <EditorView
+          editingProgramId={editingProgramId}
+          formData={formData}
+          programData={programData}
+          athletes={athletes}
+          athleteSearch={athleteSearch}
+          athleteTotal={athleteTotal}
+          editorMode={editorMode}
+          saving={saving}
+          saveMessage={saveMessage}
+          upcomingSummary={upcomingSummary}
+          fileInputRef={fileInputRef}
+          onBack={backToList}
+          onFormChange={handleFormChange}
+          onAthleteSearch={setAthleteSearch}
+          onDayChange={handleDayChange}
+          onExercisesChange={handleExercisesChange}
+          onAddDay={handleAddDay}
+          onRemoveDay={handleRemoveDay}
+          onDownloadTemplate={handleDownloadTemplate}
+          onUploadClick={handleTemplateUploadClick}
+          onUploadChosen={handleTemplateFileChosen}
+          onToggleEditorMode={toggleEditorMode}
+          onProgramDataChange={setProgramData}
+          onSave={handleSave}
+        />
+      )}
+    </div>
+  )
+}
+
+// --------------------------------------------------------------------------
+// List view -- sparse rows instead of full cards, one primary CTA.
+// --------------------------------------------------------------------------
+const ListView = ({
+  programs,
+  athletes,
+  assignmentDrafts,
+  onAssignDraftChange,
+  onAssignSubmit,
+  onNewProgram,
+  onEditProgram,
+  saveMessage,
+}) => {
+  return (
+    <>
       <div className="dashboard-header">
         <div className="dashboard-kicker-row">
-          <span className="dashboard-kicker">Coach command surface</span>
-          <span className="status-pill">Structured programming active</span>
+          <span className="dashboard-kicker">Coach</span>
+          <button type="button" className="save-btn" onClick={onNewProgram}>
+            + New program
+          </button>
         </div>
-        <h1>Coach Dashboard</h1>
+        <h1>Your programs</h1>
         <p className="dashboard-description">
-          Build structured weekly plans with real exercise prescription data, then assign or revise them for each athlete.
+          Structured weekly plans, assignments, and reassignments. Click a program to edit, or start a new one.
         </p>
-        <div className="summary-grid">
-          <div className="detail-item">
-            <span className="label">Days in draft</span>
-            <span className="value">{upcomingSummary.dayCount}</span>
-          </div>
-          <div className="detail-item">
-            <span className="label">Exercises in draft</span>
-            <span className="value">{upcomingSummary.exerciseCount}</span>
-          </div>
-          <div className="detail-item">
-            <span className="label">Assigned athletes</span>
-            <span className="value">{athletes.length}</span>
-          </div>
-        </div>
         {saveMessage && (
-          <div className={`save-message ${saveMessage.includes('Error') ? 'error' : 'success'}`}>
+          <div className={`save-message ${saveMessage.toLowerCase().includes('error') || saveMessage.toLowerCase().includes('could') ? 'error' : 'success'}`}>
             {saveMessage}
           </div>
         )}
       </div>
 
-      <div className="program-content">
-        <div className="section-card">
-          <div className="section-title-row">
-            <h3>{editingProgramId ? 'Edit Program' : 'Create Program'}</h3>
-            {editingProgramId && <button type="button" className="text-btn" onClick={resetEditor}>Start new draft</button>}
-          </div>
-          <div className="form-row">
-            <input
-              type="text"
-              placeholder="Program name"
-              value={formData.name}
-              onChange={(event) => handleFormChange('name', event.target.value)}
-              className="exercise-input"
-            />
-            <input
-              type="search"
-              placeholder={`Filter athletes (${athleteTotal} total)`}
-              value={athleteSearch}
-              onChange={(event) => setAthleteSearch(event.target.value)}
-              className="form-input"
-              aria-label="Search athletes"
-            />
-            <select
-              value={formData.athlete_id}
-              onChange={(event) => handleFormChange('athlete_id', event.target.value)}
-              className="form-input"
-            >
-              <option value="">Select athlete</option>
-              {athletes.map((athlete) => (
-                <option key={athlete.id} value={athlete.id}>{athlete.username}</option>
-              ))}
-            </select>
-          </div>
-          <textarea
-            placeholder="Program description"
-            value={formData.description}
-            onChange={(event) => handleFormChange('description', event.target.value)}
-            className="notes-textarea"
-            rows="3"
+      {programs.length === 0 ? (
+        <div className="empty-state">
+          <p>No programs yet.</p>
+          <p className="section-subtitle">Click <strong>+ New program</strong> to build your first one, or download the Excel template to import from a spreadsheet.</p>
+        </div>
+      ) : (
+        <div className="programs-list">
+          {programs.map((program) => {
+            const normalized = normalizeProgramData(program.program_data, program.start_date)
+            const exerciseCount = countExercises(normalized)
+            return (
+              <div key={program.id} className="program-row">
+                <div className="program-row-main" onClick={() => onEditProgram(program)} role="button" tabIndex={0}
+                     onKeyDown={(event) => (event.key === 'Enter' || event.key === ' ') && onEditProgram(program)}>
+                  <div className="program-row-title">{program.name}</div>
+                  <div className="program-row-meta">
+                    <span>{program.athlete_username}</span>
+                    <span className="program-row-dot">·</span>
+                    <span className="data">{normalized.days.length}</span> <span>days</span>
+                    <span className="program-row-dot">·</span>
+                    <span className="data">{exerciseCount}</span> <span>exercises</span>
+                    <span className="program-row-dot">·</span>
+                    <span>starts {program.start_date}</span>
+                  </div>
+                </div>
+                <div className="program-row-actions">
+                  <button type="button" className="text-btn" onClick={() => onEditProgram(program)}>Edit</button>
+                  <select
+                    value={assignmentDrafts[program.id] ?? ''}
+                    onChange={(event) => onAssignDraftChange(program.id, event.target.value)}
+                    className="form-input program-row-reassign-select"
+                    aria-label="Reassign athlete"
+                  >
+                    <option value="">Reassign…</option>
+                    {athletes.map((athlete) => (
+                      <option key={athlete.id} value={athlete.id}>{athlete.username}</option>
+                    ))}
+                  </select>
+                  {assignmentDrafts[program.id] && (
+                    <button type="button" className="save-btn program-row-reassign-go" onClick={() => onAssignSubmit(program.id)}>
+                      Go
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </>
+  )
+}
+
+// --------------------------------------------------------------------------
+// Editor view -- clean focused program builder.
+// Import / spreadsheet / add-day collapse into a single compact icon group.
+// --------------------------------------------------------------------------
+const EditorView = ({
+  editingProgramId,
+  formData,
+  programData,
+  athletes,
+  athleteSearch,
+  athleteTotal,
+  editorMode,
+  saving,
+  saveMessage,
+  upcomingSummary,
+  fileInputRef,
+  onBack,
+  onFormChange,
+  onAthleteSearch,
+  onDayChange,
+  onExercisesChange,
+  onAddDay,
+  onRemoveDay,
+  onDownloadTemplate,
+  onUploadClick,
+  onUploadChosen,
+  onToggleEditorMode,
+  onProgramDataChange,
+  onSave,
+}) => {
+  return (
+    <>
+      <div className="editor-topbar">
+        <button type="button" className="text-btn editor-back-btn" onClick={onBack} aria-label="Back to programs">
+          ← Programs
+        </button>
+        <div className="editor-tool-group">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv,.ods,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+            onChange={onUploadChosen}
+            style={{ display: 'none' }}
+            aria-hidden="true"
           />
-          <div className="form-grid compact-grid">
+          <button type="button" className="tool-btn" onClick={onDownloadTemplate} title="Download .xlsx template">
+            <span className="tool-btn-icon">⬇</span>
+            <span className="tool-btn-label">Template</span>
+          </button>
+          <button type="button" className="tool-btn" onClick={onUploadClick} title="Upload .xlsx to autofill">
+            <span className="tool-btn-icon">⬆</span>
+            <span className="tool-btn-label">Upload</span>
+          </button>
+          <button type="button" className="tool-btn" onClick={onToggleEditorMode}
+                  title={editorMode === 'form' ? 'Switch to spreadsheet view' : 'Switch to structured view'}>
+            <span className="tool-btn-icon">{editorMode === 'form' ? '⊞' : '☰'}</span>
+            <span className="tool-btn-label">{editorMode === 'form' ? 'Spreadsheet' : 'Structured'}</span>
+          </button>
+        </div>
+        <button type="button" className="save-btn editor-save-btn" onClick={onSave}
+                disabled={saving || !formData.name || !formData.athlete_id}>
+          {saving ? 'Saving…' : editingProgramId ? 'Save changes' : 'Create program'}
+        </button>
+      </div>
+
+      <div className="editor-header">
+        <input
+          type="text"
+          placeholder="Program name"
+          value={formData.name}
+          onChange={(event) => onFormChange('name', event.target.value)}
+          className="editor-title-input"
+          aria-label="Program name"
+        />
+        <div className="editor-summary">
+          <span className="data">{upcomingSummary.dayCount}</span> days
+          <span className="program-row-dot">·</span>
+          <span className="data">{upcomingSummary.exerciseCount}</span> exercises
+        </div>
+      </div>
+
+      {saveMessage && (
+        <div className={`save-message ${saveMessage.toLowerCase().includes('error') || saveMessage.toLowerCase().includes('could') ? 'error' : 'success'}`}>
+          {saveMessage}
+        </div>
+      )}
+
+      <div className="section-card editor-meta-card">
+        <div className="form-row">
+          <input
+            type="search"
+            placeholder={`Filter athletes (${athleteTotal} total)`}
+            value={athleteSearch}
+            onChange={(event) => onAthleteSearch(event.target.value)}
+            className="form-input"
+            aria-label="Search athletes"
+          />
+          <select
+            value={formData.athlete_id}
+            onChange={(event) => onFormChange('athlete_id', event.target.value)}
+            className="form-input"
+            aria-label="Assign athlete"
+          >
+            <option value="">Assign athlete…</option>
+            {athletes.map((athlete) => (
+              <option key={athlete.id} value={athlete.id}>{athlete.username}</option>
+            ))}
+          </select>
+        </div>
+        <textarea
+          placeholder="Program description (optional)"
+          value={formData.description}
+          onChange={(event) => onFormChange('description', event.target.value)}
+          className="notes-textarea"
+          rows="2"
+        />
+        <div className="form-grid compact-grid">
+          <label className="field-stacked">
+            <span>Start</span>
             <input
               type="date"
               value={formData.start_date}
-              onChange={(event) => handleFormChange('start_date', event.target.value)}
+              onChange={(event) => onFormChange('start_date', event.target.value)}
               className="form-input"
             />
+          </label>
+          <label className="field-stacked">
+            <span>End</span>
             <input
               type="date"
               value={formData.end_date}
-              onChange={(event) => handleFormChange('end_date', event.target.value)}
+              onChange={(event) => onFormChange('end_date', event.target.value)}
               className="form-input"
             />
-            <div className="detail-item">
-              <span className="label">Week start</span>
-              <span className="value">{programData.week_start_date || formData.start_date}</span>
-            </div>
+          </label>
+          <div className="field-stacked">
+            <span>Week of</span>
+            <span className="data field-value">{programData.week_start_date || formData.start_date}</span>
           </div>
         </div>
+      </div>
 
-        <div className="section-card builder-toolbar">
-          <div>
-            <h3>Weekly Structure</h3>
-            <p className="section-subtitle">
-              Add or trim days, then prescribe exercises with sets, reps, intensity, and notes. Coaches who live
-              in Excel can download the template, fill it in, and upload it to autofill this view.
-            </p>
-          </div>
-          <div className="toolbar-actions">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv,.ods,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
-              onChange={handleTemplateFileChosen}
-              style={{ display: 'none' }}
-              aria-hidden="true"
-            />
-            <button type="button" className="text-btn" onClick={handleDownloadTemplate}>
-              ⬇ Download template
-            </button>
-            <button type="button" className="text-btn" onClick={handleTemplateUploadClick}>
-              ⬆ Upload .xlsx
-            </button>
-            <button type="button" className="text-btn" onClick={toggleEditorMode}>
-              {editorMode === 'form' ? '⊞ Spreadsheet view' : '☰ Structured view'}
-            </button>
-            {editorMode === 'form' && (
-              <button type="button" className="text-btn" onClick={handleAddDay}>+ Add day</button>
-            )}
-            <button type="button" className="save-btn" onClick={handleSave} disabled={saving || !formData.name || !formData.athlete_id}>
-              {saving ? 'Saving...' : editingProgramId ? 'Update Program' : 'Create Program'}
-            </button>
-          </div>
-        </div>
+      <div className="section-title-row">
+        <h3>Weekly structure</h3>
+        {editorMode === 'form' && (
+          <button type="button" className="text-btn" onClick={onAddDay}>+ Add day</button>
+        )}
+      </div>
 
-        {editorMode === 'spreadsheet' ? (
-          <SpreadsheetEditor programData={programData} onChange={setProgramData} />
-        ) : (
+      {editorMode === 'spreadsheet' ? (
+        <SpreadsheetEditor programData={programData} onChange={onProgramDataChange} />
+      ) : (
         <div className="day-stack">
           {programData.days.map((day, dayIndex) => (
             <WorkoutDay
@@ -365,69 +537,16 @@ const CoachDashboard = () => {
               day={day}
               dayIndex={dayIndex}
               exercises={day.exercises}
-              onExercisesChange={(nextExercises) => handleExercisesChange(dayIndex, nextExercises)}
-              onDayChange={(nextDayName) => handleDayChange(dayIndex, nextDayName)}
-              onRemoveDay={() => handleRemoveDay(dayIndex)}
+              onExercisesChange={(nextExercises) => onExercisesChange(dayIndex, nextExercises)}
+              onDayChange={(nextDayName) => onDayChange(dayIndex, nextDayName)}
+              onRemoveDay={() => onRemoveDay(dayIndex)}
               canRemoveDay={programData.days.length > 1}
               isCoach
             />
           ))}
         </div>
-        )}
-
-        <div className="section-title-row">
-          <h3>Existing Programs</h3>
-          <span className="section-subtitle">Edit structure or reassign an existing program.</span>
-        </div>
-
-        {programs.length === 0 ? (
-          <div className="section-card empty-inline">No programs created yet.</div>
-        ) : (
-          programs.map((program) => {
-            const normalizedProgram = normalizeProgramData(program.program_data, program.start_date)
-            return (
-              <div key={program.id} className="section-card">
-                <div className="exercise-header">
-                  <div>
-                    <h4>{program.name}</h4>
-                    <p>Assigned to <strong>{program.athlete_username}</strong></p>
-                  </div>
-                  <button type="button" className="text-btn" onClick={() => handleEditProgram(program)}>Edit</button>
-                </div>
-                <p>{program.description || 'No description provided.'}</p>
-                <div className="summary-grid">
-                  <div className="detail-item">
-                    <span className="label">Start</span>
-                    <span className="value">{program.start_date}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="label">End</span>
-                    <span className="value">{program.end_date || 'n/a'}</span>
-                  </div>
-                  <div className="detail-item">
-                    <span className="label">Days / exercises</span>
-                    <span className="value">{normalizedProgram.days.length} / {countExercises(normalizedProgram)}</span>
-                  </div>
-                </div>
-                <div className="form-row assignment-row">
-                  <select
-                    value={assignmentDrafts[program.id] ?? ''}
-                    onChange={(event) => setAssignmentDrafts((current) => ({ ...current, [program.id]: event.target.value }))}
-                    className="form-input"
-                  >
-                    <option value="">Reassign athlete</option>
-                    {athletes.map((athlete) => (
-                      <option key={athlete.id} value={athlete.id}>{athlete.username}</option>
-                    ))}
-                  </select>
-                  <button type="button" className="save-btn" onClick={() => handleAssign(program.id)}>Reassign</button>
-                </div>
-              </div>
-            )
-          })
-        )}
-      </div>
-    </div>
+      )}
+    </>
   )
 }
 
