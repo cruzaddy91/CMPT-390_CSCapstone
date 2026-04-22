@@ -17,6 +17,7 @@ import { downloadTemplateXlsx, parseProgramFile } from '../utils/programTemplate
 import { clearDraft, readDraft, saveDraft } from '../utils/programDraft'
 import { BLOCK_PRESETS, endDateForBlock, inferBlockKey } from '../utils/blockLength'
 import { relativeTimeSince } from '../utils/relativeTime'
+import { athleteProfileSuffix } from '../utils/athleteMeta'
 import { programTitleForDisplay } from '../utils/safeDisplay'
 import AthleteTrainingTrendCharts from '../components/AthleteTrainingTrendCharts'
 import CoachRosterAggregateCharts from '../components/CoachRosterAggregateCharts'
@@ -187,6 +188,17 @@ const CoachDashboard = () => {
     const hit = athletes.find((a) => a.id === athleteIdNum)
     return hit ? hit.username : ''
   }, [formData.athlete_id, athletes])
+
+  const assignedAthleteProfileSuffix = useMemo(() => {
+    const id = Number(formData.athlete_id)
+    if (!id) return ''
+    const fromRoster = athletes.find((a) => a.id === id)
+    if (fromRoster && (fromRoster.bodyweight_kg != null || fromRoster.competitive_weight_class)) {
+      return athleteProfileSuffix(fromRoster)
+    }
+    const prog = programs.find((p) => p.athlete_id === id)
+    return athleteProfileSuffix(prog || {})
+  }, [formData.athlete_id, athletes, programs])
 
   const loadDashboardData = async () => {
     try {
@@ -469,6 +481,7 @@ const CoachDashboard = () => {
             athleteSearch={athleteSearch}
             athleteTotal={athleteTotal}
             assignedAthleteUsername={assignedAthleteUsername}
+            assignedAthleteProfileSuffix={assignedAthleteProfileSuffix}
             coachAthletePrs={coachAthletePrs}
             coachPrsLoading={coachPrsLoading}
             coachPrsError={coachPrsError}
@@ -504,6 +517,7 @@ const CoachDashboard = () => {
               programData={programData}
               programName={formData.name}
               athleteUsername={assignedAthleteUsername}
+              athleteProfileSuffix={assignedAthleteProfileSuffix}
               onClose={() => setShowPreview(false)}
             />
           )}
@@ -513,7 +527,7 @@ const CoachDashboard = () => {
   )
 }
 
-const AssignedAthleteBadge = ({ username }) => {
+const AssignedAthleteBadge = ({ username, profileSuffix }) => {
   if (!username) {
     return (
       <span className="assigned-athlete assigned-athlete-empty">
@@ -524,6 +538,7 @@ const AssignedAthleteBadge = ({ username }) => {
   return (
     <span className="assigned-athlete">
       Assigned to <span className="assigned-athlete-name">@{username}</span>
+      {profileSuffix ? <span className="athlete-inline-meta">{profileSuffix}</span> : null}
     </span>
   )
 }
@@ -616,6 +631,7 @@ const ProgramRow = ({ program, athletes, assignmentDrafts, onAssignDraftChange, 
 const AthleteGroup = ({ athleteUsername, programs, athletes, assignmentDrafts,
   onAssignDraftChange, onAssignSubmit, onEditProgram }) => {
   const [isOpen, setIsOpen] = useState(false)
+  const profileSuffix = useMemo(() => athleteProfileSuffix(programs[0] || {}), [programs])
   // Aggregate totals across every program in this athlete's bucket so the
   // collapsed header shows a single "how's this athlete doing overall" read.
   const { totalCompleted, totalExercises, mostRecent } = programs.reduce(
@@ -644,7 +660,10 @@ const AthleteGroup = ({ athleteUsername, programs, athletes, assignmentDrafts,
           <span className="athlete-group-ring-pct data">{pct}%</span>
         </div>
         <span className="athlete-group-main">
-          <span className="athlete-group-name">@{athleteUsername}</span>
+          <span className="athlete-group-name-row">
+            <span className="athlete-group-name">@{athleteUsername}</span>
+            {profileSuffix ? <span className="athlete-inline-meta">{profileSuffix}</span> : null}
+          </span>
           <span className="athlete-group-meta">
             <span className="data">{programs.length}</span> program{programs.length === 1 ? '' : 's'}
             <span className="program-row-dot">·</span>
@@ -775,7 +794,7 @@ const ListView = ({
 // --------------------------------------------------------------------------
 const EditorView = ({
   editingProgramId, formData, programData, athletes, athleteSearch, athleteTotal,
-  assignedAthleteUsername,
+  assignedAthleteUsername, assignedAthleteProfileSuffix,
   coachAthletePrs, coachPrsLoading, coachPrsError,
   editorMode, intensityMode, saving, saveMessage, upcomingSummary, currentBlockKey,
   fileInputRef, draftBadge,
@@ -841,7 +860,7 @@ const EditorView = ({
             className="editor-title-input"
             aria-label="Program name"
           />
-          <AssignedAthleteBadge username={assignedAthleteUsername} />
+          <AssignedAthleteBadge username={assignedAthleteUsername} profileSuffix={assignedAthleteProfileSuffix} />
         </div>
         <div className="editor-summary">
           <span className="data">{upcomingSummary.dayCount}</span> days

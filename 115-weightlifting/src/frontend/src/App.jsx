@@ -7,6 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { getAthletes, getCurrentUserFromApi, getProgramsFromBackend, logout } from './services/api'
 import { clearAuth, getCurrentUser, getToken, isAuthenticated, setCurrentUser } from './utils/auth'
 import { countExercises, normalizeProgramData } from './utils/dataStructure'
+import { athleteProfileSuffix } from './utils/athleteMeta'
 import { relativeTimeSince } from './utils/relativeTime'
 import { applyTheme, resolveInitialTheme, toggleTheme } from './utils/theme'
 import './App.css'
@@ -261,13 +262,17 @@ const CoachHome = ({ currentUser }) => {
                     .map((p) => p.updated_at)
                     .sort()
                     .at(-1)
+                  const rosterSuffix = athleteProfileSuffix(athlete)
                   return (
                     <Link
                       key={athlete.id}
                       to="/coach"
                       className="coach-home-roster-row"
                     >
-                      <span className="coach-home-roster-name">@{athlete.username}</span>
+                      <span className="coach-home-roster-name">
+                        @{athlete.username}
+                        {rosterSuffix ? <span className="athlete-inline-meta">{rosterSuffix}</span> : null}
+                      </span>
                       <span className="coach-home-roster-meta">
                         <span className="data">{athletePrograms.length}</span>
                         <span> program{athletePrograms.length === 1 ? '' : 's'}</span>

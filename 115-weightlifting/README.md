@@ -65,6 +65,7 @@ Quick reference:
 - Athlete dashboard for completing prescribed exercises, adding logs, tracking PRs, and viewing charts
 - Coach program editor shows the same three PR/trend charts for the assigned athlete (read-only; API allows only athletes who already appear on one of your saved programs)
 - Coach home (program list) shows **roster-wide averages**: mean of each athlete’s monthly-best PR curves (Snatch, Clean & Jerk, Total) and mean of each athlete’s six-month rolling peak total (`rosterAverageMonthlyBestPrLineData`, `rosterAverageRollingPeakTotalLine` in `trainingCharts.js`)
+- Athletes have optional **bodyweight (kg)** and **gender** (`M` / `F`) on the user record; the API exposes an IWF-style **competitive weight class** label (computed from body mass) on `/api/auth/me/`, the coach athlete list, and each program alongside `athlete_username`
 - Sinclair score API and frontend calculator
 - Django REST backend with SQLite-by-default and PostgreSQL-ready production settings
 
@@ -160,7 +161,7 @@ See `config/self_hosting.md` for both local and public self-hosting plans.
 
 - `POST /api/auth/register/`
 - `POST /api/auth/token/`
-- `GET /api/auth/me/`
+- `GET|PATCH /api/auth/me/` (athletes only: `PATCH` accepts `bodyweight_kg`, `gender` — `M` or `F`; response includes computed `competitive_weight_class`)
 - `GET|POST /api/programs/`
 - `PATCH /api/programs/<id>/`
 - `PATCH /api/programs/<id>/assign/`

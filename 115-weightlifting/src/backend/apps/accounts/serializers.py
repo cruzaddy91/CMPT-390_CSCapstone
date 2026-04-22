@@ -3,6 +3,8 @@ import os
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
+from .weight_class import competitive_weight_class_label, normalize_bodyweight_for_storage
+
 User = get_user_model()
 
 
@@ -40,6 +42,48 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class CurrentUserSerializer(serializers.ModelSerializer):
+    competitive_weight_class = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'user_type']
+        fields = [
+            'id',
+            'username',
+            'user_type',
+            'bodyweight_kg',
+            'gender',
+            'competitive_weight_class',
+        ]
+
+    def get_competitive_weight_class(self, obj):
+        return competitive_weight_class_label(obj.bodyweight_kg, obj.gender)
+
+
+class AthleteProfileUpdateSerializer(serializers.ModelSerializer):
+    """Partial update for athletes: body mass + gender (drives weight-class label)."""
+
+    class Meta:
+        model = User
+        fields = ['bodyweight_kg', 'gender']
+
+    def validate_gender(self, value):
+        if value in (None, ''):
+            return None
+        v = str(value).strip().upper()
+        if v not in ('M', 'F'):
+            raise serializers.ValidationError('Use M or F.')
+        return v
+
+    def validate_bodyweight_kg(self, value):
+        normalized = normalize_bodyweight_for_storage(value)
+        if normalized is None and value not in (None, ''):
+            raise serializers.ValidationError('Invalid bodyweight.')
+        if normalized is not None and (normalized > 250 or normalized < 25):
+            raise serializers.ValidationError('Bodyweight must be between 25 and 250 kg.')
+        return normalized
+
+    def update(self, instance, validated_data):
+        for k, v in validated_data.items():
+            setattr(instance, k, v)
+        instance.save()
+        return instance

@@ -5,7 +5,7 @@ import { programTitleForDisplay } from '../utils/safeDisplay'
 // Read-only render of what the athlete sees. Uses the existing WorkoutDay in
 // non-coach mode but disables the completion + result writes so the modal is
 // a true preview, not an interactive surface.
-const ProgramPreview = ({ programData, programName, athleteUsername, onClose }) => {
+const ProgramPreview = ({ programData, programName, athleteUsername, athleteProfileSuffix = '', onClose }) => {
   useEffect(() => {
     const handler = (event) => {
       if (event.key === 'Escape') onClose()
@@ -32,7 +32,10 @@ const ProgramPreview = ({ programData, programName, athleteUsername, onClose }) 
             <div className="preview-kicker">Athlete preview</div>
             <h2 className="preview-title">{programTitleForDisplay(programName) || 'Untitled program'}</h2>
             {athleteUsername && (
-              <div className="preview-subtitle">for {athleteUsername}</div>
+              <div className="preview-subtitle">
+                Athlete · {athleteUsername}
+                {athleteProfileSuffix ? <span className="athlete-inline-meta">{athleteProfileSuffix}</span> : null}
+              </div>
             )}
           </div>
           <button type="button" className="text-btn" onClick={onClose} aria-label="Close preview">

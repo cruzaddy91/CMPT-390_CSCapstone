@@ -15,6 +15,7 @@ import {
 import { getCurrentUser } from '../utils/auth'
 import { getDayCompletionKey, normalizeProgramData } from '../utils/dataStructure'
 import { formatApiError } from '../utils/errors'
+import { athleteProfileSuffix } from '../utils/athleteMeta'
 import { programTitleForDisplay } from '../utils/safeDisplay'
 import {
   computeLifetimeCompletions,
@@ -428,12 +429,16 @@ const AthleteDashboard = () => {
   }
 
   const programsAssigned = programs.length
+  const activeProfileSuffix = athleteProfileSuffix(activeProgram)
 
   return (
     <div className="dashboard-container athlete-dashboard">
       <div className="athlete-hero">
         <div className="dashboard-kicker-row">
-          <span className="dashboard-kicker">Athlete · {activeProgram.athlete_username}</span>
+          <span className="dashboard-kicker">
+            Athlete · {activeProgram.athlete_username}
+            {activeProfileSuffix ? <span className="athlete-inline-meta">{activeProfileSuffix}</span> : null}
+          </span>
           {saving && <span className="status-pill">Saving…</span>}
         </div>
         <h1 className="athlete-hero-title">

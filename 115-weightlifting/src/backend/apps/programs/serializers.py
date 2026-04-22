@@ -1,5 +1,8 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+
+from apps.accounts.weight_class import competitive_weight_class_label
+
 from .models import TrainingProgram, default_program_data
 
 User = get_user_model()
@@ -97,6 +100,15 @@ class TrainingProgramSerializer(serializers.ModelSerializer):
     coach_username = serializers.CharField(source='coach.username', read_only=True)
     athlete_id = serializers.IntegerField(source='athlete.id', read_only=True)
     athlete_username = serializers.CharField(source='athlete.username', read_only=True)
+    athlete_bodyweight_kg = serializers.DecimalField(
+        source='athlete.bodyweight_kg',
+        read_only=True,
+        max_digits=6,
+        decimal_places=2,
+        allow_null=True,
+    )
+    athlete_gender = serializers.CharField(source='athlete.gender', read_only=True, allow_null=True)
+    athlete_competitive_weight_class = serializers.SerializerMethodField()
     completion_data = serializers.SerializerMethodField()
 
     class Meta:
@@ -113,9 +125,16 @@ class TrainingProgramSerializer(serializers.ModelSerializer):
             'coach_username',
             'athlete_id',
             'athlete_username',
+            'athlete_bodyweight_kg',
+            'athlete_gender',
+            'athlete_competitive_weight_class',
             'created_at',
             'updated_at',
         ]
+
+    def get_athlete_competitive_weight_class(self, obj):
+        a = obj.athlete
+        return competitive_weight_class_label(a.bodyweight_kg, a.gender)
 
     def get_completion_data(self, obj):
         request = self.context.get('request')

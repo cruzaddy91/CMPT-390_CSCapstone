@@ -8,7 +8,8 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.conf import settings as dj_settings
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .serializers import CurrentUserSerializer, RegisterSerializer
+from .serializers import AthleteProfileUpdateSerializer, CurrentUserSerializer, RegisterSerializer
+from .weight_class import competitive_weight_class_label
 
 
 REFRESH_COOKIE_NAME = 'wl_refresh'
@@ -96,6 +97,19 @@ class CurrentUserView(APIView):
     def get(self, request):
         serializer = CurrentUserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def patch(self, request):
+        """Athletes may update bodyweight + gender (drives competitive weight class)."""
+        if request.user.user_type != 'athlete':
+            return Response(
+                {'detail': 'Only athletes can update these profile fields.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serializer = AthleteProfileUpdateSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(CurrentUserSerializer(request.user).data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request):
         """Delete the current user's own account.
@@ -205,9 +219,23 @@ class AthleteListView(APIView):
 
         total = base.count()
         offset = (page - 1) * self.PAGE_SIZE
-        athletes = list(
-            base.order_by('username').values('id', 'username')[offset:offset + self.PAGE_SIZE]
+        rows = list(
+            base.order_by('username').values(
+                'id', 'username', 'bodyweight_kg', 'gender',
+            )[offset:offset + self.PAGE_SIZE]
         )
+        athletes = []
+        for row in rows:
+            bw = row.get('bodyweight_kg')
+            athletes.append({
+                'id': row['id'],
+                'username': row['username'],
+                'bodyweight_kg': float(bw) if bw is not None else None,
+                'gender': row.get('gender'),
+                'competitive_weight_class': competitive_weight_class_label(
+                    row.get('bodyweight_kg'), row.get('gender'),
+                ),
+            })
         return Response(
             {
                 'results': athletes,

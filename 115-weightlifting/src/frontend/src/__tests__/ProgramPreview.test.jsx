@@ -23,12 +23,14 @@ describe('ProgramPreview', () => {
   it('renders the program name, athlete, and day contents', () => {
     render(<ProgramPreview programData={programFixture} programName="Block 1" athleteUsername="athlete_a" onClose={() => {}} />)
     expect(screen.getByText('Block 1')).toBeTruthy()
-    expect(screen.getByText(/for athlete_a/i)).toBeTruthy()
+    const dialog = screen.getByRole('dialog')
+    const subtitle = dialog.querySelector('.preview-subtitle')
+    expect(subtitle?.textContent?.replace(/\s+/g, ' ').trim()).toMatch(/Athlete · athlete_a/i)
     // Days now mount collapsed app-wide. Expand the first day to verify its
     // exercise contents render under the prescription.
     fireEvent.click(screen.getByTitle(/expand day/i))
     expect(screen.getByText('Snatch')).toBeTruthy()
-    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(dialog).toBeTruthy()
   })
 
   it("falls back to 'Untitled program' when no name is provided", () => {

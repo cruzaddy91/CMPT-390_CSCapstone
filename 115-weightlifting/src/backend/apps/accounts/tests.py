@@ -1,10 +1,13 @@
 import os
+from decimal import Decimal
 from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
+
+from apps.accounts.weight_class import competitive_weight_class_label
 
 User = get_user_model()
 
@@ -230,3 +233,65 @@ class AthleteListScopingTests(TestCase):
         self.client.force_authenticate(user=self.my_athlete)
         response = self.client.get(reverse('athlete-list'))
         self.assertEqual(response.status_code, 403)
+
+    def test_athlete_list_includes_weight_class_fields(self):
+        self.my_athlete.bodyweight_kg = Decimal('64.0')
+        self.my_athlete.gender = 'F'
+        self.my_athlete.save(update_fields=['bodyweight_kg', 'gender'])
+        response = self.client.get(reverse('athlete-list'))
+        self.assertEqual(response.status_code, 200)
+        hit = next(a for a in response.json()['results'] if a['username'] == 'my_athlete')
+        self.assertEqual(hit['bodyweight_kg'], 64.0)
+        self.assertEqual(hit['gender'], 'F')
+        self.assertEqual(hit['competitive_weight_class'], '71 kg')
+
+
+class WeightClassLabelTests(TestCase):
+    def test_men_superheavy(self):
+        self.assertEqual(competitive_weight_class_label(Decimal('120'), 'M'), '+109 kg')
+
+    def test_women_mid(self):
+        self.assertEqual(competitive_weight_class_label(59, 'F'), '59 kg')
+
+    def test_missing_gender(self):
+        self.assertIsNone(competitive_weight_class_label(80, None))
+
+
+class AthleteProfilePatchTests(TestCase):
+    def setUp(self):
+        self.athlete = User.objects.create_user(
+            username='patch_athlete', password='longenoughpw1', user_type='athlete',
+        )
+        self.coach = User.objects.create_user(
+            username='patch_coach', password='longenoughpw1', user_type='coach',
+        )
+        self.client = APIClient()
+
+    def test_patch_me_updates_bodyweight(self):
+        login = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': 'patch_athlete', 'password': 'longenoughpw1'},
+            format='json',
+        )
+        self.assertEqual(login.status_code, 200)
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.json()['access']}")
+        r = self.client.patch(
+            reverse('current-user'),
+            {'bodyweight_kg': '81.2', 'gender': 'M'},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200, r.content)
+        data = r.json()
+        self.assertEqual(float(data['bodyweight_kg']), 81.2)
+        self.assertEqual(data['gender'], 'M')
+        self.assertEqual(data['competitive_weight_class'], '89 kg')
+
+    def test_coach_patch_me_forbidden(self):
+        login = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': 'patch_coach', 'password': 'longenoughpw1'},
+            format='json',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.json()['access']}")
+        r = self.client.patch(reverse('current-user'), {'bodyweight_kg': '80'}, format='json')
+        self.assertEqual(r.status_code, 403)

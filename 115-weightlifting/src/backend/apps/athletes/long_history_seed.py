@@ -288,6 +288,16 @@ def seed_longterm_for_usernames(
     for i in range(0, len(all_w), batch_size):
         WorkoutLog.objects.bulk_create(all_w[i : i + batch_size], batch_size=batch_size)
 
+    # Align User.bodyweight_kg / gender with demo tiers so UI can show IWF class.
+    for uname in usernames:
+        prof = ATHLETE_PROFILES.get(uname)
+        if not prof:
+            continue
+        User.objects.filter(username=uname, user_type='athlete').update(
+            bodyweight_kg=prof['bodyweight_kg'],
+            gender=prof['gender'],
+        )
+
     return SeedSummary(
         athletes=len(users),
         pr_rows=len(all_prs),

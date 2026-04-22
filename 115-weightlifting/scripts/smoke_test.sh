@@ -9,6 +9,7 @@ ensure_backend_env
 smoke_json="$(backend_manage shell <<'PY'
 import json
 from datetime import date
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -30,6 +31,8 @@ coach.save()
 athlete, _ = User.objects.get_or_create(username='athlete_smoke', defaults={'user_type': 'athlete'})
 athlete.user_type = 'athlete'
 athlete.set_password('DemoPass123!')
+athlete.bodyweight_kg = Decimal('79.50')
+athlete.gender = 'M'
 athlete.save()
 
 athlete_b, _ = User.objects.get_or_create(username='athlete_smoke_b', defaults={'user_type': 'athlete'})
