@@ -66,12 +66,16 @@ export const normalizeProgramData = (programData, fallbackWeekStartDate = new Da
     }
   }
 
-  return {
+  const normalized = {
     week_start_date: programData.week_start_date || fallbackWeekStartDate,
     days: Array.isArray(programData.days) && programData.days.length > 0
       ? programData.days.map((day, index) => normalizeDay(day, index))
       : base.days,
   }
+  if (programData.intensity_mode === 'percent_1rm' || programData.intensity_mode === 'rpe' || programData.intensity_mode === 'weight') {
+    normalized.intensity_mode = programData.intensity_mode
+  }
+  return normalized
 }
 
 export const countExercises = (programData) => {

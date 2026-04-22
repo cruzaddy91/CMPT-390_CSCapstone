@@ -955,6 +955,35 @@
   flex-wrap: wrap;
 }
 
+.editor-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 260px;
+}
+
+.assigned-athlete {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.assigned-athlete-name {
+  color: var(--neon-cyan);
+  font-weight: 600;
+}
+
+.assigned-athlete-empty {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.program-row-updated {
+  color: var(--text-dim);
+  font-size: 0.84rem;
+}
+
 .editor-title-input {
   flex: 1;
   min-width: 260px;

@@ -8,6 +8,7 @@ import { formatApiError } from '../utils/errors'
 import { downloadTemplateXlsx, parseProgramFile } from '../utils/programTemplate'
 import { clearDraft, readDraft, saveDraft } from '../utils/programDraft'
 import { BLOCK_PRESETS, endDateForBlock, inferBlockKey } from '../utils/blockLength'
+import { relativeTimeSince } from '../utils/relativeTime'
 
 const getDefaultForm = () => ({
   name: '',
@@ -147,6 +148,11 @@ const CoachDashboard = () => {
     setEditingProgramId(program.id)
     setFormData(form)
     setProgramData(prog)
+    // Restore coach's prior intensity-mode choice if the program carries one
+    // (and the autosaved draft didn't already override it).
+    if (!restored && (prog.intensity_mode === 'percent_1rm' || prog.intensity_mode === 'rpe' || prog.intensity_mode === 'weight')) {
+      setIntensityMode(prog.intensity_mode)
+    }
     setView('editor')
     setSaveMessage('')
     if (restored) {
@@ -213,8 +219,15 @@ const CoachDashboard = () => {
   const handleDuplicateDay = (dayIndex) => {
     setProgramData((current) => {
       const source = current.days[dayIndex]
+      // Avoid the cluttered '(copy)' suffix. If the source uses the
+      // 'Day N' convention, increment N relative to the next available
+      // slot; otherwise keep the same text so the coach can rename inline.
+      const positionalMatch = typeof source.day === 'string' && source.day.match(/^Day\s+(\d+)$/i)
+      const nextDayName = positionalMatch
+        ? `Day ${current.days.length + 1}`
+        : source.day
       const cloned = {
-        day: `${source.day} (copy)`,
+        day: nextDayName,
         exercises: (source.exercises || []).map((ex) => ({ ...ex })),
       }
       const next = [...current.days]
@@ -265,7 +278,11 @@ const CoachDashboard = () => {
       ...formData,
       athlete_id: Number(formData.athlete_id),
       end_date: formData.end_date || null,
-      program_data: { ...programData, week_start_date: formData.start_date },
+      program_data: {
+        ...programData,
+        week_start_date: formData.start_date,
+        intensity_mode: intensityMode,
+      },
     }
     try {
       setSaving(true); setSaveMessage('')
@@ -339,6 +356,7 @@ const CoachDashboard = () => {
             athletes={athletes}
             athleteSearch={athleteSearch}
             athleteTotal={athleteTotal}
+            assignedAthleteUsername={assignedAthleteUsername}
             editorMode={editorMode}
             intensityMode={intensityMode}
             saving={saving}
@@ -377,6 +395,21 @@ const CoachDashboard = () => {
         </>
       )}
     </div>
+  )
+}
+
+const AssignedAthleteBadge = ({ username }) => {
+  if (!username) {
+    return (
+      <span className="assigned-athlete assigned-athlete-empty">
+        No athlete assigned yet
+      </span>
+    )
+  }
+  return (
+    <span className="assigned-athlete">
+      Assigned to <span className="assigned-athlete-name">@{username}</span>
+    </span>
   )
 }
 
@@ -425,6 +458,12 @@ const ListView = ({ programs, athletes, assignmentDrafts, onAssignDraftChange, o
                   <span className="data">{exerciseCount}</span> <span>exercises</span>
                   <span className="program-row-dot">·</span>
                   <span>starts {program.start_date}</span>
+                  {program.updated_at && (
+                    <>
+                      <span className="program-row-dot">·</span>
+                      <span className="program-row-updated">updated {relativeTimeSince(program.updated_at)}</span>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="program-row-actions">
@@ -459,6 +498,7 @@ const ListView = ({ programs, athletes, assignmentDrafts, onAssignDraftChange, o
 // --------------------------------------------------------------------------
 const EditorView = ({
   editingProgramId, formData, programData, athletes, athleteSearch, athleteTotal,
+  assignedAthleteUsername,
   editorMode, intensityMode, saving, saveMessage, upcomingSummary, currentBlockKey,
   fileInputRef, draftBadge,
   onBack, onFormChange, onBlockPreset, onAthleteSearch, onDayChange, onExercisesChange,
@@ -511,14 +551,17 @@ const EditorView = ({
       )}
 
       <div className="editor-header">
-        <input
-          type="text"
-          placeholder="Program name"
-          value={formData.name}
-          onChange={(event) => onFormChange('name', event.target.value)}
-          className="editor-title-input"
-          aria-label="Program name"
-        />
+        <div className="editor-title-block">
+          <input
+            type="text"
+            placeholder="Program name"
+            value={formData.name}
+            onChange={(event) => onFormChange('name', event.target.value)}
+            className="editor-title-input"
+            aria-label="Program name"
+          />
+          <AssignedAthleteBadge username={assignedAthleteUsername} />
+        </div>
         <div className="editor-summary">
           <span className="data">{upcomingSummary.dayCount}</span> days
           <span className="program-row-dot">·</span>
@@ -536,7 +579,9 @@ const EditorView = ({
         <div className="form-row">
           <input
             type="search"
-            placeholder={`Filter athletes (${athleteTotal} total)`}
+            placeholder={athleteSearch
+              ? `Filter athletes (${athleteTotal} match${athleteTotal === 1 ? '' : 'es'})`
+              : 'Filter athletes by name'}
             value={athleteSearch}
             onChange={(event) => onAthleteSearch(event.target.value)}
             className="form-input"

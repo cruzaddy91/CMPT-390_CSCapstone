@@ -12,10 +12,19 @@ def normalize_program_data(value):
     if not isinstance(value, dict):
         raise serializers.ValidationError('program_data must be an object.')
 
+    # Coach display preference for intensity columns (% 1RM / RPE / weight).
+    # Persisted so reopening a program restores the mode; frontend-only signal,
+    # doesn't affect stored prescription data.
+    intensity_mode = value.get('intensity_mode')
+    if intensity_mode not in ('percent_1rm', 'rpe', 'weight'):
+        intensity_mode = None
+
     normalized = {
         'week_start_date': str(value.get('week_start_date', '')),
         'days': [],
     }
+    if intensity_mode:
+        normalized['intensity_mode'] = intensity_mode
 
     days = value.get('days', [])
     if not isinstance(days, list):

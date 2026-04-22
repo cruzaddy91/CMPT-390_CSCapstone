@@ -154,6 +154,49 @@ class ProgramDataDayIdTests(TestCase):
         days = response.data['program_data']['days']
         self.assertEqual([d['id'] for d in days], ['dabc123', 'dxyz789'])
 
+    def test_intensity_mode_round_trips_on_program_data(self):
+        """Coach preference for % 1RM / RPE / Weight survives save + reload."""
+        program_data = {
+            'week_start_date': '2026-04-21',
+            'intensity_mode': 'rpe',
+            'days': [{'id': 'd0', 'day': 'Monday', 'exercises': []}],
+        }
+        response = self.client.post(
+            reverse('program-list-create'),
+            {
+                'name': 'RPE block',
+                'description': '',
+                'athlete_id': self.athlete.id,
+                'start_date': '2026-04-21',
+                'end_date': None,
+                'program_data': program_data,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(response.data['program_data'].get('intensity_mode'), 'rpe')
+
+    def test_invalid_intensity_mode_is_dropped(self):
+        program_data = {
+            'week_start_date': '2026-04-21',
+            'intensity_mode': 'not-a-real-mode',
+            'days': [{'id': 'd0', 'day': 'Monday', 'exercises': []}],
+        }
+        response = self.client.post(
+            reverse('program-list-create'),
+            {
+                'name': 'Garbage mode block',
+                'description': '',
+                'athlete_id': self.athlete.id,
+                'start_date': '2026-04-21',
+                'end_date': None,
+                'program_data': program_data,
+            },
+            format='json',
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertNotIn('intensity_mode', response.data['program_data'])
+
     def test_backfills_deterministic_id_for_days_without_one(self):
         program_data = {
             'week_start_date': '2026-04-21',
