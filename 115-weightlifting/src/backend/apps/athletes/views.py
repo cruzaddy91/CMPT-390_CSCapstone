@@ -1,10 +1,13 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from apps.accounts.roles import is_head_coach, staff_coach_queryset
 from apps.programs.models import TrainingProgram
+
+User = get_user_model()
 from .models import PersonalRecord, ProgramCompletion, WorkoutLog
 from .serializers import (
     PersonalRecordSerializer,
@@ -31,15 +34,26 @@ def _coached_athlete_ids(user, request=None):
 
     if is_head_coach(user):
         staff_ids = list(staff_coach_queryset(user).values_list('id', flat=True))
-        athlete_ids = set(
+        org_ids = [user.id, *staff_ids]
+        from_programs = set(
             TrainingProgram.objects.filter(Q(coach=user) | Q(coach_id__in=staff_ids))
             .values_list('athlete_id', flat=True)
             .distinct()
         )
+        from_primary = set(
+            User.objects.filter(user_type='athlete', primary_coach_id__in=org_ids).values_list(
+                'id', flat=True
+            )
+        )
+        athlete_ids = from_programs | from_primary
     else:
-        athlete_ids = set(
+        from_programs = set(
             TrainingProgram.objects.filter(coach=user).values_list('athlete_id', flat=True).distinct()
         )
+        from_primary = set(
+            User.objects.filter(user_type='athlete', primary_coach=user).values_list('id', flat=True)
+        )
+        athlete_ids = from_programs | from_primary
     if request is not None:
         setattr(request, _COACHED_IDS_CACHE_ATTR, athlete_ids)
     return athlete_ids

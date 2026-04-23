@@ -185,19 +185,20 @@ class LogoutView(APIView):
 
 
 class AthleteListView(APIView):
-    """List athlete users for coach assignment UI.
+    """List athlete users for coach program UI.
 
-    Defaults to athletes already programmed-for by this coach.
-    Pass `?scope=all` to browse the full pool; `?q=<text>` filters by username.
-    Results are always paginated to prevent unbounded leakage.
+    Line coaches: only ``scope=mine`` (athletes they manage via ``primary_coach``).
+    Head coaches: ``scope=mine`` is org roster; ``scope=all`` is the same org pool
+    plus any athlete who already appears on staff programs (for edge cases).
     """
 
     PAGE_SIZE = 50
 
     def get(self, request):
+        from django.db.models import Q
+
         from apps.accounts.roles import is_head_coach, is_line_coach, staff_coach_queryset
         from apps.programs.models import TrainingProgram
-        from django.db.models import Q
 
         if not is_line_coach(request.user):
             return Response({'detail': 'Only coaches can list athletes.'}, status=status.HTTP_403_FORBIDDEN)
@@ -209,18 +210,37 @@ class AthleteListView(APIView):
         except ValueError:
             page = 1
 
+        if scope == 'all' and not is_head_coach(request.user):
+            return Response(
+                {
+                    'detail': (
+                        'Line coaches may only use scope=mine (athletes you manage). '
+                        'Head coaches may use scope=all to browse the organization roster.'
+                    ),
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
         base = User.objects.filter(user_type='athlete')
-        if scope != 'all':
-            if is_head_coach(request.user):
-                staff_ids = list(staff_coach_queryset(request.user).values_list('id', flat=True))
-                coached_ids = TrainingProgram.objects.filter(
-                    Q(coach=request.user) | Q(coach_id__in=staff_ids)
-                ).values_list('athlete_id', flat=True).distinct()
+        if is_head_coach(request.user):
+            staff_ids = list(staff_coach_queryset(request.user).values_list('id', flat=True))
+            org_ids = [request.user.id, *staff_ids]
+            if scope == 'all':
+                id_primary = set(
+                    User.objects.filter(user_type='athlete', primary_coach_id__in=org_ids).values_list(
+                        'pk', flat=True
+                    )
+                )
+                id_prog = set(
+                    TrainingProgram.objects.filter(Q(coach=request.user) | Q(coach_id__in=staff_ids))
+                    .values_list('athlete_id', flat=True)
+                    .distinct()
+                )
+                base = base.filter(pk__in=(id_primary | id_prog))
             else:
-                coached_ids = TrainingProgram.objects.filter(coach=request.user).values_list(
-                    'athlete_id', flat=True
-                ).distinct()
-            base = base.filter(id__in=list(coached_ids))
+                base = base.filter(primary_coach_id__in=org_ids)
+        else:
+            base = base.filter(primary_coach=request.user)
 
         if query:
             base = base.filter(username__icontains=query)
@@ -250,7 +270,7 @@ class AthleteListView(APIView):
                 'count': total,
                 'page': page,
                 'page_size': self.PAGE_SIZE,
-                'scope': 'mine' if scope != 'all' else 'all',
+                'scope': scope if is_head_coach(request.user) else 'mine',
             },
             status=status.HTTP_200_OK,
         )

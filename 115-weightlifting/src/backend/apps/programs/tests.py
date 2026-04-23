@@ -14,6 +14,31 @@ from .models import TrainingProgram
 User = get_user_model()
 
 
+class ProgramAssignRosterGateTests(TestCase):
+    def setUp(self):
+        self.coach_a = User.objects.create_user(username='ca_gate', password='pw', user_type='coach')
+        self.coach_b = User.objects.create_user(username='cb_gate', password='pw', user_type='coach')
+        self.athlete_owned = User.objects.create_user(username='ath_owned', password='pw', user_type='athlete')
+        self.athlete_owned.primary_coach = self.coach_b
+        self.athlete_owned.save(update_fields=['primary_coach'])
+        self.athlete_a = User.objects.create_user(username='ath_a0', password='pw', user_type='athlete')
+        self.athlete_a.primary_coach = self.coach_a
+        self.athlete_a.save(update_fields=['primary_coach'])
+        self.program = TrainingProgram.objects.create(
+            coach=self.coach_a,
+            athlete=self.athlete_a,
+            name='Gate block',
+            start_date=date(2026, 1, 1),
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.coach_a)
+
+    def test_assign_rejects_other_coach_athlete(self):
+        url = reverse('program-assign', kwargs={'program_id': self.program.id})
+        response = self.client.patch(url, {'athlete_id': self.athlete_owned.id}, format='json')
+        self.assertEqual(response.status_code, 403)
+
+
 class ProgramAssignPreservesHistoryTests(TestCase):
     """Reassigning a program to a new athlete must not wipe the prior athlete's logs."""
 

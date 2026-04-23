@@ -214,6 +214,8 @@ class AthleteListScopingTests(TestCase):
             coach=self.coach, athlete=self.my_athlete,
             name='scope block', start_date=date(2026, 1, 1),
         )
+        self.my_athlete.primary_coach = self.coach
+        self.my_athlete.save(update_fields=['primary_coach'])
         self.client = APIClient()
         self.client.force_authenticate(user=self.coach)
 
@@ -227,17 +229,39 @@ class AthleteListScopingTests(TestCase):
         self.assertEqual(payload['scope'], 'mine')
         self.assertEqual(payload['page_size'], 50)
 
-    def test_scope_all_returns_every_athlete(self):
+    def test_scope_all_forbidden_for_line_coach(self):
         response = self.client.get(reverse('athlete-list'), {'scope': 'all'})
-        payload = response.json()
-        usernames = {a['username'] for a in payload['results']}
-        self.assertIn('my_athlete', usernames)
-        self.assertIn('stranger_athlete', usernames)
+        self.assertEqual(response.status_code, 403)
+
+    def test_head_scope_all_is_org_pool_only(self):
+        head = User.objects.create_user(
+            username='head_list', password='longenoughpw1', user_type='head_coach',
+        )
+        line = User.objects.create_user(
+            username='line_list', password='longenoughpw1', user_type='coach',
+        )
+        line.reports_to = head
+        line.save(update_fields=['reports_to'])
+        mine = User.objects.create_user(
+            username='org_athlete', password='longenoughpw1', user_type='athlete',
+        )
+        mine.primary_coach = line
+        mine.save(update_fields=['primary_coach'])
+        stranger = User.objects.create_user(
+            username='stranger_outside', password='longenoughpw1', user_type='athlete',
+        )
+        stranger.save()
+        self.client.force_authenticate(user=head)
+        r = self.client.get(reverse('athlete-list'), {'scope': 'all'})
+        self.assertEqual(r.status_code, 200)
+        names = {a['username'] for a in r.json()['results']}
+        self.assertIn('org_athlete', names)
+        self.assertNotIn('stranger_outside', names)
 
     def test_q_filter_narrows_results(self):
-        response = self.client.get(reverse('athlete-list'), {'scope': 'all', 'q': 'stranger'})
+        response = self.client.get(reverse('athlete-list'), {'scope': 'mine', 'q': 'my_ath'})
         payload = response.json()
-        self.assertEqual([a['username'] for a in payload['results']], ['stranger_athlete'])
+        self.assertEqual([a['username'] for a in payload['results']], ['my_athlete'])
 
     def test_athlete_cannot_list(self):
         self.client.force_authenticate(user=self.my_athlete)
@@ -342,3 +366,158 @@ class HeadOrgSummaryTests(TestCase):
         usernames = {c['username'] for c in coaches}
         self.assertIn('head_org', usernames)
         self.assertIn('line_org', usernames)
+
+    def test_counts_use_primary_coach_roster(self):
+        a_head = User.objects.create_user(
+            username='ath_head', password='longenoughpw1', user_type='athlete',
+        )
+        a_head.primary_coach = self.head
+        a_head.save(update_fields=['primary_coach'])
+        a_line = User.objects.create_user(
+            username='ath_line', password='longenoughpw1', user_type='athlete',
+        )
+        a_line.primary_coach = self.line
+        a_line.save(update_fields=['primary_coach'])
+        login = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': 'head_org', 'password': 'longenoughpw1'},
+            format='json',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.json()['access']}")
+        r = self.client.get(reverse('head-org-summary'))
+        self.assertEqual(r.status_code, 200)
+        by_user = {c['username']: c for c in r.json()['coaches']}
+        self.assertEqual(by_user['head_org']['athlete_count'], 1)
+        self.assertEqual(by_user['line_org']['athlete_count'], 1)
+
+
+class HeadRosterAssignmentTests(TestCase):
+    def setUp(self):
+        self.head = User.objects.create_user(
+            username='head_ra', password='longenoughpw1', user_type='head_coach',
+        )
+        self.line = User.objects.create_user(
+            username='line_ra', password='longenoughpw1', user_type='coach',
+        )
+        self.line.reports_to = self.head
+        self.line.save(update_fields=['reports_to'])
+        self.ath = User.objects.create_user(
+            username='ath_ra', password='longenoughpw1', user_type='athlete',
+        )
+        self.ath.primary_coach = self.line
+        self.ath.save(update_fields=['primary_coach'])
+        self.solo_coach = User.objects.create_user(
+            username='solo_coach', password='longenoughpw1', user_type='coach',
+        )
+        self.client = APIClient()
+
+    def _auth_head(self):
+        t = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': 'head_ra', 'password': 'longenoughpw1'},
+            format='json',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {t.json()['access']}")
+
+    def test_roster(self):
+        self._auth_head()
+        r = self.client.get(reverse('head-org-roster'))
+        self.assertEqual(r.status_code, 200)
+        j = r.json()
+        self.assertEqual(len(j['staff']), 1)
+        self.assertEqual(j['staff'][0]['username'], 'line_ra')
+        self.assertEqual(len(j['athletes']), 1)
+
+    def test_invite_staff_by_username(self):
+        self._auth_head()
+        r = self.client.post(reverse('head-staff-invite'), {'username': 'solo_coach'}, format='json')
+        self.assertEqual(r.status_code, 200)
+        self.solo_coach.refresh_from_db()
+        self.assertEqual(self.solo_coach.reports_to_id, self.head.id)
+
+    def test_unlink_staff(self):
+        from datetime import date
+
+        from apps.programs.models import TrainingProgram
+
+        prog = TrainingProgram.objects.create(
+            coach=self.line,
+            athlete=self.ath,
+            name='unlink_prog',
+            start_date=date(2026, 4, 1),
+        )
+        self._auth_head()
+        r = self.client.patch(
+            reverse('head-staff-link', kwargs={'user_id': self.line.id}),
+            {'linked': False},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200)
+        self.line.refresh_from_db()
+        self.assertIsNone(self.line.reports_to_id)
+        self.ath.refresh_from_db()
+        prog.refresh_from_db()
+        self.assertEqual(self.ath.primary_coach_id, self.head.id)
+        self.assertEqual(prog.coach_id, self.head.id)
+
+    def test_link_staff_patch(self):
+        self.line.reports_to = None
+        self.line.save(update_fields=['reports_to'])
+        self._auth_head()
+        r = self.client.patch(
+            reverse('head-staff-link', kwargs={'user_id': self.line.id}),
+            {'linked': True},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200)
+        self.line.refresh_from_db()
+        self.assertEqual(self.line.reports_to_id, self.head.id)
+
+    def test_reassign_athlete_to_head(self):
+        self._auth_head()
+        r = self.client.patch(
+            reverse('head-athlete-primary-coach', kwargs={'user_id': self.ath.id}),
+            {'primary_coach_id': self.head.id},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200)
+        self.ath.refresh_from_db()
+        self.assertEqual(self.ath.primary_coach_id, self.head.id)
+
+    def test_reassign_moves_program_coach(self):
+        from datetime import date
+
+        from apps.programs.models import TrainingProgram
+
+        prog = TrainingProgram.objects.create(
+            coach=self.line,
+            athlete=self.ath,
+            name='handoff_prog',
+            start_date=date(2026, 4, 1),
+        )
+        other = User.objects.create_user(
+            username='line_b_ra', password='longenoughpw1', user_type='coach',
+        )
+        other.reports_to = self.head
+        other.save(update_fields=['reports_to'])
+        self._auth_head()
+        r = self.client.patch(
+            reverse('head-athlete-primary-coach', kwargs={'user_id': self.ath.id}),
+            {'primary_coach_id': other.id},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200)
+        prog.refresh_from_db()
+        self.ath.refresh_from_db()
+        self.assertEqual(self.ath.primary_coach_id, other.id)
+        self.assertEqual(prog.coach_id, other.id)
+
+    def test_coach_forbidden_roster(self):
+        t = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': 'line_ra', 'password': 'longenoughpw1'},
+            format='json',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {t.json()['access']}")
+        r = self.client.get(reverse('head-org-roster'))
+        self.assertEqual(r.status_code, 403)

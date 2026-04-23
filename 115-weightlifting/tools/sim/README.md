@@ -57,8 +57,8 @@ users instead of creating duplicates.
 
 After seeding, log in as the coach at `http://localhost:3000/login`. The
 athletes will show up under the athlete-search box in the program editor
-(scope=all). They'll move into the coach's personal roster (scope=mine) as
-soon as programs are assigned to them.
+(`scope=mine` for line coaches; head coaches use `scope=all` for the org pool).
+They appear once `primary_coach` matches after program assignment or head setup.
 
 ## Create programs for a seeded roster
 

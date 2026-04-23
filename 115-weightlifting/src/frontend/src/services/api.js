@@ -176,6 +176,28 @@ export const getHeadOrgSummary = async () => {
   return data
 }
 
+export const getHeadOrgRoster = async () => {
+  const { data } = await apiClient.get('/api/auth/head/roster/')
+  return data
+}
+
+export const postHeadStaffInvite = async (username) => {
+  const { data } = await apiClient.post('/api/auth/head/staff/', { username })
+  return data
+}
+
+export const patchHeadStaffLink = async (userId, linked) => {
+  const { data } = await apiClient.patch(`/api/auth/head/staff/${userId}/`, { linked })
+  return data
+}
+
+export const patchHeadAthletePrimaryCoach = async (athleteId, primaryCoachId) => {
+  const { data } = await apiClient.patch(`/api/auth/head/athletes/${athleteId}/`, {
+    primary_coach_id: primaryCoachId,
+  })
+  return data
+}
+
 export const getAthletes = async ({ scope = 'mine', q = '', page = 1 } = {}) => {
   const { data } = await apiClient.get('/api/auth/athletes/', {
     params: { scope, q, page },

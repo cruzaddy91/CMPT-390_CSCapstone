@@ -276,13 +276,13 @@ assert unassigned_username not in scoped_usernames, (
     'scope=mine leaked an athlete the coach has no program for'
 )
 
-# scope=all is paginated (50/page); a busy dev DB may push this user off page 1.
-# Filter by username to assert the global pool still lists them.
+# Line coaches must not browse scope=all (org-wide roster is head-only).
 all_athletes = coach_client.get(
     '/api/auth/athletes/', {'scope': 'all', 'q': unassigned_username},
-).json()
-all_usernames = {a['username'] for a in all_athletes['results']}
-assert unassigned_username in all_usernames, 'scope=all should include every athlete'
+)
+assert all_athletes.status_code == 403, (
+    f'line coach scope=all should 403, got {all_athletes.status_code}: {all_athletes.content}'
+)
 
 reassign_response = coach_client.patch(
     f'/api/programs/{program_id}/assign/',
@@ -323,7 +323,7 @@ print(json.dumps({
     'future_date_pr_rejected': future_pr.status_code == 400,
     'absurd_weight_rejected': absurd_pr.status_code == 400,
     'athlete_list_scope_mine_safe': unassigned_username not in scoped_usernames,
-    'athlete_list_scope_all_available': unassigned_username in all_usernames,
+    'athlete_list_scope_all_blocked_for_line_coach': all_athletes.status_code == 403,
     'refresh_cookie_set_on_login': refresh_cookie_present,
     'cookie_only_refresh_ok': cookie_only_refresh.status_code == 200,
     'programs_list_is_prefetched': len(_completion_queries) <= 1,

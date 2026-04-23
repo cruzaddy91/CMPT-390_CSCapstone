@@ -6,7 +6,7 @@ from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
 
-from apps.accounts.roles import is_head_coach, is_line_coach, staff_coach_queryset
+from apps.accounts.roles import coach_may_bind_athlete, is_head_coach, is_line_coach, staff_coach_queryset
 from apps.athletes.models import ProgramCompletion
 from .models import TrainingProgram
 from .serializers import ProgramCreateSerializer, ProgramUpdateSerializer, TrainingProgramSerializer
@@ -81,6 +81,12 @@ class ProgramAssign(APIView):
             athlete = User.objects.get(id=athlete_id, user_type='athlete')
         except User.DoesNotExist:
             return Response({'athlete_id': ['Selected athlete does not exist.']}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not coach_may_bind_athlete(request.user, athlete):
+            return Response(
+                {'athlete_id': ['You can only assign this program to athletes you manage.']},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         # Preserve prior athlete's completion history. The (program, athlete)
         # unique constraint means the new athlete gets a fresh record on first log;

@@ -1,8 +1,9 @@
 """Trim local databases down to the canonical capstone demo roster.
 
-Keeps **Coachone** + first five ``game-of-thrones`` athletes and **Coachtwo**
-+ first five ``lord-of-the-rings`` athletes (same rosters as ``tools/sim/seed.py``
-defaults). Removes every other non-staff coach/athlete user.
+Keeps **Headcoachone** (org head) with **Coachone** + first five ``game-of-thrones``
+athletes and **Coachtwo** + first five ``lord-of-the-rings`` athletes (same rosters
+as ``tools/sim/seed.py`` defaults). **Adminone** remains as an extra head-coach
+account for legacy checks. Removes every other non-staff coach/athlete user.
 
 Staff and superusers are never deleted. Run with ``--dry-run`` first.
 """
@@ -38,22 +39,32 @@ def _canonical_usernames() -> tuple[str, ...]:
     roster, _ = _import_tools_sim()
     got = roster('game-of-thrones', _ROSTER_SIZE)
     lotr = roster('lord-of-the-rings', _ROSTER_SIZE)
-    return ('Adminone', 'Coachone', 'Coachtwo', *got, *lotr)
+    return ('Adminone', 'Headcoachone', 'Coachone', 'Coachtwo', *got, *lotr)
 
 
 def _ensure_canonical_users(password: str) -> dict:
     roster, resolve_sim_profile = _import_tools_sim()
     created_or_updated = []
 
-    head, _ = User.objects.get_or_create(
+    admin_head, _ = User.objects.get_or_create(
         username='Adminone',
         defaults={'user_type': 'head_coach'},
     )
-    head.user_type = 'head_coach'
-    head.reports_to = None
-    head.set_password(password)
-    head.save()
+    admin_head.user_type = 'head_coach'
+    admin_head.reports_to = None
+    admin_head.set_password(password)
+    admin_head.save()
     created_or_updated.append('Adminone')
+
+    head_org, _ = User.objects.get_or_create(
+        username='Headcoachone',
+        defaults={'user_type': 'head_coach'},
+    )
+    head_org.user_type = 'head_coach'
+    head_org.reports_to = None
+    head_org.set_password(password)
+    head_org.save()
+    created_or_updated.append('Headcoachone')
 
     for coach_username, theme in (
         ('Coachone', 'game-of-thrones'),
@@ -64,7 +75,7 @@ def _ensure_canonical_users(password: str) -> dict:
             defaults={'user_type': 'coach'},
         )
         coach.user_type = 'coach'
-        coach.reports_to = head
+        coach.reports_to = head_org
         coach.set_password(password)
         coach.save()
         created_or_updated.append(coach_username)
@@ -79,6 +90,7 @@ def _ensure_canonical_users(password: str) -> dict:
             athlete.set_password(password)
             athlete.bodyweight_kg = Decimal(str(bw)).quantize(Decimal('0.01'))
             athlete.gender = gender
+            athlete.primary_coach = coach
             athlete.save()
             created_or_updated.append(username)
 
@@ -88,7 +100,7 @@ def _ensure_canonical_users(password: str) -> dict:
 class Command(BaseCommand):
     help = (
         'Delete coach/athlete users outside the canonical demo roster '
-        '(Adminone head coach, Coachone+5 GoT, Coachtwo+5 LotR). Staff/superusers kept.'
+        '(Headcoachone org head → Coachone+5 GoT, Coachtwo+5 LotR; Adminone kept). Staff/superusers kept.'
     )
 
     def add_arguments(self, parser):

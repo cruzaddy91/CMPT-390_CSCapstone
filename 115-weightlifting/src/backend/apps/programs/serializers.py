@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from apps.accounts.roles import is_head_coach, staff_coach_queryset
+from apps.accounts.roles import coach_may_bind_athlete, is_head_coach, staff_coach_queryset
 from apps.accounts.weight_class import competitive_weight_class_label
 
 from .models import TrainingProgram, default_program_data
@@ -176,6 +176,9 @@ class ProgramCreateSerializer(serializers.ModelSerializer):
             athlete = User.objects.get(id=value, user_type='athlete')
         except User.DoesNotExist:
             raise serializers.ValidationError('Selected athlete does not exist.')
+        coach = self.context['request'].user
+        if not coach_may_bind_athlete(coach, athlete):
+            raise serializers.ValidationError('You can only select athletes you manage.')
         return athlete.id
 
     def validate_program_data(self, value):
@@ -215,6 +218,9 @@ class ProgramUpdateSerializer(serializers.ModelSerializer):
             athlete = User.objects.get(id=value, user_type='athlete')
         except User.DoesNotExist:
             raise serializers.ValidationError('Selected athlete does not exist.')
+        coach = self.context['request'].user
+        if not coach_may_bind_athlete(coach, athlete):
+            raise serializers.ValidationError('You can only select athletes you manage.')
         return athlete.id
 
     def validate_program_data(self, value):

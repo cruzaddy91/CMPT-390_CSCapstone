@@ -18,6 +18,7 @@ import { clearDraft, readDraft, saveDraft } from '../utils/programDraft'
 import { BLOCK_PRESETS, endDateForBlock, inferBlockKey } from '../utils/blockLength'
 import { relativeTimeSince } from '../utils/relativeTime'
 import { athleteProfileSuffix } from '../utils/athleteMeta'
+import { getCurrentUser } from '../utils/auth'
 import { programTitleForDisplay } from '../utils/safeDisplay'
 import AthleteTrainingTrendCharts from '../components/AthleteTrainingTrendCharts'
 import CoachRosterAggregateCharts from '../components/CoachRosterAggregateCharts'
@@ -217,7 +218,9 @@ const CoachDashboard = () => {
 
   const refreshAthletes = async (term = '') => {
     try {
-      const { results, count } = await getAthletes({ scope: 'all', q: term })
+      const u = getCurrentUser()
+      const scope = u?.user_type === 'head_coach' ? 'all' : 'mine'
+      const { results, count } = await getAthletes({ scope, q: term })
       setAthletes(results)
       setAthleteTotal(count ?? results.length)
     } catch (error) {
@@ -392,7 +395,7 @@ const CoachDashboard = () => {
 
   const handleSave = async () => {
     if (!formData.name || !formData.athlete_id) {
-      setSaveMessage('Program name and athlete assignment are required.')
+      setSaveMessage('Program name and athlete selection are required.')
       return
     }
     const payload = {
@@ -427,10 +430,10 @@ const CoachDashboard = () => {
 
   const handleAssign = async (programId) => {
     const athleteId = assignmentDrafts[programId]
-    if (!athleteId) { setSaveMessage('Select an athlete before reassigning the program.'); return }
+    if (!athleteId) { setSaveMessage('Select an athlete before moving the program.'); return }
     try {
       await assignProgram(programId, Number(athleteId))
-      setSaveMessage('Program reassigned.')
+      setSaveMessage('Program updated for the selected athlete.')
       await loadDashboardData()
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (error) {
@@ -608,9 +611,9 @@ const ProgramRow = ({ program, athletes, assignmentDrafts, onAssignDraftChange, 
               value={assignmentDrafts[program.id] ?? ''}
               onChange={(event) => onAssignDraftChange(program.id, event.target.value)}
               className="form-input program-row-reassign-select"
-              aria-label="Reassign athlete"
+              aria-label="Select athlete"
             >
-              <option value="">Reassign…</option>
+              <option value="">Select athlete…</option>
               {athletes.map((athlete) => (
                 <option key={athlete.id} value={athlete.id}>{athlete.username}</option>
               ))}
@@ -892,9 +895,9 @@ const EditorView = ({
             value={formData.athlete_id}
             onChange={(event) => onFormChange('athlete_id', event.target.value)}
             className="form-input"
-            aria-label="Assign athlete"
+            aria-label="Select athlete"
           >
-            <option value="">Assign athlete…</option>
+            <option value="">Select athlete…</option>
             {athletes.map((athlete) => (
               <option key={athlete.id} value={athlete.id}>{athlete.username}</option>
             ))}
@@ -983,7 +986,7 @@ const EditorView = ({
         <h3 id="coach-athlete-pr-heading" className="coach-athlete-pr-charts-title">Athlete PR trends</h3>
         {!formData.athlete_id ? (
           <p className="section-subtitle coach-athlete-pr-charts-hint">
-            Choose an assigned athlete above to load charts. Data comes from their PR log; the backend only returns athletes on your programs.
+            Choose an athlete above to load charts. Data comes from their PR log; the backend only returns athletes you manage.
           </p>
         ) : coachPrsLoading ? (
           <div className="loading coach-athlete-pr-charts-loading">Loading PR history…</div>
