@@ -1,0 +1,13 @@
+---
+description: New 115-weightlifting behavior must extend unit tests; run zw validate before commit
+globs: 115-weightlifting/**/*
+alwaysApply: false
+---
+
+# Unit tests when changing 115 Weightlifting
+
+When you add or change behavior under `115-weightlifting/`:
+
+1. **Ship tests in the same change** — extend `src/backend/apps/*/tests.py` for API, serializers, and auth paths; add or extend `src/frontend/src/__tests__/` for non-trivial UI logic. Prefer testing the layer you changed (view + status codes, serializer validation, not only happy-path smoke).
+2. **Run** from `115-weightlifting/`: `./bin/zw test` at minimum; `./bin/zw smoke-all` before merge/push when the change touches HTTP contracts or auth.
+3. **Do not** finish a feature with only manual checks — if tests are genuinely impossible, say why in the PR and get an explicit waiver; default is tests required.
