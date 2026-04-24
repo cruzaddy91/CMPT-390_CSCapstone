@@ -25,7 +25,7 @@
 **/.mypy_cache/
 
 # Course deliverables and heavy documents
-/docs/assignments/
+#/docs/assignments/
 /docs/deliverables/
 /docs/final_deliverables/
 /docs/**/*.pdf
