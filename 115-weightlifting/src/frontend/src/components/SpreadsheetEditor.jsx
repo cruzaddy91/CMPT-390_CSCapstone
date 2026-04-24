@@ -6,7 +6,6 @@ import { PROGRAM_TEMPLATE_WEB_SPREADSHEET_PALETTE } from '../utils/programTempla
 // they'd see in Excel. Each row = one exercise on one day.
 const ALL_COLUMNS = [
   { key: 'week', label: 'Week', width: '4rem' },
-  { key: 'day', label: 'Day', width: '9rem' },
   { key: 'name', label: 'Exercise', width: '14rem' },
   { key: 'sets', label: 'Sets', width: '4rem' },
   { key: 'reps', label: 'Reps', width: '6rem' },
@@ -30,86 +29,85 @@ const columnsForMode = (mode) => {
 }
 
 const EMPTY_ROW_PAD = 3 // always render this many blank rows at the bottom for quick entry
+const MIN_ROWS_PER_WEEK = 5
 const BLANK_ROW = {
   week: '', day: '', name: '', sets: '', reps: '',
   percent_1rm: '', rpe: '', weight: '', tempo: '', rest: '', notes: '',
 }
 const DAY_OPTIONS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-const DAY_ORDER = new Map(DAY_OPTIONS.map((day, idx) => [day.toLowerCase(), idx]))
+const _norm = (s) => String(s || '').trim().toLowerCase()
+const BLOCK_WEEKS_BY_KEY = { '4wk': 4, '8wk': 8, '16wk': 16 }
+const PLACEHOLDER_BY_COL = {
+  name: 'Enter exercise',
+  sets: 'Enter sets',
+  reps: 'Enter reps',
+  percent_1rm: 'Enter %',
+  rpe: 'Enter RPE',
+  weight: 'Enter weight',
+  tempo: 'Enter tempo',
+  rest: 'Enter rest',
+  notes: 'Enter notes',
+}
+const _weekSortValue = (value) => {
+  const n = Number.parseInt(String(value || '').trim(), 10)
+  return Number.isFinite(n) && n > 0 ? n : Number.POSITIVE_INFINITY
+}
 
-const programDataToRows = (programData) => {
-  if (!programData?.days) return []
-  const rows = []
-  programData.days.forEach((day) => {
-    if (!day.exercises || day.exercises.length === 0) {
-      rows.push({
-        week: '', day: day.day, name: '', sets: '', reps: '',
-        percent_1rm: '', rpe: '', weight: '', tempo: '', rest: '', notes: '',
-      })
-    } else {
-      day.exercises.forEach((exercise) => {
-        rows.push({
-          week: exercise.week || '',
-          day: day.day,
-          name: exercise.name || '',
-          sets: exercise.sets || '',
-          reps: exercise.reps || '',
-          percent_1rm: exercise.percent_1rm || '',
-          rpe: exercise.rpe || '',
-          weight: exercise.weight || '',
-          tempo: exercise.tempo || '',
-          rest: exercise.rest || '',
-          notes: exercise.notes || '',
-        })
-      })
-    }
-  })
+const programDataToRowsForDay = (programData, activeDay) => {
+  const days = Array.isArray(programData?.days) ? programData.days : []
+  const hit = days.find((d) => _norm(d.day) === _norm(activeDay))
+  const exercises = Array.isArray(hit?.exercises) ? hit.exercises : []
+  const rows = exercises.map((exercise) => ({
+    week: exercise.week || '',
+    day: activeDay,
+    name: exercise.name || '',
+    sets: exercise.sets || '',
+    reps: exercise.reps || '',
+    percent_1rm: exercise.percent_1rm || '',
+    rpe: exercise.rpe || '',
+    weight: exercise.weight || '',
+    tempo: exercise.tempo || '',
+    rest: exercise.rest || '',
+    notes: exercise.notes || '',
+  }))
+  // Keep each day section grouped by week number 1..n for predictable editing.
+  rows.sort((a, b) => _weekSortValue(a.week) - _weekSortValue(b.week))
   return rows
 }
 
-const rowsToProgramData = (rows, weekStartDate) => {
-  const dayOrder = []
-  const grouped = new Map()
-  rows.forEach((row) => {
-    const day = String(row.day || '').trim()
-    const exerciseName = String(row.name || '').trim()
-    if (!day) return
-    if (!grouped.has(day)) {
-      grouped.set(day, [])
-      dayOrder.push(day)
-    }
-    // Only persist rows with an actual exercise name; fully-empty rows are
-    // UI padding. But preserve empty day shells so coaches can leave rest
-    // days in the plan.
-    if (!exerciseName) return
-    const percent = String(row.percent_1rm ?? '').trim()
-    const rpe = String(row.rpe ?? '').trim()
-    const weight = String(row.weight ?? '').trim()
-    grouped.get(day).push({
-      name: exerciseName,
-      sets: String(row.sets ?? '').trim(),
-      reps: String(row.reps ?? '').trim(),
-      percent_1rm: percent,
-      rpe,
-      weight,
-      tempo: String(row.tempo ?? '').trim(),
-      rest: String(row.rest ?? '').trim(),
-      // Legacy field preserved for backwards-compat with any consumer that
-      // still keys on `intensity`. Prefer % 1RM, then RPE, then weight.
-      intensity: percent || rpe || weight,
-      notes: String(row.notes ?? '').trim(),
-      week: String(row.week ?? '').trim(),
+const rowsToProgramDataForDay = (programData, dayName, dayRows, weekStartDate) => {
+  const days = Array.isArray(programData?.days) ? [...programData.days] : []
+  const dayIndex = days.findIndex((d) => _norm(d.day) === _norm(dayName))
+  const exercises = dayRows
+    .filter((row) => String(row.name || '').trim())
+    .map((row) => {
+      const percent = String(row.percent_1rm ?? '').trim()
+      const rpe = String(row.rpe ?? '').trim()
+      const weight = String(row.weight ?? '').trim()
+      return {
+        name: String(row.name ?? '').trim(),
+        sets: String(row.sets ?? '').trim(),
+        reps: String(row.reps ?? '').trim(),
+        percent_1rm: percent,
+        rpe,
+        weight,
+        tempo: String(row.tempo ?? '').trim(),
+        rest: String(row.rest ?? '').trim(),
+        intensity: percent || rpe || weight,
+        notes: String(row.notes ?? '').trim(),
+        week: String(row.week ?? '').trim(),
+      }
     })
-  })
-  const sortedDayOrder = [...dayOrder].sort((a, b) => {
-    const ai = DAY_ORDER.has(a.toLowerCase()) ? DAY_ORDER.get(a.toLowerCase()) : Number.POSITIVE_INFINITY
-    const bi = DAY_ORDER.has(b.toLowerCase()) ? DAY_ORDER.get(b.toLowerCase()) : Number.POSITIVE_INFINITY
-    if (ai !== bi) return ai - bi
-    return dayOrder.indexOf(a) - dayOrder.indexOf(b)
-  })
+  exercises.sort((a, b) => _weekSortValue(a.week) - _weekSortValue(b.week))
+  if (dayIndex >= 0) {
+    days[dayIndex] = { ...days[dayIndex], day: dayName, exercises }
+  } else {
+    days.push({ day: dayName, exercises })
+  }
   return {
+    ...programData,
     week_start_date: weekStartDate || new Date().toISOString().split('T')[0],
-    days: sortedDayOrder.map((day) => ({ day, exercises: grouped.get(day) || [] })),
+    days,
   }
 }
 
@@ -121,9 +119,22 @@ const SpreadsheetEditor = ({
   onBlockPresetSelect,
 }) => {
   const weekStartDate = programData?.week_start_date
-  const baseRows = useMemo(() => programDataToRows(programData), [programData])
+  const [activeDay, setActiveDay] = useState('Monday')
+  const blockWeeks = useMemo(() => BLOCK_WEEKS_BY_KEY[blockPresetKey] || 4, [blockPresetKey])
+  const baseRows = useMemo(() => programDataToRowsForDay(programData, activeDay), [programData, activeDay])
   const columns = useMemo(() => columnsForMode(intensityMode), [intensityMode])
   const [draftRows, setDraftRows] = useState({})
+  const dayCounts = useMemo(() => {
+    const days = Array.isArray(programData?.days) ? programData.days : []
+    const map = {}
+    for (const day of DAY_OPTIONS) map[day] = 0
+    for (const d of days) {
+      const key = DAY_OPTIONS.find((k) => _norm(k) === _norm(d.day))
+      if (!key) continue
+      map[key] = Array.isArray(d.exercises) ? d.exercises.length : 0
+    }
+    return map
+  }, [programData])
   const paletteVars = useMemo(
     () => ({
       '--st-header-bg': PROGRAM_TEMPLATE_WEB_SPREADSHEET_PALETTE.headerBackground,
@@ -138,8 +149,12 @@ const SpreadsheetEditor = ({
   // on serialize so they never corrupt the program_data shape.
   const displayRows = useMemo(() => {
     const padded = [...baseRows]
-    for (let i = 0; i < EMPTY_ROW_PAD; i += 1) {
-      padded.push({ ...BLANK_ROW })
+    const minTemplateRows = blockWeeks * MIN_ROWS_PER_WEEK
+    const templateFloor = Math.max(minTemplateRows, baseRows.length + EMPTY_ROW_PAD)
+    while (padded.length < templateFloor) {
+      const rowIndex = padded.length
+      const week = String(Math.floor(rowIndex / MIN_ROWS_PER_WEEK) + 1)
+      padded.push({ ...BLANK_ROW, day: activeDay, week })
     }
     for (const [indexText, draft] of Object.entries(draftRows)) {
       const index = Number(indexText)
@@ -148,7 +163,11 @@ const SpreadsheetEditor = ({
       padded[index] = { ...padded[index], ...draft }
     }
     return padded
-  }, [baseRows, draftRows])
+  }, [activeDay, baseRows, blockWeeks, draftRows])
+  const firstHintRowIndex = useMemo(
+    () => displayRows.findIndex((row) => !String(row.name || '').trim()),
+    [displayRows],
+  )
 
   useEffect(() => {
     setDraftRows((current) => {
@@ -166,30 +185,33 @@ const SpreadsheetEditor = ({
     })
   }, [baseRows.length])
 
+  useEffect(() => {
+    setDraftRows({})
+  }, [activeDay])
+
   const tableRef = useRef(null)
 
   const handleCellChange = (rowIndex, columnKey, value) => {
+    if (rowIndex < baseRows.length) {
+      const next = displayRows.map((row, i) =>
+        i === rowIndex ? { ...row, [columnKey]: value } : row
+      )
+      onChange(rowsToProgramDataForDay(programData, activeDay, next, weekStartDate))
+      return
+    }
     setDraftRows((current) => ({
       ...current,
-      [rowIndex]: { ...displayRows[rowIndex], [columnKey]: value },
+      [rowIndex]: { ...displayRows[rowIndex], day: activeDay, [columnKey]: value },
     }))
   }
 
-  const handleCellBlur = (rowIndex, event) => {
-    const nextFocused = event?.relatedTarget
-    const nextRowIndex = nextFocused?.getAttribute?.('data-row-index')
-    // Do not commit while tabbing/clicking across cells in the same row.
-    // This prevents row re-bucketing from "jumping" the active edit target.
-    if (nextRowIndex === String(rowIndex)) return
-
+  const commitRow = (rowIndex) => {
     const draftRow = draftRows[rowIndex] || displayRows[rowIndex]
-    if (!draftRow) return
+    if (!draftRow) return false
     const isPadRow = rowIndex >= baseRows.length
     const hasDay = String(draftRow.day || '').trim().length > 0
     const hasExerciseName = String(draftRow.name || '').trim().length > 0
-    // Keep partial new-row drafts (day selected, exercise not entered yet)
-    // so moving across cells never erases in-progress row setup.
-    if (isPadRow && hasDay && !hasExerciseName) return
+    if (isPadRow && (!hasDay || !hasExerciseName)) return false
 
     const serialRows = displayRows.map((row, idx) => {
       const r = idx === rowIndex ? { ...row, ...draftRow } : row
@@ -198,12 +220,17 @@ const SpreadsheetEditor = ({
       const rowHasExerciseName = String(r.name || '').trim().length > 0
       return rowHasDay && rowHasExerciseName ? r : { ...BLANK_ROW }
     })
-    onChange(rowsToProgramData(serialRows, weekStartDate))
+    onChange(rowsToProgramDataForDay(programData, activeDay, serialRows, weekStartDate))
     setDraftRows((current) => {
       const next = { ...current }
       delete next[rowIndex]
       return next
     })
+    return true
+  }
+
+  const handleCellBlur = () => {
+    // Explicit-commit UX: blur never commits. Enter commits the row.
   }
 
   // Arrow/enter navigation to move between cells like Excel.
@@ -214,7 +241,12 @@ const SpreadsheetEditor = ({
     let targetRow = rowIndex
     let targetCol = columnIndex
     if (key === 'ArrowUp') targetRow -= 1
-    else if (key === 'ArrowDown' || key === 'Enter') targetRow += 1
+    else if (key === 'ArrowDown') targetRow += 1
+    else if (key === 'Enter') {
+      event.preventDefault()
+      if (!commitRow(rowIndex)) return
+      targetRow += 1
+    }
     else if (key === 'Tab') {
       event.preventDefault()
       targetCol = event.shiftKey ? columnIndex - 1 : columnIndex + 1
@@ -264,8 +296,34 @@ const SpreadsheetEditor = ({
           </div>
         </div>
       )}
+      <div className="spreadsheet-editor-instructions" role="note" aria-label="Spreadsheet row instructions">
+        <div className="spreadsheet-editor-instructions-title">
+          <span className="spreadsheet-editor-instructions-icon" aria-hidden="true">ⓘ</span>
+          <span>How to add a row</span>
+        </div>
+        <ul>
+          <li>Select a day.</li>
+          <li>Enter exercise and any details.</li>
+          <li>When the row is complete, press Enter to add it.</li>
+        </ul>
+      </div>
       <div className="spreadsheet-editor-hint section-subtitle">
-        Same columns as the downloaded Excel (4 / 8 / 16 Week template). Header colors match that file. Keyboard: Tab / Enter / arrows. Rows without a day or exercise are ignored on save.
+        Same columns as the downloaded Excel (4 / 8 / 16 Week template). Editing day: {activeDay}.
+      </div>
+      <div className="spreadsheet-day-tabs" role="tablist" aria-label="Training day tabs">
+        {DAY_OPTIONS.map((day) => (
+          <button
+            key={day}
+            type="button"
+            role="tab"
+            aria-selected={activeDay === day}
+            className={`spreadsheet-day-tab ${activeDay === day ? 'is-active' : ''}`}
+            onClick={() => setActiveDay(day)}
+          >
+            {day}
+            <span className="spreadsheet-day-tab-count">{dayCounts[day] || 0}</span>
+          </button>
+        ))}
       </div>
       <div className="spreadsheet-editor-scroll">
         <table ref={tableRef} className="spreadsheet-editor-table">
@@ -290,10 +348,13 @@ const SpreadsheetEditor = ({
               const isDayRepeat = !!currentDay && currentDay === prevDay
               const isDayStart = !!currentDay && !isDayRepeat
               const isPadRow = rowIndex >= baseRows.length
+              const prevWeek = rowIndex > 0 ? String(displayRows[rowIndex - 1].week || '').trim() : ''
+              const currentWeek = String(row.week || '').trim()
+              const isWeekStart = !!currentWeek && currentWeek !== prevWeek
               return (
                 <tr
                   key={rowIndex}
-                  className={`${isDayStart ? 'is-day-start' : ''} ${isDayRepeat ? 'is-day-repeat-row' : ''} ${isPadRow ? 'is-pad-row' : ''}`.trim()}
+                  className={`${isDayStart ? 'is-day-start' : ''} ${isDayRepeat ? 'is-day-repeat-row' : ''} ${isPadRow ? 'is-pad-row' : ''} ${isWeekStart ? 'is-week-start' : ''}`.trim()}
                 >
                   {columns.map((col, columnIndex) => (
                     <td key={col.key} className={col.key === 'day' && isDayRepeat ? 'is-day-repeat' : ''}>
@@ -318,6 +379,7 @@ const SpreadsheetEditor = ({
                           data-row-index={rowIndex}
                           type="text"
                           value={row[col.key] ?? ''}
+                          placeholder={rowIndex === firstHintRowIndex ? PLACEHOLDER_BY_COL[col.key] || '' : ''}
                           onChange={(event) => handleCellChange(rowIndex, col.key, event.target.value)}
                           onBlur={(event) => handleCellBlur(rowIndex, event)}
                           onKeyDown={(event) => handleKeyDown(event, rowIndex, columnIndex)}

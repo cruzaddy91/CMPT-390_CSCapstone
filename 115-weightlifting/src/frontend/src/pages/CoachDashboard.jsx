@@ -27,6 +27,9 @@ import { programTitleForDisplay } from '../utils/safeDisplay'
 import AthleteTrainingTrendCharts from '../components/AthleteTrainingTrendCharts'
 import CoachRosterAggregateCharts from '../components/CoachRosterAggregateCharts'
 
+const WEEKDAY_TABS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const _normDay = (value) => String(value || '').trim().toLowerCase()
+
 const getDefaultForm = () => ({
   name: '',
   description: '',
@@ -235,6 +238,11 @@ const CoachDashboard = () => {
   }
 
   const applyDraftIfPresent = (programId, fallbackForm, fallbackProgramData) => {
+    // New programs should always open as a clean template, not with stale
+    // autosaved rows from prior sessions.
+    if (programId == null) {
+      return { form: fallbackForm, programData: fallbackProgramData, restored: false }
+    }
     const storedDraft = readDraft(programId)
     if (!storedDraft || !storedDraft.draft) {
       return { form: fallbackForm, programData: fallbackProgramData, restored: false }
@@ -250,6 +258,7 @@ const CoachDashboard = () => {
   }
 
   const openNewProgram = () => {
+    clearDraft(null)
     const freshForm = getDefaultForm()
     const freshProgram = createEmptyWeek(freshForm.start_date)
     const { form, programData: prog, restored } = applyDraftIfPresent(null, freshForm, freshProgram)
@@ -370,6 +379,29 @@ const CoachDashboard = () => {
     setProgramData((current) => ({ ...current, days: swap(current.days, dayIndex, dayIndex + delta) }))
   }
 
+  const handleResetToBlankTemplate = () => {
+    const ok = typeof window === 'undefined' || window.confirm(
+      'Start from a blank 7-day template? This clears all current rows in the editor until you publish.',
+    )
+    if (!ok) return
+    setProgramData((current) => {
+      const byDay = new Map((current.days || []).map((day) => [_normDay(day.day), day]))
+      return {
+        ...current,
+        days: WEEKDAY_TABS.map((dayName) => {
+          const existing = byDay.get(_normDay(dayName))
+          return {
+            id: existing?.id || generateDayId(),
+            day: dayName,
+            exercises: [],
+          }
+        }),
+      }
+    })
+    setSaveMessage('Template reset: all day rows cleared in this editor.')
+    setTimeout(() => setSaveMessage(''), 3500)
+  }
+
   const handleDownloadTemplate = async () => {
     try {
       await downloadTemplateXlsx()
@@ -421,6 +453,11 @@ const CoachDashboard = () => {
         intensity_mode: intensityMode,
       },
     }
+    const confirmationMessage = editingProgramId
+      ? 'Publish these program updates? Your athlete will see the updated plan on their dashboard.'
+      : 'Publish this program now? It will be saved to your coach dashboard and shared to your athlete dashboard.'
+    const confirmed = typeof window === 'undefined' || window.confirm(confirmationMessage)
+    if (!confirmed) return
     try {
       setSaving(true); setSaveMessage('')
       if (editingProgramId) {
@@ -520,6 +557,7 @@ const CoachDashboard = () => {
             onRemoveDay={handleRemoveDay}
             onDuplicateDay={handleDuplicateDay}
             onMoveDay={handleMoveDay}
+            onResetToBlankTemplate={handleResetToBlankTemplate}
             onDownloadTemplate={handleDownloadTemplate}
             onUploadClick={handleTemplateUploadClick}
             onUploadChosen={handleTemplateFileChosen}
@@ -556,7 +594,7 @@ const AssignedAthleteBadge = ({ username, profileSuffix }) => {
   }
   return (
     <span className="assigned-athlete">
-      Assigned to <span className="assigned-athlete-name">@{username}</span>
+      Assigned to <span className="assigned-athlete-name username-highlight">@{username}</span>
       {profileSuffix ? <span className="athlete-inline-meta">{profileSuffix}</span> : null}
     </span>
   )
@@ -680,7 +718,7 @@ const AthleteGroup = ({ athleteUsername, programs, athletes, assignmentDrafts,
         </div>
         <span className="athlete-group-main">
           <span className="athlete-group-name-row">
-            <span className="athlete-group-name">@{athleteUsername}</span>
+            <span className="athlete-group-name username-highlight">@{athleteUsername}</span>
             {profileSuffix ? <span className="athlete-inline-meta">{profileSuffix}</span> : null}
           </span>
           <span className="athlete-group-meta">
@@ -820,13 +858,24 @@ const EditorView = ({
   importSheetChoice, onImportSheetChoiceChange,
   onBack, onFormChange, onBlockPreset, onAthleteSearch, onDayChange, onExercisesChange,
   onAddDay, onRemoveDay, onDuplicateDay, onMoveDay,
+  onResetToBlankTemplate,
   onDownloadTemplate, onUploadClick, onUploadChosen,
   onToggleEditorMode, onIntensityModeChange, onProgramDataChange, onPreview, onSave,
 }) => {
   const dayCount = programData.days.length
   const coachPrChartsIntro = !formData.athlete_id
     ? ''
-    : `PR history for ${assignedAthleteUsername ? `@${assignedAthleteUsername}` : 'this athlete'} (read-only). Same visualizations as the athlete stats drawer: monthly bests, estimated peak rhythm on competition totals, and a six-month rolling peak. Forecasts are planning hints only—not a physiological model.`
+    : (
+      <>
+        PR history for{' '}
+        {assignedAthleteUsername
+          ? <span className="username-highlight">@{assignedAthleteUsername}</span>
+          : 'this athlete'}{' '}
+        (read-only). Same visualizations as the athlete stats drawer: monthly bests, estimated peak
+        rhythm on competition totals, and a six-month rolling peak. Forecasts are planning hints
+        only, not a physiological model.
+      </>
+    )
   return (
     <>
       <div className="editor-topbar">
@@ -873,10 +922,6 @@ const EditorView = ({
             <span className="tool-btn-label">Preview as Athlete</span>
           </button>
         </div>
-        <button type="button" className="save-btn editor-save-btn" onClick={onSave}
-                disabled={saving || !formData.name || !formData.athlete_id}>
-          {saving ? 'Saving…' : editingProgramId ? 'Save changes' : 'Create program'}
-        </button>
       </div>
 
       {draftBadge && (
@@ -1037,9 +1082,14 @@ const EditorView = ({
 
       <div className="section-title-row">
         <h3>Weekly structure</h3>
-        {editorMode === 'form' && (
-          <button type="button" className="text-btn" onClick={onAddDay}>+ Add day</button>
-        )}
+        <div className="editor-structure-actions">
+          {editorMode === 'form' && (
+            <button type="button" className="text-btn" onClick={onAddDay}>+ Add day</button>
+          )}
+          <button type="button" className="text-btn" onClick={onResetToBlankTemplate}>
+            Reset blank template
+          </button>
+        </div>
       </div>
 
       {editorMode === 'spreadsheet' ? (
@@ -1072,6 +1122,16 @@ const EditorView = ({
           ))}
         </div>
       )}
+      <div className="editor-publish-footer">
+        <button
+          type="button"
+          className="save-btn publish-btn"
+          onClick={onSave}
+          disabled={saving || !formData.name || !formData.athlete_id}
+        >
+          {saving ? 'Publishing…' : 'Publish Program'}
+        </button>
+      </div>
     </>
   )
 }

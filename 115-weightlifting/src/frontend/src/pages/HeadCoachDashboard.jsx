@@ -158,7 +158,7 @@ const HeadCoachDashboard = () => {
             <tbody>
               {rows.map((row) => (
                 <tr key={row.id}>
-                  <td>@{row.username}</td>
+                  <td><span className="username-highlight">@{row.username}</span></td>
                   <td>{row.user_type === 'head_coach' ? 'Head' : 'Line'}</td>
                   <td>{row.athlete_count}</td>
                   <td>{row.program_count}</td>
@@ -211,7 +211,7 @@ const HeadCoachDashboard = () => {
                 <ul className="head-assign-list">
                   {roster.staff.map((s) => (
                     <li key={s.id}>
-                      <span>@{s.username}</span>
+                      <span className="username-highlight">@{s.username}</span>
                       <button
                         type="button"
                         className="head-btn-danger"
@@ -241,7 +241,7 @@ const HeadCoachDashboard = () => {
                   <tbody>
                     {roster.athletes.map((a) => (
                       <tr key={a.id}>
-                        <td>@{a.username}</td>
+                        <td><span className="username-highlight">@{a.username}</span></td>
                         <td>
                           <select
                             className="head-coach-select"

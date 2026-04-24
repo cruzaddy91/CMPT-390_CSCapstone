@@ -129,7 +129,7 @@ const Navigation = () => {
           {currentUser && (
             <>
               <span className="nav-user">
-                {currentUser.username} · {roleDisplayLabel(currentUser.user_type)}
+                <span className="username-highlight">{currentUser.username}</span> · {roleDisplayLabel(currentUser.user_type)}
                 {currentUser.user_type === 'athlete' && athleteProfileSuffix(currentUser) ? (
                   <span className="athlete-inline-meta nav-user-athlete-meta">{athleteProfileSuffix(currentUser)}</span>
                 ) : null}
@@ -147,7 +147,7 @@ const HeadCoachHome = ({ currentUser }) => (
   <div className="home-container coach-home">
     <div className="home-grid">
       <div className="home-copy">
-        <div className="home-eyebrow">Head coach · {currentUser.username}</div>
+        <div className="home-eyebrow">Head coach · <span className="username-highlight">{currentUser.username}</span></div>
         <h1>Welcome back.</h1>
         <p className="home-description">
           Review organization metrics for your staff, or use the coach workspace to program athletes directly.
@@ -277,7 +277,7 @@ const CoachHome = ({ currentUser }) => {
     <div className="home-container coach-home">
       <div className="home-grid">
         <div className="home-copy">
-          <div className="home-eyebrow">Coach · {currentUser.username}</div>
+          <div className="home-eyebrow">Coach · <span className="username-highlight">{currentUser.username}</span></div>
           <h1>Welcome back.</h1>
           <p className="home-description">
             {loading
@@ -320,7 +320,7 @@ const CoachHome = ({ currentUser }) => {
                       className="coach-home-roster-row"
                     >
                       <span className="coach-home-roster-name">
-                        @{athlete.username}
+                        <span className="username-highlight">@{athlete.username}</span>
                         {rosterSuffix ? <span className="athlete-inline-meta">{rosterSuffix}</span> : null}
                       </span>
                       <span className="coach-home-roster-meta">

@@ -537,6 +537,19 @@
   box-shadow: var(--shadow-md), 0 0 0 1px var(--neon-amber);
 }
 
+/* Spreadsheet publish action: centered near the editor content and green. */
+.coach-dashboard .publish-btn {
+  background: linear-gradient(180deg, #0f3b1f, #082413);
+  border-color: rgba(111, 227, 147, 0.5);
+  color: #dcffe8;
+  min-width: 240px;
+}
+
+.coach-dashboard .publish-btn:hover:not(:disabled) {
+  border-color: #6fe393;
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(111, 227, 147, 0.72);
+}
+
 /* Athlete save button uses the primary cyan (violet retired). */
 .athlete-dashboard .save-btn {
   background: linear-gradient(180deg, #102a48, #081426);
@@ -709,6 +722,18 @@
   margin-top: 0.25rem;
   padding-bottom: 0.45rem;
   position: relative;
+}
+
+.editor-structure-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.editor-publish-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
 }
 
 .section-title-row::after {
@@ -1270,6 +1295,12 @@
 .assigned-athlete-name {
   color: var(--neon-cyan);
   font-weight: 600;
+}
+
+/* Shared username accent; tokenized for easy revert back to cyan if desired. */
+.username-highlight {
+  color: var(--neon-amber) !important;
+  text-shadow: 0 0 10px rgba(255, 178, 63, 0.24);
 }
 
 .assigned-athlete-empty {
@@ -2527,6 +2558,51 @@
   padding: 1rem;
 }
 
+.spreadsheet-day-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  margin: 0.35rem 0 0.7rem;
+}
+
+.spreadsheet-day-tab {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  min-height: 36px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.spreadsheet-day-tab.is-active {
+  color: var(--text-primary);
+  border-color: rgba(255, 89, 89, 0.9);
+  box-shadow: var(--glow-ring);
+}
+
+.spreadsheet-day-tab + .spreadsheet-day-tab {
+  box-shadow: inset 2px 0 0 rgba(255, 89, 89, 0.55);
+}
+
+.spreadsheet-day-tab-count {
+  border-radius: 999px;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 0.3rem;
+  font-size: 0.68rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(95, 228, 255, 0.1);
+  color: var(--text-primary);
+}
+
 .spreadsheet-template-block-row {
   display: flex;
   flex-wrap: wrap;
@@ -2546,6 +2622,41 @@
   margin-bottom: 0.75rem;
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+
+.spreadsheet-editor-instructions {
+  margin-bottom: 0.6rem;
+  padding: 0.52rem 0.68rem;
+  border: 1px solid rgba(95, 228, 255, 0.24);
+  border-radius: 8px;
+  background: rgba(95, 228, 255, 0.06);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.spreadsheet-editor-instructions-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.2rem;
+  color: rgba(95, 228, 255, 0.92);
+  font-weight: 700;
+}
+
+.spreadsheet-editor-instructions-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.spreadsheet-editor-instructions ul {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.spreadsheet-editor-instructions li + li {
+  margin-top: 0.15rem;
 }
 
 .spreadsheet-editor-scroll {
@@ -2627,6 +2738,10 @@
    A thin cyan rule above each day-start row gives the group visual anchor. */
 .spreadsheet-editor-table tr.is-day-start > td {
   border-top: 2px solid rgba(95, 228, 255, 0.28);
+}
+
+.spreadsheet-editor-table tr.is-week-start > td {
+  border-top: 2px solid rgba(255, 89, 89, 0.85);
 }
 
 .spreadsheet-editor-table tr.is-day-start > td:first-child,

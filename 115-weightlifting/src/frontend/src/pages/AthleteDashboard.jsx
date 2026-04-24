@@ -471,7 +471,7 @@ const AthleteDashboard = () => {
       <div className="dashboard-container athlete-dashboard">
         <div className="dashboard-header">
           <div className="dashboard-kicker">
-            Athlete · {me?.username || '—'}
+            Athlete · <span className="username-highlight">{me?.username || '—'}</span>
             {noProgramSuffix ? <span className="athlete-inline-meta">{noProgramSuffix}</span> : null}
           </div>
           <h1>No program yet.</h1>
@@ -530,7 +530,7 @@ const AthleteDashboard = () => {
       <div className="athlete-hero">
         <div className="dashboard-kicker-row">
           <span className="dashboard-kicker">
-            Athlete · {activeProgram.athlete_username}
+            Athlete · <span className="username-highlight">{activeProgram.athlete_username}</span>
             {activeProfileSuffix ? <span className="athlete-inline-meta">{activeProfileSuffix}</span> : null}
           </span>
           {saving && <span className="status-pill">Saving…</span>}

@@ -31,6 +31,22 @@ const programFixture = {
 }
 
 describe('SpreadsheetEditor', () => {
+  it('renders day tabs Monday through Sunday', () => {
+    render(<SpreadsheetEditor programData={programFixture} onChange={() => {}} />)
+    const tablist = screen.getByRole('tablist', { name: /training day tabs/i })
+    expect(within(tablist).getByRole('tab', { name: /Monday/i })).toBeTruthy()
+    expect(within(tablist).getByRole('tab', { name: /Sunday/i })).toBeTruthy()
+  })
+
+  it('shows only active-day rows in the grid', () => {
+    render(<SpreadsheetEditor programData={programFixture} onChange={() => {}} />)
+    expect(screen.getByDisplayValue('Snatch')).toBeTruthy()
+    expect(screen.queryByDisplayValue('Clean & Jerk')).toBeNull()
+    fireEvent.click(screen.getByRole('tab', { name: /Tuesday/i }))
+    expect(screen.getByDisplayValue('Clean & Jerk')).toBeTruthy()
+    expect(screen.queryByDisplayValue('Snatch')).toBeNull()
+  })
+
   it('offers 4/8/16 Week block controls when onBlockPresetSelect is passed', () => {
     const onPreset = vi.fn()
     render(
@@ -49,9 +65,8 @@ describe('SpreadsheetEditor', () => {
   it('renders one row per exercise with all expanded columns populated', () => {
     render(<SpreadsheetEditor programData={programFixture} onChange={() => {}} />)
     expect(screen.getByDisplayValue('Snatch')).toBeTruthy()
-    expect(screen.getByDisplayValue('Clean & Jerk')).toBeTruthy()
     expect(screen.getByDisplayValue('3-1-X-1')).toBeTruthy()
-    expect(screen.getAllByDisplayValue('2min').length).toBeGreaterThan(0)
+    expect(screen.getByDisplayValue('2min')).toBeTruthy()
   })
 
   it('emits updated program_data preserving all expanded fields when a cell changes', () => {
@@ -59,7 +74,6 @@ describe('SpreadsheetEditor', () => {
     render(<SpreadsheetEditor programData={programFixture} onChange={onChange} />)
     const snatchInput = screen.getByDisplayValue('Snatch')
     fireEvent.change(snatchInput, { target: { value: 'Power Snatch' } })
-    fireEvent.blur(snatchInput)
 
     const nextProgram = onChange.mock.calls.at(-1)[0]
     const firstExercise = nextProgram.days[0].exercises[0]
@@ -74,57 +88,29 @@ describe('SpreadsheetEditor', () => {
     const onChange = vi.fn()
     render(<SpreadsheetEditor programData={programFixture} onChange={onChange} />)
     const rows = document.querySelectorAll('.spreadsheet-editor-table tbody tr')
-    const thirdPadRow = rows[4]
-    const paddingDaySelect = within(thirdPadRow).getByRole('combobox', { name: /day row 5/i })
-    fireEvent.change(paddingDaySelect, { target: { value: 'Friday' } })
-    expect(paddingDaySelect.value).toBe('Friday')
+    const thirdPadRow = rows[3]
+    const padExerciseInput = within(thirdPadRow).getAllByRole('textbox')[1]
+    fireEvent.change(padExerciseInput, { target: { value: 'Snatch Pull' } })
     expect(onChange).not.toHaveBeenCalled()
-
-    const paddingExerciseInput = within(thirdPadRow).getAllByRole('textbox')[1]
-    fireEvent.change(paddingExerciseInput, { target: { value: 'Snatch Pull' } })
-    expect(onChange).not.toHaveBeenCalled()
-    fireEvent.blur(paddingExerciseInput)
+    fireEvent.keyDown(padExerciseInput, { key: 'Enter' })
     const nextProgram = onChange.mock.calls.at(-1)[0]
-    const fridayDay = nextProgram.days.find((d) => d.day === 'Friday')
-    expect(fridayDay).toBeDefined()
-    expect(fridayDay.exercises[0].name).toBe('Snatch Pull')
+    const monday = nextProgram.days.find((d) => d.day === 'Monday')
+    expect(monday.exercises.map((x) => x.name)).toContain('Snatch Pull')
   })
 
-  it('keeps selected day after blur while exercise is still empty', () => {
+  it('saves rows under currently active day tab', () => {
     const onChange = vi.fn()
     render(<SpreadsheetEditor programData={programFixture} onChange={onChange} />)
+    fireEvent.click(screen.getByRole('tab', { name: /Tuesday/i }))
     const rows = document.querySelectorAll('.spreadsheet-editor-table tbody tr')
     const firstPadRow = rows[2]
-    const daySelect = within(firstPadRow).getByRole('combobox', { name: /day row 3/i })
-    fireEvent.change(daySelect, { target: { value: 'Monday' } })
-    fireEvent.blur(daySelect)
-
-    expect(daySelect.value).toBe('Monday')
-    expect(onChange).not.toHaveBeenCalled()
-
     const exerciseInput = within(firstPadRow).getAllByRole('textbox')[1]
-    fireEvent.change(exerciseInput, { target: { value: 'Snatch Balance' } })
-    fireEvent.blur(exerciseInput)
+    fireEvent.change(exerciseInput, { target: { value: 'Power Clean' } })
+    fireEvent.keyDown(exerciseInput, { key: 'Enter' })
 
     const nextProgram = onChange.mock.calls.at(-1)[0]
-    expect(nextProgram.days[0].day).toBe('Monday')
-    expect(nextProgram.days[0].exercises.map((x) => x.name)).toContain('Snatch Balance')
-  })
-
-  it('auto-buckets a bottom Monday row into the Monday day group', () => {
-    const onChange = vi.fn()
-    render(<SpreadsheetEditor programData={programFixture} onChange={onChange} />)
-    const rows = document.querySelectorAll('.spreadsheet-editor-table tbody tr')
-    const firstPadRow = rows[2]
-    const daySelect = within(firstPadRow).getByRole('combobox', { name: /day row 3/i })
-    fireEvent.change(daySelect, { target: { value: 'Monday' } })
-    const exerciseInput = within(firstPadRow).getAllByRole('textbox')[1]
-    fireEvent.change(exerciseInput, { target: { value: 'Hang Snatch' } })
-    fireEvent.blur(exerciseInput)
-
-    const nextProgram = onChange.mock.calls.at(-1)[0]
-    expect(nextProgram.days[0].day).toBe('Monday')
-    expect(nextProgram.days[0].exercises.map((x) => x.name)).toContain('Hang Snatch')
+    const tuesday = nextProgram.days.find((d) => d.day === 'Tuesday')
+    expect(tuesday.exercises.map((x) => x.name)).toContain('Power Clean')
   })
 
   it('stress: long exercise typing in a new row keeps focus and full text', () => {
@@ -132,8 +118,6 @@ describe('SpreadsheetEditor', () => {
     render(<SpreadsheetEditor programData={programFixture} onChange={onChange} />)
     const rows = document.querySelectorAll('.spreadsheet-editor-table tbody tr')
     const firstPadRow = rows[2]
-    const daySelect = within(firstPadRow).getByRole('combobox', { name: /day row 3/i })
-    fireEvent.change(daySelect, { target: { value: 'Monday' } })
 
     const exerciseInput = within(firstPadRow).getAllByRole('textbox')[1]
     exerciseInput.focus()
@@ -146,34 +130,33 @@ describe('SpreadsheetEditor', () => {
       expect(exerciseInput.value).toBe(typed)
     }
 
-    fireEvent.blur(exerciseInput)
+    fireEvent.keyDown(exerciseInput, { key: 'Enter' })
     const nextProgram = onChange.mock.calls.at(-1)[0]
-    expect(nextProgram.days[0].day).toBe('Monday')
-    expect(nextProgram.days[0].exercises.map((x) => x.name)).toContain(phrase)
+    const monday = nextProgram.days.find((d) => d.day === 'Monday')
+    expect(monday.exercises.map((x) => x.name)).toContain(phrase)
   })
 
-  it('does not commit/reflow while moving between cells in same row', () => {
+  it('does not commit while moving between cells in same row; commits on Enter', () => {
     const onChange = vi.fn()
     render(<SpreadsheetEditor programData={programFixture} onChange={onChange} />)
     const rows = document.querySelectorAll('.spreadsheet-editor-table tbody tr')
     const firstPadRow = rows[2]
-    const daySelect = within(firstPadRow).getByRole('combobox', { name: /day row 3/i })
     const textboxes = within(firstPadRow).getAllByRole('textbox')
     const exerciseInput = textboxes[1]
     const setsInput = textboxes[2]
-    const nextRowFirstText = within(rows[3]).getAllByRole('textbox')[0]
 
-    fireEvent.change(daySelect, { target: { value: 'Monday' } })
     fireEvent.change(exerciseInput, { target: { value: 'Muscle Snatch' } })
-    fireEvent.blur(exerciseInput, { relatedTarget: setsInput })
+    fireEvent.keyDown(exerciseInput, { key: 'Tab' })
     expect(onChange).not.toHaveBeenCalled()
 
     fireEvent.change(setsInput, { target: { value: '4' } })
-    fireEvent.blur(setsInput, { relatedTarget: nextRowFirstText })
+    fireEvent.keyDown(setsInput, { key: 'Tab' })
+    expect(onChange).not.toHaveBeenCalled()
+    fireEvent.keyDown(setsInput, { key: 'Enter' })
 
     const nextProgram = onChange.mock.calls.at(-1)[0]
-    expect(nextProgram.days[0].day).toBe('Monday')
-    const hit = nextProgram.days[0].exercises.find((x) => x.name === 'Muscle Snatch')
+    const monday = nextProgram.days.find((d) => d.day === 'Monday')
+    const hit = monday.exercises.find((x) => x.name === 'Muscle Snatch')
     expect(hit?.sets).toBe('4')
   })
 
@@ -204,52 +187,38 @@ describe('SpreadsheetEditor', () => {
     expect(headers).not.toContain('RPE')
   })
 
-  it('groups rows by day: first row of each day is .is-day-start, repeats are .is-day-repeat-row', () => {
-    const program = {
-      week_start_date: '2026-04-21',
-      days: [
-        { day: 'Monday', exercises: [
-          { name: 'Snatch', sets: '5', reps: '2', percent_1rm: '75%' },
-          { name: 'Back Squat', sets: '4', reps: '5', percent_1rm: '79%' },
-          { name: 'Snatch Pull', sets: '4', reps: '3', percent_1rm: '89%' },
-        ]},
-        { day: 'Tuesday', exercises: [
-          { name: 'Clean & Jerk', sets: '5', reps: '1+1', percent_1rm: '80%' },
-          { name: 'Front Squat', sets: '4', reps: '3', percent_1rm: '83%' },
-        ]},
-      ],
-    }
-    render(<SpreadsheetEditor programData={program} onChange={() => {}} />)
+  it('shows default Sunday tab with entry capacity', () => {
+    render(<SpreadsheetEditor programData={programFixture} onChange={() => {}} />)
+    fireEvent.click(screen.getByRole('tab', { name: /Sunday/i }))
     const rows = document.querySelectorAll('.spreadsheet-editor-table tbody tr')
-    // 3 Monday rows + 2 Tuesday rows + 3 empty padding = 8 rows.
-    expect(rows.length).toBe(8)
-    // Row 0 (first Monday) is day-start; rows 1 and 2 (also Monday) are repeats.
-    expect(rows[0].className).toContain('is-day-start')
-    expect(rows[1].className).toContain('is-day-repeat-row')
-    expect(rows[2].className).toContain('is-day-repeat-row')
-    // Row 3 (first Tuesday) is day-start; row 4 (also Tuesday) is a repeat.
-    expect(rows[3].className).toContain('is-day-start')
-    expect(rows[4].className).toContain('is-day-repeat-row')
-    // Repeat rows have the day cell marked so CSS can blank the label.
-    const repeatDayCells = document.querySelectorAll('.spreadsheet-editor-table td.is-day-repeat')
-    expect(repeatDayCells.length).toBe(3) // 2 Monday repeats + 1 Tuesday repeat
+    expect(rows.length).toBe(20) // default 4-week block => 5 rows/week template floor
   })
 
-  it('keeps repeated day cells editable (dropdown value preserved, keyboard reachable)', () => {
+  it('keeps weekday rows sorted by week number after Enter commit', () => {
+    const onChange = vi.fn()
+    render(<SpreadsheetEditor programData={programFixture} onChange={onChange} />)
+    const rows = document.querySelectorAll('.spreadsheet-editor-table tbody tr')
+    const rowInWeek4 = rows[15] // week 4 first template row
+    const weekInput = within(rowInWeek4).getAllByRole('textbox')[0]
+    const exerciseInput = within(rowInWeek4).getAllByRole('textbox')[1]
+    fireEvent.change(weekInput, { target: { value: '4' } })
+    fireEvent.change(exerciseInput, { target: { value: 'Week4 Lift' } })
+    fireEvent.keyDown(exerciseInput, { key: 'Enter' })
+
+    const nextProgram = onChange.mock.calls.at(-1)[0]
+    const monday = nextProgram.days.find((d) => d.day === 'Monday')
+    const weeks = monday.exercises.map((x) => Number.parseInt(x.week || '999', 10))
+    expect(weeks).toEqual([...weeks].sort((a, b) => a - b))
+  })
+
+  it('shows first-row hint on first empty row when row one has exercise', () => {
     const program = {
       week_start_date: '2026-04-21',
       days: [
-        { day: 'Monday', exercises: [
-          { name: 'Snatch', sets: '5', reps: '2' },
-          { name: 'Back Squat', sets: '4', reps: '5' },
-        ]},
+        { day: 'Monday', exercises: [{ name: 'Loaded Row', sets: '5', reps: '2', week: '1' }] },
       ],
     }
     render(<SpreadsheetEditor programData={program} onChange={() => {}} />)
-    const daySelects = Array.from(document.querySelectorAll('.spreadsheet-editor-table td:nth-child(2) select'))
-    // The second day selector (row 1) sits inside an .is-day-repeat cell but
-    // still holds 'Monday' as its value, so edits + keyboard navigation work.
-    expect(daySelects[1].value).toBe('Monday')
-    expect(daySelects[1].closest('td').classList.contains('is-day-repeat')).toBe(true)
+    expect(screen.queryByPlaceholderText('Enter exercise')).toBeTruthy()
   })
 })
