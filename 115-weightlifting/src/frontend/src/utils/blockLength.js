@@ -1,12 +1,10 @@
-// Coaches think in blocks (2-week test, 4-week accumulation, 8-week build,
-// 12-week prep) rather than exact end dates. These helpers convert a start
-// date plus a block preset into an end date.
+// Block presets match the official Excel template tab names (4 / 8 / 16 Week).
+// Coaches pick a preset to set the program end date; "Custom" is any other span.
 
 export const BLOCK_PRESETS = [
-  { key: '2wk',   label: '2 wk',  weeks: 2 },
-  { key: '4wk',   label: '4 wk',  weeks: 4 },
-  { key: '8wk',   label: '8 wk',  weeks: 8 },
-  { key: '12wk',  label: '12 wk', weeks: 12 },
+  { key: '4wk',  label: '4 Week',  weeks: 4 },
+  { key: '8wk',  label: '8 Week',  weeks: 8 },
+  { key: '16wk', label: '16 Week', weeks: 16 },
 ]
 
 export const endDateForBlock = (startDateISO, weeks) => {

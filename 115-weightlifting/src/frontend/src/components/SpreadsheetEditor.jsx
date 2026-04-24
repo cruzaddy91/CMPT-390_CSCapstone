@@ -1,4 +1,6 @@
 import { useMemo, useRef } from 'react'
+import { BLOCK_PRESETS } from '../utils/blockLength'
+import { PROGRAM_TEMPLATE_WEB_SPREADSHEET_PALETTE } from '../utils/programTemplate'
 
 // Columns match the xlsx template schema 1:1 so what coaches see here is what
 // they'd see in Excel. Each row = one exercise on one day.
@@ -99,10 +101,25 @@ const rowsToProgramData = (rows, weekStartDate) => {
   }
 }
 
-const SpreadsheetEditor = ({ programData, onChange, intensityMode = 'percent_1rm' }) => {
+const SpreadsheetEditor = ({
+  programData,
+  onChange,
+  intensityMode = 'percent_1rm',
+  blockPresetKey = 'custom',
+  onBlockPresetSelect,
+}) => {
   const weekStartDate = programData?.week_start_date
   const baseRows = useMemo(() => programDataToRows(programData), [programData])
   const columns = useMemo(() => columnsForMode(intensityMode), [intensityMode])
+  const paletteVars = useMemo(
+    () => ({
+      '--st-header-bg': PROGRAM_TEMPLATE_WEB_SPREADSHEET_PALETTE.headerBackground,
+      '--st-header-text': PROGRAM_TEMPLATE_WEB_SPREADSHEET_PALETTE.headerText,
+      '--st-header-border': PROGRAM_TEMPLATE_WEB_SPREADSHEET_PALETTE.headerBorder,
+      '--st-pad-bg': 'rgba(243, 246, 250, 0.07)',
+    }),
+    [],
+  )
 
   // Always show a buffer of empty rows for quick entry. They get filtered out
   // on serialize so they never corrupt the program_data shape.
@@ -158,9 +175,34 @@ const SpreadsheetEditor = ({ programData, onChange, intensityMode = 'percent_1rm
   }
 
   return (
-    <div className="spreadsheet-editor section-card">
+    <div className="spreadsheet-editor section-card" style={paletteVars}>
+      {typeof onBlockPresetSelect === 'function' && (
+        <div className="spreadsheet-template-block-row">
+          <span className="spreadsheet-template-block-label">Block length</span>
+          <div className="block-length-options" role="radiogroup" aria-label="Block length matching Excel template tabs">
+            {BLOCK_PRESETS.map((preset) => (
+              <button
+                key={preset.key}
+                type="button"
+                role="radio"
+                aria-checked={blockPresetKey === preset.key}
+                className={`block-length-chip ${blockPresetKey === preset.key ? 'is-active' : ''}`}
+                onClick={() => onBlockPresetSelect(preset.weeks)}
+              >
+                {preset.label}
+              </button>
+            ))}
+            <span
+              className={`block-length-chip block-length-chip-custom ${blockPresetKey === 'custom' ? 'is-active' : ''}`}
+              aria-disabled="true"
+            >
+              Custom
+            </span>
+          </div>
+        </div>
+      )}
       <div className="spreadsheet-editor-hint section-subtitle">
-        Same columns as the downloaded Excel (4 / 8 / 16 Week template). Keyboard: Tab / Enter / arrows. Rows without a day or exercise are ignored on save.
+        Same columns as the downloaded Excel (4 / 8 / 16 Week template). Header colors match that file. Keyboard: Tab / Enter / arrows. Rows without a day or exercise are ignored on save.
       </div>
       <div className="spreadsheet-editor-scroll">
         <table ref={tableRef} className="spreadsheet-editor-table">
@@ -184,8 +226,12 @@ const SpreadsheetEditor = ({ programData, onChange, intensityMode = 'percent_1rm
               const currentDay = row.day || ''
               const isDayRepeat = !!currentDay && currentDay === prevDay
               const isDayStart = !!currentDay && !isDayRepeat
+              const isPadRow = rowIndex >= baseRows.length
               return (
-                <tr key={rowIndex} className={`${isDayStart ? 'is-day-start' : ''} ${isDayRepeat ? 'is-day-repeat-row' : ''}`.trim()}>
+                <tr
+                  key={rowIndex}
+                  className={`${isDayStart ? 'is-day-start' : ''} ${isDayRepeat ? 'is-day-repeat-row' : ''} ${isPadRow ? 'is-pad-row' : ''}`.trim()}
+                >
                   {columns.map((col, columnIndex) => (
                     <td key={col.key} className={col.key === 'day' && isDayRepeat ? 'is-day-repeat' : ''}>
                       <input

@@ -56,6 +56,16 @@ const COLUMN_META = [
   { key: 'notes', label: 'Notes', width: 32, hint: 'Coach cues, technique reminders, warmup notes.' },
 ]
 
+// Header / sample-row colors mirror xlsx-js-style in this module (download template).
+// The web spreadsheet applies the same header treatment for coach familiarity.
+export const PROGRAM_TEMPLATE_WEB_SPREADSHEET_PALETTE = {
+  headerBackground: '#0f3a5f',
+  headerText: '#ffffff',
+  headerBorder: '#1e4e7f',
+  sampleRowBackground: '#f3f6fa',
+  sampleRowMutedText: '#666666',
+}
+
 // Realistic 4-day microcycle sample so coaches immediately see how to use the
 // different intensity columns, tempo, and Olympic complex notation.
 const TEMPLATE_SAMPLE_ROWS = [

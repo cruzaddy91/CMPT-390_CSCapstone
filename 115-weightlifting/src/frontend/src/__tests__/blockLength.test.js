@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { BLOCK_PRESETS, endDateForBlock, inferBlockKey } from '../utils/blockLength'
 
 describe('blockLength', () => {
-  it('exposes the canonical 2/4/8/12 block presets', () => {
-    expect(BLOCK_PRESETS.map((p) => p.weeks)).toEqual([2, 4, 8, 12])
+  it('exposes presets aligned with Excel template tabs (4 / 8 / 16 Week)', () => {
+    expect(BLOCK_PRESETS.map((p) => p.weeks)).toEqual([4, 8, 16])
   })
 
   it('computes correct end date for a 4-week block starting on a Monday', () => {
@@ -15,6 +15,10 @@ describe('blockLength', () => {
     expect(endDateForBlock('2026-01-05', 8)).toBe('2026-03-01') // 55 days later
   })
 
+  it('computes correct end date for a 16-week block', () => {
+    expect(endDateForBlock('2026-04-20', 16)).toBe('2026-08-09')
+  })
+
   it('returns empty string for invalid inputs', () => {
     expect(endDateForBlock('', 4)).toBe('')
     expect(endDateForBlock('2026-04-20', 0)).toBe('')
@@ -24,9 +28,11 @@ describe('blockLength', () => {
 
   it("infers block key from start/end date pair", () => {
     expect(inferBlockKey('2026-04-20', '2026-05-17')).toBe('4wk')
-    expect(inferBlockKey('2026-04-20', '2026-05-03')).toBe('2wk')
     expect(inferBlockKey('2026-04-20', '2026-06-14')).toBe('8wk')
-    expect(inferBlockKey('2026-04-20', '2026-07-12')).toBe('12wk')
+    expect(inferBlockKey('2026-04-20', '2026-08-09')).toBe('16wk')
+    expect(inferBlockKey('2026-01-05', '2026-04-26')).toBe('16wk')
+    expect(inferBlockKey('2026-04-20', '2026-05-03')).toBe('custom') // 2-week span not a preset
+    expect(inferBlockKey('2026-04-20', '2026-07-12')).toBe('custom') // 12-week span not a preset
   })
 
   it("falls back to 'custom' for non-matching lengths", () => {

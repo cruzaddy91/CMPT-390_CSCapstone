@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import SpreadsheetEditor from '../components/SpreadsheetEditor'
 
 const programFixture = {
@@ -31,6 +31,21 @@ const programFixture = {
 }
 
 describe('SpreadsheetEditor', () => {
+  it('offers 4/8/16 Week block controls when onBlockPresetSelect is passed', () => {
+    const onPreset = vi.fn()
+    render(
+      <SpreadsheetEditor
+        programData={programFixture}
+        onChange={() => {}}
+        blockPresetKey="4wk"
+        onBlockPresetSelect={onPreset}
+      />,
+    )
+    const group = screen.getByRole('radiogroup', { name: /matching excel template tabs/i })
+    fireEvent.click(within(group).getByRole('radio', { name: '8 Week' }))
+    expect(onPreset).toHaveBeenCalledWith(8)
+  })
+
   it('renders one row per exercise with all expanded columns populated', () => {
     render(<SpreadsheetEditor programData={programFixture} onChange={() => {}} />)
     expect(screen.getByDisplayValue('Snatch')).toBeTruthy()

@@ -1043,7 +1043,13 @@ const EditorView = ({
       </div>
 
       {editorMode === 'spreadsheet' ? (
-        <SpreadsheetEditor programData={programData} onChange={onProgramDataChange} intensityMode={intensityMode} />
+        <SpreadsheetEditor
+          programData={programData}
+          onChange={onProgramDataChange}
+          intensityMode={intensityMode}
+          blockPresetKey={currentBlockKey}
+          onBlockPresetSelect={onBlockPreset}
+        />
       ) : (
         <div className="day-stack">
           {programData.days.map((day, dayIndex) => (
