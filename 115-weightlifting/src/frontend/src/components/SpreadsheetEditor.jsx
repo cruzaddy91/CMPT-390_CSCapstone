@@ -175,15 +175,28 @@ const SpreadsheetEditor = ({
     }))
   }
 
-  const handleCellBlur = (rowIndex) => {
+  const handleCellBlur = (rowIndex, event) => {
+    const nextFocused = event?.relatedTarget
+    const nextRowIndex = nextFocused?.getAttribute?.('data-row-index')
+    // Do not commit while tabbing/clicking across cells in the same row.
+    // This prevents row re-bucketing from "jumping" the active edit target.
+    if (nextRowIndex === String(rowIndex)) return
+
     const draftRow = draftRows[rowIndex] || displayRows[rowIndex]
     if (!draftRow) return
+    const isPadRow = rowIndex >= baseRows.length
+    const hasDay = String(draftRow.day || '').trim().length > 0
+    const hasExerciseName = String(draftRow.name || '').trim().length > 0
+    // Keep partial new-row drafts (day selected, exercise not entered yet)
+    // so moving across cells never erases in-progress row setup.
+    if (isPadRow && hasDay && !hasExerciseName) return
+
     const serialRows = displayRows.map((row, idx) => {
       const r = idx === rowIndex ? { ...row, ...draftRow } : row
       if (idx < baseRows.length) return r
-      const hasDay = String(r.day || '').trim().length > 0
-      const hasExerciseName = String(r.name || '').trim().length > 0
-      return hasDay && hasExerciseName ? r : { ...BLANK_ROW }
+      const rowHasDay = String(r.day || '').trim().length > 0
+      const rowHasExerciseName = String(r.name || '').trim().length > 0
+      return rowHasDay && rowHasExerciseName ? r : { ...BLANK_ROW }
     })
     onChange(rowsToProgramData(serialRows, weekStartDate))
     setDraftRows((current) => {
@@ -287,9 +300,10 @@ const SpreadsheetEditor = ({
                       {col.key === 'day' ? (
                         <select
                           data-cell
+                          data-row-index={rowIndex}
                           value={row.day ?? ''}
                           onChange={(event) => handleCellChange(rowIndex, 'day', event.target.value)}
-                          onBlur={() => handleCellBlur(rowIndex)}
+                          onBlur={(event) => handleCellBlur(rowIndex, event)}
                           onKeyDown={(event) => handleKeyDown(event, rowIndex, columnIndex)}
                           aria-label={`Day row ${rowIndex + 1}`}
                         >
@@ -301,10 +315,11 @@ const SpreadsheetEditor = ({
                       ) : (
                         <input
                           data-cell
+                          data-row-index={rowIndex}
                           type="text"
                           value={row[col.key] ?? ''}
                           onChange={(event) => handleCellChange(rowIndex, col.key, event.target.value)}
-                          onBlur={() => handleCellBlur(rowIndex)}
+                          onBlur={(event) => handleCellBlur(rowIndex, event)}
                           onKeyDown={(event) => handleKeyDown(event, rowIndex, columnIndex)}
                         />
                       )}

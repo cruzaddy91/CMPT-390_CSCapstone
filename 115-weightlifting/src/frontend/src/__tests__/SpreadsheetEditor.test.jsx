@@ -90,6 +90,27 @@ describe('SpreadsheetEditor', () => {
     expect(fridayDay.exercises[0].name).toBe('Snatch Pull')
   })
 
+  it('keeps selected day after blur while exercise is still empty', () => {
+    const onChange = vi.fn()
+    render(<SpreadsheetEditor programData={programFixture} onChange={onChange} />)
+    const rows = document.querySelectorAll('.spreadsheet-editor-table tbody tr')
+    const firstPadRow = rows[2]
+    const daySelect = within(firstPadRow).getByRole('combobox', { name: /day row 3/i })
+    fireEvent.change(daySelect, { target: { value: 'Monday' } })
+    fireEvent.blur(daySelect)
+
+    expect(daySelect.value).toBe('Monday')
+    expect(onChange).not.toHaveBeenCalled()
+
+    const exerciseInput = within(firstPadRow).getAllByRole('textbox')[1]
+    fireEvent.change(exerciseInput, { target: { value: 'Snatch Balance' } })
+    fireEvent.blur(exerciseInput)
+
+    const nextProgram = onChange.mock.calls.at(-1)[0]
+    expect(nextProgram.days[0].day).toBe('Monday')
+    expect(nextProgram.days[0].exercises.map((x) => x.name)).toContain('Snatch Balance')
+  })
+
   it('auto-buckets a bottom Monday row into the Monday day group', () => {
     const onChange = vi.fn()
     render(<SpreadsheetEditor programData={programFixture} onChange={onChange} />)
@@ -129,6 +150,31 @@ describe('SpreadsheetEditor', () => {
     const nextProgram = onChange.mock.calls.at(-1)[0]
     expect(nextProgram.days[0].day).toBe('Monday')
     expect(nextProgram.days[0].exercises.map((x) => x.name)).toContain(phrase)
+  })
+
+  it('does not commit/reflow while moving between cells in same row', () => {
+    const onChange = vi.fn()
+    render(<SpreadsheetEditor programData={programFixture} onChange={onChange} />)
+    const rows = document.querySelectorAll('.spreadsheet-editor-table tbody tr')
+    const firstPadRow = rows[2]
+    const daySelect = within(firstPadRow).getByRole('combobox', { name: /day row 3/i })
+    const textboxes = within(firstPadRow).getAllByRole('textbox')
+    const exerciseInput = textboxes[1]
+    const setsInput = textboxes[2]
+    const nextRowFirstText = within(rows[3]).getAllByRole('textbox')[0]
+
+    fireEvent.change(daySelect, { target: { value: 'Monday' } })
+    fireEvent.change(exerciseInput, { target: { value: 'Muscle Snatch' } })
+    fireEvent.blur(exerciseInput, { relatedTarget: setsInput })
+    expect(onChange).not.toHaveBeenCalled()
+
+    fireEvent.change(setsInput, { target: { value: '4' } })
+    fireEvent.blur(setsInput, { relatedTarget: nextRowFirstText })
+
+    const nextProgram = onChange.mock.calls.at(-1)[0]
+    expect(nextProgram.days[0].day).toBe('Monday')
+    const hit = nextProgram.days[0].exercises.find((x) => x.name === 'Muscle Snatch')
+    expect(hit?.sets).toBe('4')
   })
 
   it('respects intensityMode=percent_1rm: shows % 1RM, hides RPE and Weight', () => {
