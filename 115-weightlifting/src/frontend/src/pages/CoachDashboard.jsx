@@ -29,6 +29,22 @@ import CoachRosterAggregateCharts from '../components/CoachRosterAggregateCharts
 
 const WEEKDAY_TABS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const _normDay = (value) => String(value || '').trim().toLowerCase()
+const BLOCK_WEEKS_BY_KEY = { '4wk': 4, '8wk': 8, '16wk': 16 }
+const _weekOf = (exercise) => {
+  const raw = String(exercise?.week ?? '').trim()
+  if (!raw) return 1
+  const n = Number.parseInt(raw, 10)
+  return Number.isFinite(n) && n > 0 ? n : 1
+}
+const _maxWeekInProgram = (programData) => {
+  let max = 1
+  for (const day of (programData?.days || [])) {
+    for (const ex of (day?.exercises || [])) {
+      max = Math.max(max, _weekOf(ex))
+    }
+  }
+  return max
+}
 
 const getDefaultForm = () => ({
   name: '',
@@ -74,6 +90,8 @@ const CoachDashboard = () => {
   const [formData, setFormData] = useState(getDefaultForm())
   const [programData, setProgramData] = useState(createEmptyWeek())
   const [editorMode, setEditorMode] = useState('form') // 'form' | 'spreadsheet'
+  const [activeCardWeek, setActiveCardWeek] = useState(1)
+  const [customWeekCount, setCustomWeekCount] = useState(1)
   const [view, setView] = useState('list') // 'list' | 'editor'
   const [intensityMode, setIntensityMode] = useState('percent_1rm') // 'percent_1rm' | 'rpe' | 'weight'
   const [showPreview, setShowPreview] = useState(false)
@@ -191,6 +209,23 @@ const CoachDashboard = () => {
     () => inferBlockKey(formData.start_date, formData.end_date),
     [formData.start_date, formData.end_date],
   )
+  const editorWeekCount = useMemo(() => {
+    const presetWeeks = BLOCK_WEEKS_BY_KEY[currentBlockKey] || 0
+    const fromData = _maxWeekInProgram(programData)
+    if (currentBlockKey === 'custom') {
+      return Math.max(customWeekCount, fromData, 1)
+    }
+    return Math.max(presetWeeks, fromData, 1)
+  }, [currentBlockKey, customWeekCount, programData])
+
+  useEffect(() => {
+    setActiveCardWeek((current) => Math.min(Math.max(current, 1), editorWeekCount))
+  }, [editorWeekCount])
+  useEffect(() => {
+    if (currentBlockKey === 'custom') {
+      setCustomWeekCount((current) => Math.max(current, _maxWeekInProgram(programData), 1))
+    }
+  }, [currentBlockKey, programData])
 
   const assignedAthleteUsername = useMemo(() => {
     const athleteIdNum = Number(formData.athlete_id)
@@ -265,6 +300,7 @@ const CoachDashboard = () => {
     setEditingProgramId(null)
     setFormData(form)
     setProgramData(prog)
+    setActiveCardWeek(1)
     setView('editor')
     setSaveMessage('')
     if (restored) {
@@ -286,6 +322,7 @@ const CoachDashboard = () => {
     setEditingProgramId(program.id)
     setFormData(form)
     setProgramData(prog)
+    setActiveCardWeek(1)
     // Restore coach's prior intensity-mode choice if the program carries one
     // (and the autosaved draft didn't already override it).
     if (!restored && (prog.intensity_mode === 'percent_1rm' || prog.intensity_mode === 'rpe' || prog.intensity_mode === 'weight')) {
@@ -316,6 +353,9 @@ const CoachDashboard = () => {
     const end = endDateForBlock(formData.start_date, weeks)
     setFormData((current) => ({ ...current, end_date: end }))
   }
+  const handleBlockCustom = () => {
+    setFormData((current) => ({ ...current, end_date: '' }))
+  }
 
   // Program-data mutations (day-level)
   const handleDayChange = (dayIndex, nextDayName) => {
@@ -326,9 +366,20 @@ const CoachDashboard = () => {
   }
 
   const handleExercisesChange = (dayIndex, nextExercises) => {
+    const normalizeWeekExercise = (exercise) => ({
+      ...exercise,
+      week: String(activeCardWeek),
+    })
     setProgramData((current) => ({
       ...current,
-      days: current.days.map((day, idx) => (idx === dayIndex ? { ...day, exercises: nextExercises } : day)),
+      days: current.days.map((day, idx) => {
+        if (idx !== dayIndex) return day
+        const keepOthers = (day.exercises || []).filter((exercise) => _weekOf(exercise) !== activeCardWeek)
+        const thisWeek = (nextExercises || []).map(normalizeWeekExercise)
+        const merged = [...keepOthers, ...thisWeek]
+        merged.sort((a, b) => _weekOf(a) - _weekOf(b))
+        return { ...day, exercises: merged }
+      }),
     }))
   }
 
@@ -545,11 +596,14 @@ const CoachDashboard = () => {
             saveMessage={saveMessage}
             upcomingSummary={upcomingSummary}
             currentBlockKey={currentBlockKey}
+            activeCardWeek={activeCardWeek}
+            editorWeekCount={editorWeekCount}
             fileInputRef={fileInputRef}
             draftBadge={draftBadge}
             onBack={backToList}
             onFormChange={handleFormChange}
             onBlockPreset={handleBlockPreset}
+            onBlockCustom={handleBlockCustom}
             onAthleteSearch={setAthleteSearch}
             onDayChange={handleDayChange}
             onExercisesChange={handleExercisesChange}
@@ -557,6 +611,8 @@ const CoachDashboard = () => {
             onRemoveDay={handleRemoveDay}
             onDuplicateDay={handleDuplicateDay}
             onMoveDay={handleMoveDay}
+            onAddCustomWeek={() => setCustomWeekCount((current) => current + 1)}
+            onSelectCardWeek={setActiveCardWeek}
             onResetToBlankTemplate={handleResetToBlankTemplate}
             onDownloadTemplate={handleDownloadTemplate}
             onUploadClick={handleTemplateUploadClick}
@@ -854,10 +910,13 @@ const EditorView = ({
   assignedAthleteUsername, assignedAthleteProfileSuffix,
   coachAthletePrs, coachPrsLoading, coachPrsError,
   editorMode, intensityMode, saving, saveMessage, upcomingSummary, currentBlockKey,
+  activeCardWeek, editorWeekCount,
   fileInputRef, draftBadge,
   importSheetChoice, onImportSheetChoiceChange,
-  onBack, onFormChange, onBlockPreset, onAthleteSearch, onDayChange, onExercisesChange,
+  onBack, onFormChange, onBlockPreset, onBlockCustom, onAthleteSearch, onDayChange, onExercisesChange,
   onAddDay, onRemoveDay, onDuplicateDay, onMoveDay,
+  onAddCustomWeek,
+  onSelectCardWeek,
   onResetToBlankTemplate,
   onDownloadTemplate, onUploadClick, onUploadChosen,
   onToggleEditorMode, onIntensityModeChange, onProgramDataChange, onPreview, onSave,
@@ -1025,10 +1084,15 @@ const EditorView = ({
                 {preset.label}
               </button>
             ))}
-            <span className={`block-length-chip ${currentBlockKey === 'custom' ? 'is-active' : ''} block-length-chip-custom`}
-                  aria-disabled="true">
+            <button
+              type="button"
+              className={`block-length-chip ${currentBlockKey === 'custom' ? 'is-active' : ''} block-length-chip-custom`}
+              onClick={onBlockCustom}
+              role="radio"
+              aria-checked={currentBlockKey === 'custom'}
+            >
               Custom
-            </span>
+            </button>
           </div>
         </div>
 
@@ -1101,14 +1165,42 @@ const EditorView = ({
           onBlockPresetSelect={onBlockPreset}
         />
       ) : (
-        <div className="day-stack">
+        <>
+          <div className="coach-week-tabs" role="tablist" aria-label="Program week tabs">
+            {Array.from({ length: editorWeekCount }).map((_, idx) => {
+              const week = idx + 1
+              return (
+                <button
+                  key={week}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeCardWeek === week}
+                  className={`program-chip ${activeCardWeek === week ? 'is-active' : ''}`}
+                  onClick={() => onSelectCardWeek(week)}
+                >
+                  Week {week}
+                </button>
+              )
+            })}
+          </div>
+          {currentBlockKey === 'custom' && (
+            <div className="coach-week-tabs-actions">
+              <button type="button" className="text-btn" onClick={onAddCustomWeek}>+ Add week</button>
+            </div>
+          )}
+          <div className="day-stack">
           {programData.days.map((day, dayIndex) => (
             <WorkoutDay
               key={day.id || `day-fallback-${dayIndex}`}
               day={day}
               dayIndex={dayIndex}
               dayCount={dayCount}
-              exercises={day.exercises}
+              exercises={(day.exercises || []).filter((exercise) => {
+                const raw = String(exercise?.week ?? '').trim()
+                if (!raw) return activeCardWeek === 1
+                const n = Number.parseInt(raw, 10)
+                return Number.isFinite(n) ? n === activeCardWeek : activeCardWeek === 1
+              })}
               intensityMode={intensityMode}
               onExercisesChange={(nextExercises) => onExercisesChange(dayIndex, nextExercises)}
               onDayChange={(nextDayName) => onDayChange(dayIndex, nextDayName)}
@@ -1120,7 +1212,8 @@ const EditorView = ({
               isCoach
             />
           ))}
-        </div>
+          </div>
+        </>
       )}
       <div className="editor-publish-footer">
         <button
