@@ -13,7 +13,11 @@ import {
 } from '../services/api'
 import { countExercises, createEmptyDay, createEmptyWeek, generateDayId, normalizeProgramData } from '../utils/dataStructure'
 import { formatApiError } from '../utils/errors'
-import { downloadTemplateXlsx, parseProgramFile } from '../utils/programTemplate'
+import {
+  PROGRAM_TEMPLATE_BLOCK_SHEETS,
+  downloadTemplateXlsx,
+  parseProgramFile,
+} from '../utils/programTemplate'
 import { clearDraft, readDraft, saveDraft } from '../utils/programDraft'
 import { BLOCK_PRESETS, endDateForBlock, inferBlockKey } from '../utils/blockLength'
 import { relativeTimeSince } from '../utils/relativeTime'
@@ -72,6 +76,8 @@ const CoachDashboard = () => {
   const [showPreview, setShowPreview] = useState(false)
   const [draftBadge, setDraftBadge] = useState(false) // shows briefly when a saved draft is restored
   const fileInputRef = useRef(null)
+  /** 'auto' | sheet name from PROGRAM_TEMPLATE_BLOCK_SHEETS — which tab to read on upload */
+  const [importSheetChoice, setImportSheetChoice] = useState('auto')
   const [coachAthletePrs, setCoachAthletePrs] = useState([])
   const [coachPrsLoading, setCoachPrsLoading] = useState(false)
   const [coachPrsError, setCoachPrsError] = useState(null)
@@ -383,11 +389,13 @@ const CoachDashboard = () => {
     if (!file) return
     try {
       setSaveMessage('')
-      const nextProgramData = await parseProgramFile(file)
+      const parseOpts = importSheetChoice === 'auto' ? {} : { sheetName: importSheetChoice }
+      const nextProgramData = await parseProgramFile(file, parseOpts)
       setProgramData(nextProgramData)
       const exercises = nextProgramData.days.reduce((t, d) => t + d.exercises.length, 0)
+      const sheetNote = importSheetChoice === 'auto' ? '' : ` (${importSheetChoice})`
       setSaveMessage(
-        `Loaded ${nextProgramData.days.length} day(s) / ${exercises} exercise(s) from ${file.name}. Review and hit Save.`
+        `Loaded ${nextProgramData.days.length} day(s) / ${exercises} exercise(s) from ${file.name}${sheetNote}. Review and hit Save.`
       )
       setTimeout(() => setSaveMessage(''), 6000)
     } catch (error) {
@@ -515,6 +523,8 @@ const CoachDashboard = () => {
             onDownloadTemplate={handleDownloadTemplate}
             onUploadClick={handleTemplateUploadClick}
             onUploadChosen={handleTemplateFileChosen}
+            importSheetChoice={importSheetChoice}
+            onImportSheetChoiceChange={setImportSheetChoice}
             onToggleEditorMode={toggleEditorMode}
             onIntensityModeChange={setIntensityMode}
             onProgramDataChange={setProgramData}
@@ -768,7 +778,7 @@ const ListView = ({
       {programs.length === 0 ? (
         <div className="empty-state">
           <p>No programs yet.</p>
-          <p className="section-subtitle">Click <strong>+ New program</strong> to build your first one, or download the Excel template to import from a spreadsheet.</p>
+          <p className="section-subtitle">Click <strong>+ New program</strong> to build your first one, or download the Excel template (Instructions + 4 / 8 / 16 Week tabs) and import the tab you filled.</p>
         </div>
       ) : (
         <>
@@ -807,6 +817,7 @@ const EditorView = ({
   coachAthletePrs, coachPrsLoading, coachPrsError,
   editorMode, intensityMode, saving, saveMessage, upcomingSummary, currentBlockKey,
   fileInputRef, draftBadge,
+  importSheetChoice, onImportSheetChoiceChange,
   onBack, onFormChange, onBlockPreset, onAthleteSearch, onDayChange, onExercisesChange,
   onAddDay, onRemoveDay, onDuplicateDay, onMoveDay,
   onDownloadTemplate, onUploadClick, onUploadChosen,
@@ -839,6 +850,19 @@ const EditorView = ({
             <span className="tool-btn-icon">⬆</span>
             <span className="tool-btn-label">Upload Program</span>
           </button>
+          <label className="import-sheet-control" title="Auto uses the 4 Week tab when this template has it. Pick 8 Week or 16 Week if you only filled that tab; side-by-side blocks on one tab are merged into one program.">
+            <span className="import-sheet-control-label">Import tab</span>
+            <select
+              className="form-input import-sheet-select"
+              value={importSheetChoice}
+              onChange={(e) => onImportSheetChoiceChange(e.target.value)}
+            >
+              <option value="auto">Auto (4 Week tab when present)</option>
+              {PROGRAM_TEMPLATE_BLOCK_SHEETS.map((name) => (
+                <option key={name} value={name}>{name}</option>
+              ))}
+            </select>
+          </label>
           <button type="button" className="tool-btn" onClick={onToggleEditorMode}
                   title={editorMode === 'form' ? 'Switch to spreadsheet view (Excel-like grid)' : 'Switch to card view (day-by-day cards)'}>
             <span className="tool-btn-icon">{editorMode === 'form' ? '⊞' : '☰'}</span>

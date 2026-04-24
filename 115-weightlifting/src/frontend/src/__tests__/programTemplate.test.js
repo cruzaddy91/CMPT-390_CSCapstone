@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import * as XLSX from 'xlsx'
 
@@ -6,7 +9,9 @@ import {
   PROGRAM_TEMPLATE_COLUMNS,
   PROGRAM_TEMPLATE_SHEET,
   buildTemplateWorkbook,
+  expandMultiBlockTemplateRows,
   parseProgramFile,
+  pickProgramSheetNameForImport,
 } from '../utils/programTemplate'
 
 const makeFileFromAoA = (aoa, sheetName = PROGRAM_TEMPLATE_SHEET) => {
@@ -115,5 +120,62 @@ describe('programTemplate', () => {
     const buffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
     const file = new File([buffer], 'empty.xlsx')
     await expect(parseProgramFile(file)).rejects.toThrow(/empty/i)
+  })
+
+  it('expands side-by-side program blocks from one SheetJS row', () => {
+    const raw = [
+      {
+        Week: 1,
+        Day: 'Monday',
+        Exercise: 'Snatch',
+        Sets: '1',
+        Reps: '1',
+        '% 1RM': '70%',
+        RPE: '',
+        Weight: '',
+        Tempo: '',
+        Rest: '',
+        Notes: '',
+        Week_1: 2,
+        Day_1: 'Tuesday',
+        Exercise_1: 'Clean & Jerk',
+        Sets_1: '2',
+        Reps_1: '2',
+        '% 1RM_1': '80%',
+        RPE_1: '',
+        Weight_1: '',
+        Tempo_1: '',
+        Rest_1: '',
+        Notes_1: '',
+      },
+    ]
+    const expanded = expandMultiBlockTemplateRows(raw)
+    expect(expanded).toHaveLength(2)
+    expect(expanded[0].Exercise).toBe('Snatch')
+    expect(expanded[1].Exercise).toBe('Clean & Jerk')
+  })
+
+  it('rejects unknown explicit sheet name', async () => {
+    const workbook = XLSX.utils.book_new()
+    const ws = XLSX.utils.aoa_to_sheet([[HEADER_ROW], [1, 'Mon', 'X', 1, 1, '', '', '', '', '', '']])
+    XLSX.utils.book_append_sheet(workbook, ws, '4 Week')
+    const buffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' })
+    const file = new File([buffer], 'p.xlsx')
+    await expect(parseProgramFile(file, { sheetName: 'No Such Sheet' })).rejects.toThrow(/no sheet named/i)
+  })
+
+  it('imports the committed ExcelTables workbook (4 Week tab)', async () => {
+    const dir = path.dirname(fileURLToPath(import.meta.url))
+    const asset = path.join(dir, '../../public/115wl_program_template_ExcelTables.xlsx')
+    const buf = readFileSync(asset)
+    const file = new File([buf], '115wl_program_template_ExcelTables.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const wb = XLSX.read(buf, { type: 'array' })
+    expect(pickProgramSheetNameForImport(wb)).toBe('4 Week')
+    const result = await parseProgramFile(file, { sheetName: '4 Week' })
+    expect(result.days.length).toBeGreaterThan(0)
+    const exCount = result.days.reduce((t, d) => t + d.exercises.length, 0)
+    expect(exCount).toBeGreaterThan(0)
   })
 })

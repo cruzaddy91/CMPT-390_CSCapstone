@@ -1197,6 +1197,24 @@
   flex-wrap: wrap;
 }
 
+.import-sheet-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.import-sheet-control-label {
+  white-space: nowrap;
+}
+
+.import-sheet-select {
+  min-width: 10.5rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+}
+
 .tool-btn {
   display: inline-flex;
   align-items: center;

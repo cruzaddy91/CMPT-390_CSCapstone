@@ -160,7 +160,7 @@ const SpreadsheetEditor = ({ programData, onChange, intensityMode = 'percent_1rm
   return (
     <div className="spreadsheet-editor section-card">
       <div className="spreadsheet-editor-hint section-subtitle">
-        Spreadsheet view: keyboard nav with Tab / Enter / arrows. Rows without a day or exercise are ignored on save.
+        Same columns as the downloaded Excel (4 / 8 / 16 Week template). Keyboard: Tab / Enter / arrows. Rows without a day or exercise are ignored on save.
       </div>
       <div className="spreadsheet-editor-scroll">
         <table ref={tableRef} className="spreadsheet-editor-table">

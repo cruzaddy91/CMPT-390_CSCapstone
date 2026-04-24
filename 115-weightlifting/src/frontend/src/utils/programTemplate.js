@@ -23,6 +23,9 @@ export const PROGRAM_TEMPLATE_COLUMNS = [
 export const PROGRAM_TEMPLATE_SHEET = 'Program'
 export const INSTRUCTIONS_SHEET = 'Instructions'
 
+// Canonical program sheets in the pre-built ExcelTables workbook (import + download).
+export const PROGRAM_TEMPLATE_BLOCK_SHEETS = ['4 Week', '8 Week', '16 Week']
+
 // Static download: OOXML file with Instructions + 4/8/16 Week sheets and native
 // tables (from bin/add_excel_program_tables.py). Serves as source of truth for
 // "Download template" in the app. Regenerate when FINAL changes.
@@ -229,7 +232,8 @@ export const downloadTemplateXlsx = async (filename) => {
 // Parses an uploaded File (xlsx/xls/csv/ods) into our program_data shape.
 // Throws Error('<readable message>') on anything that does not look like the
 // template. Resolves with: { week_start_date, days: [{ day, exercises: [...] }] }.
-export const parseProgramFile = async (file) => {
+// @param {{ sheetName?: string }} [options] sheetName — explicit worksheet (e.g. "8 Week"); omit for auto among PROGRAM_TEMPLATE_BLOCK_SHEETS.
+export const parseProgramFile = async (file, options = {}) => {
   if (!file) throw new Error('No file provided.')
   // jsdom's File shim doesn't implement arrayBuffer; fall back to FileReader
   // which is present in both jsdom and real browsers.
@@ -242,11 +246,7 @@ export const parseProgramFile = async (file) => {
     throw new Error('Workbook has no sheets.')
   }
 
-  // Prefer the sheet literally named "Program"; fall back to the first
-  // non-instructions sheet so coaches can name it anything.
-  const preferredSheet = workbook.SheetNames.includes(PROGRAM_TEMPLATE_SHEET)
-    ? PROGRAM_TEMPLATE_SHEET
-    : workbook.SheetNames.find((name) => name !== INSTRUCTIONS_SHEET) || workbook.SheetNames[0]
+  const preferredSheet = pickProgramSheetNameForImport(workbook, options.sheetName)
   const sheet = workbook.Sheets[preferredSheet]
 
   const rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false })
@@ -254,7 +254,8 @@ export const parseProgramFile = async (file) => {
     throw new Error(`Sheet "${preferredSheet}" is empty.`)
   }
 
-  const rows = normalizeRows(rawRows)
+  const expanded = expandMultiBlockTemplateRows(rawRows)
+  const rows = normalizeRows(expanded.length ? expanded : rawRows)
   if (!rows.length) {
     throw new Error(
       'No usable rows. Expected columns: ' + PROGRAM_TEMPLATE_COLUMNS.join(', ') + '.'
@@ -300,6 +301,119 @@ const readFileAsArrayBuffer = (file) =>
     reader.onerror = () => reject(reader.error || new Error('Failed to read file.'))
     reader.readAsArrayBuffer(file)
   })
+
+/** @param {number} blockIndex 0..3 — parallel blocks on 8- / 16-week sheets use _1, _2, _3 suffixes in SheetJS JSON. */
+const _blockHeaderKeys = (blockIndex) => {
+  if (blockIndex === 0) {
+    return {
+      week: 'Week',
+      day: 'Day',
+      exercise: 'Exercise',
+      sets: 'Sets',
+      reps: 'Reps',
+      pct: '% 1RM',
+      rpe: 'RPE',
+      weight: 'Weight',
+      tempo: 'Tempo',
+      rest: 'Rest',
+      notes: 'Notes',
+    }
+  }
+  const s = `_${blockIndex}`
+  return {
+    week: `Week${s}`,
+    day: `Day${s}`,
+    exercise: `Exercise${s}`,
+    sets: `Sets${s}`,
+    reps: `Reps${s}`,
+    pct: `% 1RM${s}`,
+    rpe: `RPE${s}`,
+    weight: `Weight${s}`,
+    tempo: `Tempo${s}`,
+    rest: `Rest${s}`,
+    notes: `Notes${s}`,
+  }
+}
+
+/**
+ * Flatten one SheetJS row (possibly multiple horizontal program blocks) into
+ * 1–4 logical rows using the first-row header names from the official template.
+ * @param {Record<string, unknown>[]} rawRows
+ * @returns {Record<string, unknown>[]}
+ */
+export const expandMultiBlockTemplateRows = (rawRows) => {
+  const out = []
+  for (const raw of rawRows) {
+    for (let b = 0; b < 4; b += 1) {
+      const k = _blockHeaderKeys(b)
+      if (b > 0 && !(k.day in raw) && !(k.exercise in raw)) {
+        continue
+      }
+      const day = String(raw[k.day] ?? '').trim()
+      const exercise = String(raw[k.exercise] ?? '').trim()
+      if (!day || !exercise) continue
+      out.push({
+        Week: raw[k.week],
+        Day: raw[k.day],
+        Exercise: raw[k.exercise],
+        Sets: raw[k.sets],
+        Reps: raw[k.reps],
+        '% 1RM': raw[k.pct],
+        RPE: raw[k.rpe],
+        Weight: raw[k.weight],
+        Tempo: raw[k.tempo],
+        Rest: raw[k.rest],
+        Notes: raw[k.notes],
+      })
+    }
+  }
+  return out
+}
+
+const _scoreProgramSheet = (workbook, sheetName) => {
+  const sheet = workbook.Sheets[sheetName]
+  if (!sheet) return 0
+  const raw = XLSX.utils.sheet_to_json(sheet, { defval: '', raw: false })
+  return normalizeRows(expandMultiBlockTemplateRows(raw)).length
+}
+
+/**
+ * Choose which worksheet to import. With no explicit name, picks the 4/8/16
+ * sheet that has the most exercise rows (ties → first in PROGRAM_TEMPLATE_BLOCK_SHEETS).
+ * @param {object} workbook XLSX workbook object from XLSX.read
+ * @param {string} [explicitSheetName]
+ */
+export const pickProgramSheetNameForImport = (workbook, explicitSheetName) => {
+  if (explicitSheetName) {
+    if (!workbook.SheetNames.includes(explicitSheetName)) {
+      throw new Error(`This workbook has no sheet named "${explicitSheetName}".`)
+    }
+    return explicitSheetName
+  }
+  // Default auto-import: the 4 Week tab when the workbook follows our template.
+  // (Stock 4/8/16 sheets share sample rows; 16 Week would otherwise "win" on row count
+  // because it has more horizontal blocks — coaches who only use 8 or 16 pick that tab explicitly.)
+  const primary = PROGRAM_TEMPLATE_BLOCK_SHEETS[0]
+  if (workbook.SheetNames.includes(primary)) {
+    return primary
+  }
+  let best = null
+  let bestScore = 0
+  for (const name of PROGRAM_TEMPLATE_BLOCK_SHEETS) {
+    const s = _scoreProgramSheet(workbook, name)
+    const idx = PROGRAM_TEMPLATE_BLOCK_SHEETS.indexOf(name)
+    const bestIdx = best == null ? 999 : PROGRAM_TEMPLATE_BLOCK_SHEETS.indexOf(best)
+    if (s > bestScore || (s === bestScore && s > 0 && idx < bestIdx)) {
+      bestScore = s
+      best = name
+    }
+  }
+  if (best != null && bestScore > 0) return best
+  if (workbook.SheetNames.includes(PROGRAM_TEMPLATE_SHEET)) return PROGRAM_TEMPLATE_SHEET
+  const fallback = workbook.SheetNames.find((n) => n !== INSTRUCTIONS_SHEET)
+  if (!fallback) throw new Error('Workbook has no data sheets.')
+  return fallback
+}
 
 // Lower-cases header keys, trims values, drops rows with no exercise name or
 // no day. All numeric-ish fields coerced to strings so downstream normalization
