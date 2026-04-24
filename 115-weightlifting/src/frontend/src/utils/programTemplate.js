@@ -23,6 +23,22 @@ export const PROGRAM_TEMPLATE_COLUMNS = [
 export const PROGRAM_TEMPLATE_SHEET = 'Program'
 export const INSTRUCTIONS_SHEET = 'Instructions'
 
+// Static download: OOXML file with Instructions + 4/8/16 Week sheets and native
+// tables (from bin/add_excel_program_tables.py). Serves as source of truth for
+// "Download template" in the app. Regenerate when FINAL changes.
+export const PROGRAM_TEMPLATE_DOWNLOAD_FILENAME = '115wl_program_template_ExcelTables.xlsx'
+
+const _templateDownloadUrl = () => {
+  const base = import.meta.env.BASE_URL || '/'
+  const path = base.endsWith('/')
+    ? `${base}${PROGRAM_TEMPLATE_DOWNLOAD_FILENAME}`
+    : `${base}/${PROGRAM_TEMPLATE_DOWNLOAD_FILENAME}`
+  if (typeof window === 'undefined' || !window.location?.origin) {
+    return path
+  }
+  return new URL(path, window.location.origin).href
+}
+
 const COLUMN_META = [
   { key: 'week', label: 'Week', width: 6, hint: 'Week number in the block (1, 2, 3 ...). Leave blank for a single-week program.' },
   { key: 'day', label: 'Day', width: 12, hint: 'Monday, Tuesday, Day 1, etc. Rows with the same day are grouped together.' },
@@ -174,6 +190,8 @@ const buildInstructionsSheet = () => {
   return worksheet
 }
 
+// Used by unit tests and for quick dev-only fallbacks. Production download uses
+// the pre-built xlsx in /public (see downloadTemplateXlsx).
 export const buildTemplateWorkbook = () => {
   const workbook = XLSXStyle.utils.book_new()
   XLSXStyle.utils.book_append_sheet(workbook, buildInstructionsSheet(), INSTRUCTIONS_SHEET)
@@ -181,10 +199,31 @@ export const buildTemplateWorkbook = () => {
   return workbook
 }
 
-export const downloadTemplateXlsx = (filename) => {
-  const workbook = buildTemplateWorkbook()
-  const fallbackName = `115wl_program_template_${new Date().toISOString().split('T')[0]}.xlsx`
-  XLSXStyle.writeFile(workbook, filename || fallbackName)
+/**
+ * Download the canonical Excel template (Vite public asset), not a JS-generated stub.
+ * @param {string} [filename] Suggested file name; defaults to PROGRAM_TEMPLATE_DOWNLOAD_FILENAME
+ * @returns {Promise<void>}
+ */
+export const downloadTemplateXlsx = async (filename) => {
+  const name = filename || PROGRAM_TEMPLATE_DOWNLOAD_FILENAME
+  const url = _templateDownloadUrl()
+  const res = await fetch(url, { cache: 'no-store' })
+  if (!res.ok) {
+    throw new Error(
+      `Template file is missing or could not be loaded (${res.status}). ` +
+        'If you are in dev, run the OOXML build so public/ has the .xlsx asset.',
+    )
+  }
+  const blob = await res.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = objectUrl
+  a.download = name
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(objectUrl)
 }
 
 // Parses an uploaded File (xlsx/xls/csv/ods) into our program_data shape.

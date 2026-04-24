@@ -364,9 +364,14 @@ const CoachDashboard = () => {
     setProgramData((current) => ({ ...current, days: swap(current.days, dayIndex, dayIndex + delta) }))
   }
 
-  const handleDownloadTemplate = () => {
-    downloadTemplateXlsx()
-    setSaveMessage('Template downloaded. Fill it in and re-upload to autofill a new program.')
+  const handleDownloadTemplate = async () => {
+    try {
+      await downloadTemplateXlsx()
+      setSaveMessage('Template downloaded. Fill it in and re-upload to autofill a new program.')
+    } catch (e) {
+      console.error('Template download failed:', e)
+      setSaveMessage(e?.message || 'Template download failed.')
+    }
     setTimeout(() => setSaveMessage(''), 4000)
   }
 

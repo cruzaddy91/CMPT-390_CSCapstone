@@ -6,6 +6,10 @@ drops parts (e.g. sharedStrings, webExtensions) and can produce files Mac Excel
 refuses to open.
 
 Read-only: source FINAL .xlsx. Write-only: dest path.
+
+Typical app asset (after template changes, commit the output):
+
+  115-weightlifting/src/frontend/public/115wl_program_template_ExcelTables.xlsx
 """
 from __future__ import annotations
 
