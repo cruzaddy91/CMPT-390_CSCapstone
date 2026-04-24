@@ -15,7 +15,7 @@ Run in order before every push:
 
 ```bash
 ./bin/zw smoke-all   # API smoke, settings smoke, vitest + production build
-./bin/zw test        # Django checks, migration drift check, app tests, frontend build
+./bin/zw test        # Django checks, migration drift check, app tests, Vitest, frontend build
 ```
 
 Then commit and push from the repo root (`git status`, `git add`, `git commit`, `git push`).

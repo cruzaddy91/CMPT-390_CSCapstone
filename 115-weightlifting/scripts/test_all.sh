@@ -21,8 +21,11 @@ backend_manage test \
   apps.athletes.tests \
   apps.analytics.tests
 
+echo "Running frontend unit tests (Vitest)..."
+frontend_npm test
+
 echo "Building frontend..."
 frontend_npm run build
 
-log_event "test" "success" "test_all.sh" '{"backend_checks":"passed","frontend_build":"passed"}'
+log_event "test" "success" "test_all.sh" '{"backend_checks":"passed","vitest":"passed","frontend_build":"passed"}'
 "$ROOT_DIR/scripts/report.sh" >/dev/null
