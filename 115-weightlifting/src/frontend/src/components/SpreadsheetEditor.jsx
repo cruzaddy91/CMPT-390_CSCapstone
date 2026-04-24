@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BLOCK_PRESETS } from '../utils/blockLength'
 import { PROGRAM_TEMPLATE_WEB_SPREADSHEET_PALETTE } from '../utils/programTemplate'
 
@@ -30,6 +30,12 @@ const columnsForMode = (mode) => {
 }
 
 const EMPTY_ROW_PAD = 3 // always render this many blank rows at the bottom for quick entry
+const BLANK_ROW = {
+  week: '', day: '', name: '', sets: '', reps: '',
+  percent_1rm: '', rpe: '', weight: '', tempo: '', rest: '', notes: '',
+}
+const DAY_OPTIONS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+const DAY_ORDER = new Map(DAY_OPTIONS.map((day, idx) => [day.toLowerCase(), idx]))
 
 const programDataToRows = (programData) => {
   if (!programData?.days) return []
@@ -95,9 +101,15 @@ const rowsToProgramData = (rows, weekStartDate) => {
       week: String(row.week ?? '').trim(),
     })
   })
+  const sortedDayOrder = [...dayOrder].sort((a, b) => {
+    const ai = DAY_ORDER.has(a.toLowerCase()) ? DAY_ORDER.get(a.toLowerCase()) : Number.POSITIVE_INFINITY
+    const bi = DAY_ORDER.has(b.toLowerCase()) ? DAY_ORDER.get(b.toLowerCase()) : Number.POSITIVE_INFINITY
+    if (ai !== bi) return ai - bi
+    return dayOrder.indexOf(a) - dayOrder.indexOf(b)
+  })
   return {
     week_start_date: weekStartDate || new Date().toISOString().split('T')[0],
-    days: dayOrder.map((day) => ({ day, exercises: grouped.get(day) || [] })),
+    days: sortedDayOrder.map((day) => ({ day, exercises: grouped.get(day) || [] })),
   }
 }
 
@@ -111,6 +123,7 @@ const SpreadsheetEditor = ({
   const weekStartDate = programData?.week_start_date
   const baseRows = useMemo(() => programDataToRows(programData), [programData])
   const columns = useMemo(() => columnsForMode(intensityMode), [intensityMode])
+  const [draftRows, setDraftRows] = useState({})
   const paletteVars = useMemo(
     () => ({
       '--st-header-bg': PROGRAM_TEMPLATE_WEB_SPREADSHEET_PALETTE.headerBackground,
@@ -126,21 +139,58 @@ const SpreadsheetEditor = ({
   const displayRows = useMemo(() => {
     const padded = [...baseRows]
     for (let i = 0; i < EMPTY_ROW_PAD; i += 1) {
-      padded.push({
-        week: '', day: '', name: '', sets: '', reps: '',
-        percent_1rm: '', rpe: '', weight: '', tempo: '', rest: '', notes: '',
-      })
+      padded.push({ ...BLANK_ROW })
+    }
+    for (const [indexText, draft] of Object.entries(draftRows)) {
+      const index = Number(indexText)
+      if (Number.isNaN(index)) continue
+      while (padded.length <= index) padded.push({ ...BLANK_ROW })
+      padded[index] = { ...padded[index], ...draft }
     }
     return padded
-  }, [baseRows])
+  }, [baseRows, draftRows])
+
+  useEffect(() => {
+    setDraftRows((current) => {
+      const next = {}
+      let changed = false
+      for (const [indexText, draft] of Object.entries(current)) {
+        const index = Number(indexText)
+        if (Number.isNaN(index)) {
+          changed = true
+          continue
+        }
+        next[indexText] = draft
+      }
+      return changed ? next : current
+    })
+  }, [baseRows.length])
 
   const tableRef = useRef(null)
 
   const handleCellChange = (rowIndex, columnKey, value) => {
-    const next = displayRows.map((row, i) =>
-      i === rowIndex ? { ...row, [columnKey]: value } : row
-    )
-    onChange(rowsToProgramData(next, weekStartDate))
+    setDraftRows((current) => ({
+      ...current,
+      [rowIndex]: { ...displayRows[rowIndex], [columnKey]: value },
+    }))
+  }
+
+  const handleCellBlur = (rowIndex) => {
+    const draftRow = draftRows[rowIndex] || displayRows[rowIndex]
+    if (!draftRow) return
+    const serialRows = displayRows.map((row, idx) => {
+      const r = idx === rowIndex ? { ...row, ...draftRow } : row
+      if (idx < baseRows.length) return r
+      const hasDay = String(r.day || '').trim().length > 0
+      const hasExerciseName = String(r.name || '').trim().length > 0
+      return hasDay && hasExerciseName ? r : { ...BLANK_ROW }
+    })
+    onChange(rowsToProgramData(serialRows, weekStartDate))
+    setDraftRows((current) => {
+      const next = { ...current }
+      delete next[rowIndex]
+      return next
+    })
   }
 
   // Arrow/enter navigation to move between cells like Excel.
@@ -163,7 +213,7 @@ const SpreadsheetEditor = ({
         targetRow += 1
       }
     }
-    const inputs = tableRef.current?.querySelectorAll('input[data-cell]')
+    const inputs = tableRef.current?.querySelectorAll('[data-cell]')
     if (!inputs) return
     const targetIndex = targetRow * columns.length + targetCol
     const nextInput = inputs[targetIndex]
@@ -234,14 +284,30 @@ const SpreadsheetEditor = ({
                 >
                   {columns.map((col, columnIndex) => (
                     <td key={col.key} className={col.key === 'day' && isDayRepeat ? 'is-day-repeat' : ''}>
-                      <input
-                        data-cell
-                        type="text"
-                        value={row[col.key] ?? ''}
-                        onChange={(event) => handleCellChange(rowIndex, col.key, event.target.value)}
-                        onKeyDown={(event) => handleKeyDown(event, rowIndex, columnIndex)}
-                        placeholder={col.key === 'day' && rowIndex >= baseRows.length ? 'Monday' : ''}
-                      />
+                      {col.key === 'day' ? (
+                        <select
+                          data-cell
+                          value={row.day ?? ''}
+                          onChange={(event) => handleCellChange(rowIndex, 'day', event.target.value)}
+                          onBlur={() => handleCellBlur(rowIndex)}
+                          onKeyDown={(event) => handleKeyDown(event, rowIndex, columnIndex)}
+                          aria-label={`Day row ${rowIndex + 1}`}
+                        >
+                          <option value="">Select day</option>
+                          {DAY_OPTIONS.map((dayOption) => (
+                            <option key={dayOption} value={dayOption}>{dayOption}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          data-cell
+                          type="text"
+                          value={row[col.key] ?? ''}
+                          onChange={(event) => handleCellChange(rowIndex, col.key, event.target.value)}
+                          onBlur={() => handleCellBlur(rowIndex)}
+                          onKeyDown={(event) => handleKeyDown(event, rowIndex, columnIndex)}
+                        />
+                      )}
                     </td>
                   ))}
                 </tr>

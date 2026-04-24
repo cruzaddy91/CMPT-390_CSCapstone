@@ -2597,12 +2597,27 @@
   outline: none;
 }
 
-.spreadsheet-editor-table input:focus {
+.spreadsheet-editor-table select {
+  width: 100%;
+  min-height: 34px;
+  padding: 0.4rem 0.45rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.spreadsheet-editor-table input:focus,
+.spreadsheet-editor-table select:focus {
   background: rgba(95, 228, 255, 0.06);
   box-shadow: inset 0 0 0 2px var(--neon-cyan);
 }
 
-.spreadsheet-editor-table tr:hover input {
+.spreadsheet-editor-table tr:hover input,
+.spreadsheet-editor-table tr:hover select {
   background: rgba(95, 228, 255, 0.02);
 }
 
@@ -2615,7 +2630,8 @@
 }
 
 .spreadsheet-editor-table tr.is-day-start > td:first-child,
-.spreadsheet-editor-table tr.is-day-start > td:nth-child(2) input {
+.spreadsheet-editor-table tr.is-day-start > td:nth-child(2) input,
+.spreadsheet-editor-table tr.is-day-start > td:nth-child(2) select {
   /* Day column on the day-start row reads as the group header. */
   color: var(--neon-cyan);
   font-weight: 700;
