@@ -24,6 +24,8 @@ import { relativeTimeSince } from '../utils/relativeTime'
 import { athleteProfileSuffix } from '../utils/athleteMeta'
 import { getCurrentUser } from '../utils/auth'
 import { programTitleForDisplay } from '../utils/safeDisplay'
+import { propagateExerciseNamesAcrossWeeks } from '../utils/programPropagation'
+import { buildRestDayExercises } from '../utils/restTemplate'
 import AthleteTrainingTrendCharts from '../components/AthleteTrainingTrendCharts'
 import CoachRosterAggregateCharts from '../components/CoachRosterAggregateCharts'
 
@@ -356,6 +358,22 @@ const CoachDashboard = () => {
   const handleBlockCustom = () => {
     setFormData((current) => ({ ...current, end_date: '' }))
   }
+  const handleAddCustomWeek = () => {
+    setCustomWeekCount((current) => current + 1)
+  }
+  const handleRemoveCustomWeek = () => {
+    setCustomWeekCount((current) => {
+      const nextWeekCount = Math.max(1, current - 1)
+      setProgramData((programCurrent) => ({
+        ...programCurrent,
+        days: (programCurrent.days || []).map((day) => ({
+          ...day,
+          exercises: (day.exercises || []).filter((exercise) => _weekOf(exercise) <= nextWeekCount),
+        })),
+      }))
+      return nextWeekCount
+    })
+  }
 
   // Program-data mutations (day-level)
   const handleDayChange = (dayIndex, nextDayName) => {
@@ -432,7 +450,7 @@ const CoachDashboard = () => {
 
   const handleResetToBlankTemplate = () => {
     const ok = typeof window === 'undefined' || window.confirm(
-      'Start from a blank 7-day template? This clears all current rows in the editor until you publish.',
+      'ATTENTION!\nReset to a blank 7-day template? This will clear all current rows in the editor until you publish.',
     )
     if (!ok) return
     setProgramData((current) => {
@@ -451,6 +469,32 @@ const CoachDashboard = () => {
     })
     setSaveMessage('Template reset: all day rows cleared in this editor.')
     setTimeout(() => setSaveMessage(''), 3500)
+  }
+  const handleApplyRestDay = (dayIndex) => {
+    setProgramData((current) => ({
+      ...current,
+      days: current.days.map((day, idx) => (
+        idx === dayIndex ? { ...day, exercises: buildRestDayExercises(editorWeekCount) } : day
+      )),
+    }))
+    setSaveMessage(`Marked ${programData.days?.[dayIndex]?.day || 'day'} as Rest across ${editorWeekCount} week(s).`)
+    setTimeout(() => setSaveMessage(''), 3200)
+  }
+
+  const handlePropagateExerciseNames = () => {
+    if (editorWeekCount <= 1) {
+      setSaveMessage('Add more than one week to use name propagation.')
+      setTimeout(() => setSaveMessage(''), 2800)
+      return
+    }
+    const next = propagateExerciseNamesAcrossWeeks(programData, {
+      sourceWeek: 1,
+      maxWeeks: editorWeekCount,
+      overwriteNames: true,
+    })
+    setProgramData(next)
+    setSaveMessage(`Copied Week 1 exercise names into Weeks 2-${editorWeekCount}. Prescriptions were left unchanged.`)
+    setTimeout(() => setSaveMessage(''), 3800)
   }
 
   const handleDownloadTemplate = async () => {
@@ -491,7 +535,7 @@ const CoachDashboard = () => {
 
   const handleSave = async () => {
     if (!formData.name || !formData.athlete_id) {
-      setSaveMessage('Program name and athlete selection are required.')
+      setSaveMessage('Enter Program Name and athlete selection are required.')
       return
     }
     const payload = {
@@ -611,9 +655,12 @@ const CoachDashboard = () => {
             onRemoveDay={handleRemoveDay}
             onDuplicateDay={handleDuplicateDay}
             onMoveDay={handleMoveDay}
-            onAddCustomWeek={() => setCustomWeekCount((current) => current + 1)}
+            onApplyRestDay={handleApplyRestDay}
+            onAddCustomWeek={handleAddCustomWeek}
+            onRemoveCustomWeek={handleRemoveCustomWeek}
             onSelectCardWeek={setActiveCardWeek}
             onResetToBlankTemplate={handleResetToBlankTemplate}
+            onPropagateExerciseNames={handlePropagateExerciseNames}
             onDownloadTemplate={handleDownloadTemplate}
             onUploadClick={handleTemplateUploadClick}
             onUploadChosen={handleTemplateFileChosen}
@@ -914,13 +961,15 @@ const EditorView = ({
   fileInputRef, draftBadge,
   importSheetChoice, onImportSheetChoiceChange,
   onBack, onFormChange, onBlockPreset, onBlockCustom, onAthleteSearch, onDayChange, onExercisesChange,
-  onAddDay, onRemoveDay, onDuplicateDay, onMoveDay,
-  onAddCustomWeek,
+  onAddDay, onRemoveDay, onDuplicateDay, onMoveDay, onApplyRestDay,
+  onAddCustomWeek, onRemoveCustomWeek,
   onSelectCardWeek,
   onResetToBlankTemplate,
+  onPropagateExerciseNames,
   onDownloadTemplate, onUploadClick, onUploadChosen,
   onToggleEditorMode, onIntensityModeChange, onProgramDataChange, onPreview, onSave,
 }) => {
+  const [propagateNamesChecked, setPropagateNamesChecked] = useState(false)
   const dayCount = programData.days.length
   const coachPrChartsIntro = !formData.athlete_id
     ? ''
@@ -950,36 +999,40 @@ const EditorView = ({
             style={{ display: 'none' }}
             aria-hidden="true"
           />
-          <button type="button" className="tool-btn" onClick={onDownloadTemplate} title="Download the .xlsx template to fill in your program offline">
-            <span className="tool-btn-icon">⬇</span>
-            <span className="tool-btn-label">Download Template</span>
-          </button>
-          <button type="button" className="tool-btn" onClick={onUploadClick} title="Upload a filled-in .xlsx to autofill this program">
-            <span className="tool-btn-icon">⬆</span>
-            <span className="tool-btn-label">Upload Program</span>
-          </button>
-          <label className="import-sheet-control" title="Auto uses the 4 Week tab when this template has it. Pick 8 Week or 16 Week if you only filled that tab; side-by-side blocks on one tab are merged into one program.">
-            <span className="import-sheet-control-label">Import tab</span>
-            <select
-              className="form-input import-sheet-select"
-              value={importSheetChoice}
-              onChange={(e) => onImportSheetChoiceChange(e.target.value)}
-            >
-              <option value="auto">Auto (4 Week tab when present)</option>
-              {PROGRAM_TEMPLATE_BLOCK_SHEETS.map((name) => (
-                <option key={name} value={name}>{name}</option>
-              ))}
-            </select>
-          </label>
-          <button type="button" className="tool-btn" onClick={onToggleEditorMode}
-                  title={editorMode === 'form' ? 'Switch to spreadsheet view (Excel-like grid)' : 'Switch to card view (day-by-day cards)'}>
-            <span className="tool-btn-icon">{editorMode === 'form' ? '⊞' : '☰'}</span>
-            <span className="tool-btn-label">{editorMode === 'form' ? 'Spreadsheet View' : 'Card View'}</span>
-          </button>
-          <button type="button" className="tool-btn" onClick={onPreview}
-                  title="See this program from the athlete's perspective">
-            <span className="tool-btn-label">Preview as Athlete</span>
-          </button>
+          <div className="editor-tool-row editor-tool-row-primary">
+            <button type="button" className="tool-btn" onClick={onDownloadTemplate} title="Download the .xlsx template to fill in your program offline">
+              <span className="tool-btn-icon">⬇</span>
+              <span className="tool-btn-label">Download Template</span>
+            </button>
+            <button type="button" className="tool-btn" onClick={onUploadClick} title="Upload a filled-in .xlsx to autofill this program">
+              <span className="tool-btn-icon">⬆</span>
+              <span className="tool-btn-label">Upload Program</span>
+            </button>
+            <label className="import-sheet-control" title="Auto uses the 4 Week tab when this template has it. Pick 8 Week or 16 Week if you only filled that tab; side-by-side blocks on one tab are merged into one program.">
+              <span className="import-sheet-control-label">Import worksheet</span>
+              <select
+                className="form-input import-sheet-select"
+                value={importSheetChoice}
+                onChange={(e) => onImportSheetChoiceChange(e.target.value)}
+              >
+                <option value="auto">Auto (4 Week tab when present)</option>
+                {PROGRAM_TEMPLATE_BLOCK_SHEETS.map((name) => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="editor-tool-row editor-tool-row-secondary">
+            <button type="button" className="tool-btn" onClick={onToggleEditorMode}
+                    title={editorMode === 'form' ? 'Switch to spreadsheet view (Excel-like grid)' : 'Switch to card view (day-by-day cards)'}>
+              <span className="tool-btn-icon">{editorMode === 'form' ? '⊞' : '☰'}</span>
+              <span className="tool-btn-label">{editorMode === 'form' ? 'Spreadsheet View' : 'Card View'}</span>
+            </button>
+            <button type="button" className="tool-btn" onClick={onPreview}
+                    title="See this program from the athlete's perspective">
+              <span className="tool-btn-label">Preview as Athlete</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -991,11 +1044,11 @@ const EditorView = ({
         <div className="editor-title-block">
           <input
             type="text"
-            placeholder="Program name"
+            placeholder="Enter Program Name"
             value={formData.name}
             onChange={(event) => onFormChange('name', event.target.value)}
             className="editor-title-input"
-            aria-label="Program name"
+            aria-label="Enter Program Name"
           />
           <AssignedAthleteBadge username={assignedAthleteUsername} profileSuffix={assignedAthleteProfileSuffix} />
         </div>
@@ -1146,13 +1199,43 @@ const EditorView = ({
 
       <div className="section-title-row">
         <h3>Weekly structure</h3>
-        <div className="editor-structure-actions">
-          {editorMode === 'form' && (
-            <button type="button" className="text-btn" onClick={onAddDay}>+ Add day</button>
-          )}
-          <button type="button" className="text-btn" onClick={onResetToBlankTemplate}>
-            Reset blank template
-          </button>
+        <div className="editor-structure-actions editor-structure-actions-stack">
+          <div className="editor-structure-actions-row">
+            {editorMode === 'form' && (
+              <button type="button" className="text-btn" onClick={onAddDay}>+ Add day</button>
+            )}
+            <button type="button" className="text-btn reset-template-btn" onClick={onResetToBlankTemplate}>
+              Reset blank template
+            </button>
+          </div>
+          <label className="editor-propagate-toggle">
+            <input
+              type="checkbox"
+              checked={propagateNamesChecked}
+              onChange={(event) => {
+                const checked = event.target.checked
+                setPropagateNamesChecked(checked)
+                if (checked) onPropagateExerciseNames()
+              }}
+            />
+            <span>Repeat Week 1 exercise names across weeks</span>
+            <span
+              className="editor-propagate-help"
+              tabIndex={0}
+              aria-label="Propagation help"
+              role="button"
+              aria-describedby="propagation-help-tooltip"
+            >
+              ?
+              <span id="propagation-help-tooltip" role="tooltip" className="editor-propagate-tooltip">
+                <strong className="editor-propagate-tooltip-lead">Copies only exercise names.</strong>
+                {' '}
+                Uses <span className="editor-propagate-tooltip-key">Week 1</span> as the source and repeats names across each day for the other weeks.
+                {' '}
+                <span className="editor-propagate-tooltip-key">Sets, reps, percent/RPE/weight, tempo, rest, and notes</span> are left unchanged.
+              </span>
+            </span>
+          </label>
         </div>
       </div>
 
@@ -1162,10 +1245,23 @@ const EditorView = ({
           onChange={onProgramDataChange}
           intensityMode={intensityMode}
           blockPresetKey={currentBlockKey}
+          weekCount={editorWeekCount}
+          onAddCustomWeek={onAddCustomWeek}
+          onRemoveCustomWeek={onRemoveCustomWeek}
           onBlockPresetSelect={onBlockPreset}
+          onBlockCustomSelect={onBlockCustom}
         />
       ) : (
         <>
+          {currentBlockKey === 'custom' && (
+            <div className="coach-week-controls" aria-label="Custom week controls">
+              <span className="coach-week-counter">
+                Week count: <strong>{editorWeekCount}</strong>
+              </span>
+              <button type="button" className="text-btn" onClick={onAddCustomWeek}>+ Add week</button>
+              <button type="button" className="text-btn" onClick={onRemoveCustomWeek} disabled={editorWeekCount <= 1}>− Remove week</button>
+            </div>
+          )}
           <div className="coach-week-tabs" role="tablist" aria-label="Program week tabs">
             {Array.from({ length: editorWeekCount }).map((_, idx) => {
               const week = idx + 1
@@ -1183,11 +1279,6 @@ const EditorView = ({
               )
             })}
           </div>
-          {currentBlockKey === 'custom' && (
-            <div className="coach-week-tabs-actions">
-              <button type="button" className="text-btn" onClick={onAddCustomWeek}>+ Add week</button>
-            </div>
-          )}
           <div className="day-stack">
           {programData.days.map((day, dayIndex) => (
             <WorkoutDay
@@ -1208,6 +1299,7 @@ const EditorView = ({
               onDuplicateDay={() => onDuplicateDay(dayIndex)}
               onMoveDayUp={() => onMoveDay(dayIndex, -1)}
               onMoveDayDown={() => onMoveDay(dayIndex, 1)}
+              onApplyRestDay={() => onApplyRestDay(dayIndex)}
               canRemoveDay={programData.days.length > 1}
               isCoach
             />

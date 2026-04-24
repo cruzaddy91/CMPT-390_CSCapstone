@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
@@ -19,6 +21,93 @@ def _plain_text_no_markup(value, field_label):
             f'{field_label} cannot contain "<" or ">".'
         )
     return text
+
+
+def canonical_program_name(value):
+    text = str(value or '').strip().lower()
+    text = re.sub(r'[^a-z0-9]+', ' ', text)
+    return re.sub(r'\s+', ' ', text).strip()
+
+
+def derive_program_style_tags(program_data):
+    tags = set()
+    days = program_data.get('days') if isinstance(program_data, dict) else []
+    if not isinstance(days, list):
+        return []
+
+    intensity_mode = str(program_data.get('intensity_mode') or '').strip()
+    if intensity_mode in ('percent_1rm', 'rpe', 'weight'):
+        tags.add(f'intensity_mode:{intensity_mode}')
+
+    max_week = 1
+    total_volume = 0
+    lift_rows = 0
+    pct_sum = 0.0
+    pct_rows = 0
+    low_rep_rows = 0
+    olympic_hits = 0
+    strength_hits = 0
+    conditioning_hits = 0
+
+    for day in days:
+        exercises = day.get('exercises') if isinstance(day, dict) else []
+        if not isinstance(exercises, list):
+            continue
+        for exercise in exercises:
+            if not isinstance(exercise, dict):
+                continue
+            raw_week = str(exercise.get('week') or '').strip()
+            try:
+                if raw_week:
+                    max_week = max(max_week, int(raw_week))
+            except ValueError:
+                pass
+
+            name = str(exercise.get('name') or '').lower()
+            if any(k in name for k in ('snatch', 'clean', 'jerk')):
+                olympic_hits += 1
+            if any(k in name for k in ('squat', 'deadlift', 'press', 'pull')):
+                strength_hits += 1
+            if any(k in name for k in ('run', 'row', 'bike', 'burpee', 'conditioning', 'emom', 'amrap')):
+                conditioning_hits += 1
+
+            sets = str(exercise.get('sets') or '').strip()
+            reps = str(exercise.get('reps') or '').strip()
+            try:
+                sets_n = float(sets)
+                reps_n = float(reps.split('+')[0]) if '+' in reps else float(reps)
+                total_volume += sets_n * reps_n
+                lift_rows += 1
+                if reps_n <= 2:
+                    low_rep_rows += 1
+            except ValueError:
+                pass
+
+            pct = str(exercise.get('percent_1rm') or '').strip().replace('%', '')
+            try:
+                pct_sum += float(pct)
+                pct_rows += 1
+            except ValueError:
+                pass
+
+    tags.add(f'block:{max_week}wk')
+    if olympic_hits > 0:
+        tags.add('style:olympic')
+    if strength_hits > 0:
+        tags.add('style:strength')
+    if conditioning_hits > 0:
+        tags.add('style:conditioning')
+    if lift_rows > 0:
+        avg_volume = total_volume / lift_rows
+        if avg_volume >= 20:
+            tags.add('volume:high')
+        elif avg_volume <= 8:
+            tags.add('volume:low')
+    if pct_rows > 0 and (pct_sum / pct_rows) >= 85 and low_rep_rows >= max(1, lift_rows // 3):
+        tags.add('phase:peak')
+    elif low_rep_rows >= max(1, lift_rows // 3):
+        tags.add('phase:taper')
+    return sorted(tags)
 
 
 def normalize_program_data(value):
@@ -117,6 +206,8 @@ class TrainingProgramSerializer(serializers.ModelSerializer):
         fields = [
             'id',
             'name',
+            'normalized_name',
+            'style_tags',
             'description',
             'start_date',
             'end_date',
@@ -194,6 +285,10 @@ class ProgramCreateSerializer(serializers.ModelSerializer):
         athlete_id = validated_data.pop('athlete_id')
         athlete = User.objects.get(id=athlete_id, user_type='athlete')
         coach = self.context['request'].user
+        name = validated_data.get('name', '')
+        program_data = validated_data.get('program_data', default_program_data())
+        validated_data['normalized_name'] = canonical_program_name(name)
+        validated_data['style_tags'] = derive_program_style_tags(program_data)
         program = TrainingProgram.objects.create(coach=coach, athlete=athlete, **validated_data)
         User.objects.filter(pk=athlete.id, user_type='athlete').update(primary_coach_id=coach.id)
         return program
@@ -239,6 +334,9 @@ class ProgramUpdateSerializer(serializers.ModelSerializer):
 
         for field, value in validated_data.items():
             setattr(instance, field, value)
+
+        instance.normalized_name = canonical_program_name(instance.name)
+        instance.style_tags = derive_program_style_tags(instance.program_data or default_program_data())
 
         instance.save()
         if athlete_id is not None:

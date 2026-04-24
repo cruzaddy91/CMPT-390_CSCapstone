@@ -197,6 +197,9 @@ CSRF_TRUSTED_ORIGINS = parse_csv_env(
 
 CORS_ALLOW_CREDENTIALS = True
 
+HEAD_RECOMMENDER_MODE = os.getenv('HEAD_RECOMMENDER_MODE', 'rule').strip().lower()
+HEAD_RECOMMENDER_ARTIFACT_DIR = os.getenv('HEAD_RECOMMENDER_ARTIFACT_DIR', '')
+
 # --- Production TLS / proxy hardening -----------------------------------
 # When DEBUG=False we assume the app sits behind a TLS-terminating proxy
 # (Caddy, nginx, a load balancer) that sets X-Forwarded-Proto. Without this

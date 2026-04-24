@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BLOCK_PRESETS } from '../utils/blockLength'
 import { PROGRAM_TEMPLATE_WEB_SPREADSHEET_PALETTE } from '../utils/programTemplate'
+import { createRestExercise } from '../utils/restTemplate'
 
 // Columns match the xlsx template schema 1:1 so what coaches see here is what
 // they'd see in Excel. Each row = one exercise on one day.
@@ -51,6 +52,14 @@ const PLACEHOLDER_BY_COL = {
 const _weekSortValue = (value) => {
   const n = Number.parseInt(String(value || '').trim(), 10)
   return Number.isFinite(n) && n > 0 ? n : Number.POSITIVE_INFINITY
+}
+const _maxWeekInRows = (rows) => {
+  let max = 1
+  for (const row of (rows || [])) {
+    const n = Number.parseInt(String(row?.week ?? '').trim(), 10)
+    if (Number.isFinite(n) && n > max) max = n
+  }
+  return max
 }
 
 const programDataToRowsForDay = (programData, activeDay) => {
@@ -116,11 +125,25 @@ const SpreadsheetEditor = ({
   onChange,
   intensityMode = 'percent_1rm',
   blockPresetKey = 'custom',
+  weekCount,
+  onAddCustomWeek,
+  onRemoveCustomWeek,
   onBlockPresetSelect,
+  onBlockCustomSelect,
 }) => {
   const weekStartDate = programData?.week_start_date
   const [activeDay, setActiveDay] = useState('Monday')
-  const blockWeeks = useMemo(() => BLOCK_WEEKS_BY_KEY[blockPresetKey] || 4, [blockPresetKey])
+  const parsedWeekCount = Number.parseInt(String(weekCount ?? ''), 10)
+  const explicitWeekCount = Number.isFinite(parsedWeekCount) && parsedWeekCount > 0 ? parsedWeekCount : null
+  const blockWeeks = useMemo(
+    () => {
+      // Presets always keep their fixed week size (4/8/16). Custom defaults to
+      // 4 only when no explicit count exists; once explicit, honor 1..n exactly.
+      if (blockPresetKey === 'custom') return explicitWeekCount || 4
+      return Math.max(BLOCK_WEEKS_BY_KEY[blockPresetKey] || 4, explicitWeekCount || 0, 4)
+    },
+    [blockPresetKey, explicitWeekCount],
+  )
   const baseRows = useMemo(() => programDataToRowsForDay(programData, activeDay), [programData, activeDay])
   const columns = useMemo(() => columnsForMode(intensityMode), [intensityMode])
   const [draftRows, setDraftRows] = useState({})
@@ -232,6 +255,21 @@ const SpreadsheetEditor = ({
   const handleCellBlur = () => {
     // Explicit-commit UX: blur never commits. Enter commits the row.
   }
+  const applyRestDay = () => {
+    const targetWeeks = Math.max(blockWeeks, _maxWeekInRows(baseRows))
+    const rowsPerWeek = MIN_ROWS_PER_WEEK
+    const totalRows = targetWeeks * rowsPerWeek
+    const restRows = Array.from({ length: totalRows }).map((_, idx) => {
+      const week = Math.floor(idx / rowsPerWeek) + 1
+      return {
+        ...BLANK_ROW,
+        ...createRestExercise(week),
+        day: activeDay,
+      }
+    })
+    onChange(rowsToProgramDataForDay(programData, activeDay, restRows, weekStartDate))
+    setDraftRows({})
+  }
 
   // Arrow/enter navigation to move between cells like Excel.
   const handleKeyDown = (event, rowIndex, columnIndex) => {
@@ -287,13 +325,34 @@ const SpreadsheetEditor = ({
                 {preset.label}
               </button>
             ))}
-            <span
+            <button
+              type="button"
+              role="radio"
+              aria-checked={blockPresetKey === 'custom'}
               className={`block-length-chip block-length-chip-custom ${blockPresetKey === 'custom' ? 'is-active' : ''}`}
-              aria-disabled="true"
+              onClick={() => onBlockCustomSelect?.()}
             >
               Custom
-            </span>
+            </button>
           </div>
+        </div>
+      )}
+      {blockPresetKey === 'custom' && (
+        <div className="spreadsheet-week-controls" aria-label="Custom week controls">
+          <span className="spreadsheet-week-counter">
+            Week count: <strong>{Math.max(1, Number(weekCount) || 1)}</strong>
+          </span>
+          <button type="button" className="text-btn" onClick={onAddCustomWeek}>
+            + Add week
+          </button>
+          <button
+            type="button"
+            className="text-btn"
+            onClick={onRemoveCustomWeek}
+            disabled={(Number(weekCount) || 1) <= 1}
+          >
+            − Remove week
+          </button>
         </div>
       )}
       <div className="spreadsheet-editor-instructions" role="note" aria-label="Spreadsheet row instructions">
@@ -324,6 +383,11 @@ const SpreadsheetEditor = ({
             <span className="spreadsheet-day-tab-count">{dayCounts[day] || 0}</span>
           </button>
         ))}
+      </div>
+      <div className="spreadsheet-day-actions">
+        <button type="button" className="text-btn spreadsheet-rest-btn" onClick={applyRestDay}>
+          Set Rest Day
+        </button>
       </div>
       <div className="spreadsheet-editor-scroll">
         <table ref={tableRef} className="spreadsheet-editor-table">

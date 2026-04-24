@@ -550,6 +550,18 @@
   box-shadow: var(--shadow-md), 0 0 0 1px rgba(111, 227, 147, 0.72);
 }
 
+/* Reset template action mirrors publish emphasis, but destructive red. */
+.coach-dashboard .reset-template-btn {
+  background: linear-gradient(180deg, #4a1212, #220909);
+  border-color: rgba(255, 120, 120, 0.55);
+  color: #ffd9d9;
+}
+
+.coach-dashboard .reset-template-btn:hover:not(:disabled) {
+  border-color: #ff7b7b;
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(255, 123, 123, 0.7);
+}
+
 /* Athlete save button uses the primary cyan (violet retired). */
 .athlete-dashboard .save-btn {
   background: linear-gradient(180deg, #102a48, #081426);
@@ -719,8 +731,8 @@
 .section-title-row {
   justify-content: space-between;
   align-items: baseline;
-  margin-top: 0.25rem;
-  padding-bottom: 0.45rem;
+  margin-top: 0.4rem;
+  padding: 0.1rem 0.05rem 0.5rem;
   position: relative;
 }
 
@@ -728,6 +740,101 @@
   display: flex;
   align-items: center;
   gap: 0.55rem;
+}
+
+.editor-structure-actions-stack {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+}
+
+.editor-structure-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.editor-propagate-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.editor-propagate-toggle input[type='checkbox'] {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.editor-propagate-help {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  cursor: help;
+  user-select: none;
+}
+
+.editor-propagate-help:focus-visible {
+  outline: 1px solid var(--line-strong);
+  outline-offset: 2px;
+}
+
+.editor-propagate-tooltip {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.45rem);
+  left: auto;
+  transform: none;
+  width: min(22rem, 78vw);
+  padding: 0.45rem 0.6rem;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--line-strong);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 8;
+}
+
+.editor-propagate-tooltip-lead {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.editor-propagate-tooltip-key {
+  color: rgba(145, 214, 255, 0.92);
+  font-weight: 600;
+}
+
+.editor-propagate-tooltip::after {
+  content: '';
+  position: absolute;
+  right: 0.45rem;
+  top: 100%;
+  width: 0.5rem;
+  height: 0.5rem;
+  transform: rotate(45deg);
+  background: var(--bg-panel);
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.editor-propagate-help:hover .editor-propagate-tooltip,
+.editor-propagate-help:focus-visible .editor-propagate-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 .editor-publish-footer {
@@ -743,7 +850,27 @@
   right: 0;
   bottom: 0;
   height: 1px;
-  background: linear-gradient(90deg, var(--line-strong), transparent);
+  background: linear-gradient(90deg, rgba(126, 174, 221, 0.58), rgba(126, 174, 221, 0.08) 68%, transparent);
+}
+
+.section-title-row h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0.26rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 170, 220, 0.28);
+  background: linear-gradient(90deg, rgba(88, 131, 180, 0.2), rgba(88, 131, 180, 0.06));
+  box-shadow: inset 0 1px 0 rgba(176, 214, 248, 0.12);
+}
+
+.section-title-row h3::before {
+  content: '';
+  width: 0.38rem;
+  height: 0.38rem;
+  border-radius: 50%;
+  background: rgba(150, 203, 255, 0.62);
+  box-shadow: 0 0 0 2px rgba(150, 203, 255, 0.14);
 }
 
 .section-title-row h3,
@@ -1215,37 +1342,75 @@
 
 .editor-tool-group {
   display: flex;
-  align-items: center;
-  gap: 0.35rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
   flex: 1;
-  justify-content: center;
-  flex-wrap: wrap;
+}
+
+.editor-tool-row {
+  display: grid;
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
+.editor-tool-row-primary {
+  grid-template-columns: repeat(3, minmax(12.5rem, 1fr));
+}
+
+.editor-tool-row-secondary {
+  grid-template-columns: repeat(2, minmax(12.5rem, 1fr));
 }
 
 .import-sheet-control {
   display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 46px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--bg-deep);
   font-size: 0.78rem;
   color: var(--text-secondary);
 }
 
 .import-sheet-control-label {
   white-space: nowrap;
+  font-size: 0.72rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
 }
 
 .import-sheet-select {
-  min-width: 10.5rem;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
   padding: 0.35rem 0.5rem;
   font-size: 0.78rem;
+  background: var(--bg-panel);
+  box-sizing: border-box;
+}
+
+.import-sheet-control:hover {
+  border-color: var(--line-strong);
+  background: var(--bg-panel-2);
 }
 
 .tool-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
   padding: 0.45rem 0.8rem;
-  min-height: 38px;
+  min-height: 46px;
+  width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--line);
   border-radius: var(--radius-xs);
   background: var(--bg-deep);
@@ -1696,6 +1861,28 @@
   gap: 0.5rem;
   flex-wrap: wrap;
   margin: 0.2rem 0 0.9rem;
+}
+
+.coach-week-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.1rem 0 0.55rem;
+}
+
+.coach-week-counter {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 0.22rem 0.6rem;
+  background: var(--bg-panel);
+}
+
+.coach-week-counter strong {
+  color: var(--neon-cyan);
+  font-weight: 700;
 }
 
 .coach-week-tabs-actions {
@@ -2352,6 +2539,21 @@
   margin-left: 0.35rem;
 }
 
+.day-destructive-actions {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.22rem;
+}
+
+.day-rest-btn {
+  font-size: 0.72rem;
+  padding: 0.18rem 0.5rem;
+  color: var(--neon-cyan);
+  border-color: rgba(95, 228, 255, 0.4);
+  background: linear-gradient(180deg, rgba(31, 97, 120, 0.3), rgba(16, 58, 76, 0.2));
+}
+
 .exercise-row-controls {
   display: flex;
   align-items: center;
@@ -2577,6 +2779,26 @@
   margin: 0.35rem 0 0.7rem;
 }
 
+.spreadsheet-day-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: -0.25rem 0 0.45rem;
+}
+
+.spreadsheet-rest-btn {
+  font-size: 0.74rem;
+  padding: 0.2rem 0.55rem;
+  color: var(--neon-cyan);
+  border-color: rgba(95, 228, 255, 0.4);
+  background: linear-gradient(180deg, rgba(31, 97, 120, 0.3), rgba(16, 58, 76, 0.2));
+}
+
+.day-rest-btn:hover:not(:disabled),
+.spreadsheet-rest-btn:hover:not(:disabled) {
+  border-color: var(--neon-cyan);
+  box-shadow: var(--shadow-md), 0 0 0 1px rgba(95, 228, 255, 0.36);
+}
+
 .spreadsheet-day-tab {
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
@@ -2620,6 +2842,28 @@
   align-items: center;
   gap: 0.65rem 1rem;
   margin-bottom: 0.85rem;
+}
+
+.spreadsheet-week-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: -0.1rem 0 0.55rem;
+}
+
+.spreadsheet-week-counter {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 0.22rem 0.6rem;
+  background: var(--bg-panel);
+}
+
+.spreadsheet-week-counter strong {
+  color: var(--neon-cyan);
+  font-weight: 700;
 }
 
 .spreadsheet-template-block-label {
@@ -2794,6 +3038,22 @@
   /* Subtle left guideline down each day-group so the eye tracks 'these three
      rows belong to Monday'. */
   box-shadow: inset 2px 0 0 rgba(95, 228, 255, 0.16);
+}
+
+/* Light-mode readability: keep cool palette but increase text contrast in
+   helper copy and placeholder-heavy spreadsheet rows. */
+:root[data-theme="light"] .section-subtitle,
+:root[data-theme="light"] .spreadsheet-editor-hint,
+:root[data-theme="light"] .spreadsheet-editor-instructions {
+  color: #415872;
+}
+
+:root[data-theme="light"] .spreadsheet-editor-table tbody tr.is-pad-row input {
+  color: #5a7088;
+}
+
+:root[data-theme="light"] .spreadsheet-editor-table input::placeholder {
+  color: #6a8198;
 }
 
 /* --------------------------------------------------------------------------
@@ -2989,8 +3249,24 @@
   }
 
   .editor-tool-group {
+    align-items: stretch;
+  }
+
+  .editor-tool-row,
+  .editor-tool-row-primary,
+  .editor-tool-row-secondary {
+    display: flex;
     flex-wrap: wrap;
     justify-content: flex-start;
+  }
+
+  .import-sheet-control {
+    width: 100%;
+  }
+
+  .import-sheet-select {
+    min-width: 0;
+    width: 100%;
   }
 
   .tool-btn {

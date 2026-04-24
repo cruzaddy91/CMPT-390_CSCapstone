@@ -1,8 +1,12 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
+from unittest.mock import patch
 
 from apps.accounts.weight_class import competitive_weight_class_label
+from apps.athletes.models import PersonalRecord, ProgramCompletion
+from apps.programs.models import TrainingProgram
 
 from .robi import (
     MEN_CATEGORIES,
@@ -174,3 +178,77 @@ class RobiEndpointTests(TestCase):
             'bodyweight_kg': 85, 'total_kg': 380, 'gender': 'M',
         }, format='json')
         self.assertEqual(resp.status_code, 401)
+
+
+class HeadRecommendationModeTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.head = User.objects.create_user(
+            username='head_mode',
+            password='longenoughpw1',
+            user_type='head_coach',
+        )
+        self.staff = User.objects.create_user(
+            username='line_mode',
+            password='longenoughpw1',
+            user_type='coach',
+            reports_to=self.head,
+        )
+        self.athlete = User.objects.create_user(
+            username='athlete_mode',
+            password='longenoughpw1',
+            user_type='athlete',
+            primary_coach=self.staff,
+            gender='F',
+            bodyweight_kg=59,
+        )
+        start = timezone.now().date()
+        for idx in range(4):
+            program = TrainingProgram.objects.create(
+                coach=self.staff,
+                athlete=self.athlete,
+                name=f'Cycle {idx}',
+                normalized_name=f'cycle {idx}',
+                style_tags=['style:strength'],
+                start_date=start,
+                end_date=start,
+                program_data={'days': [{'day': 'Monday', 'exercises': [{'sets': 4, 'reps': 3}]}]},
+            )
+            ProgramCompletion.objects.create(
+                program=program,
+                athlete=self.athlete,
+                completion_data={'entries': {'Monday': {'0': {'completed': idx % 2 == 0}}}},
+            )
+            PersonalRecord.objects.create(
+                athlete=self.athlete,
+                lift_type='total',
+                weight=100 + idx,
+                date=start,
+            )
+        self.client.force_authenticate(user=self.head)
+
+    def test_head_recommendations_include_strategy_metadata(self):
+        response = self.client.get('/api/analytics/head/recommendations/')
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn('strategy', payload)
+        self.assertIn('generated_at', payload)
+        self.assertIn('model_version', payload)
+        self.assertIn('fallback_reason', payload)
+
+    @patch('apps.analytics.views.load_latest_model_bundle')
+    @patch('apps.analytics.views.settings.HEAD_RECOMMENDER_MODE', 'model')
+    def test_model_mode_falls_back_when_artifact_missing(self, mocked_loader):
+        mocked_loader.return_value = None
+        response = self.client.get('/api/analytics/head/recommendations/')
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload['strategy'], 'rule')
+        self.assertTrue(payload['fallback_reason'])
+
+    def test_head_model_status_endpoint_exists(self):
+        response = self.client.get('/api/analytics/head/model-status/')
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn('mode', payload)
+        self.assertIn('has_model_artifact', payload)

@@ -170,7 +170,7 @@ const HeadCoachHome = ({ currentUser }) => (
 
 const Home = () => {
   const currentUser = getCurrentUser()
-  if (currentUser?.user_type === 'head_coach') return <HeadCoachHome currentUser={currentUser} />
+  if (currentUser?.user_type === 'head_coach') return <HeadCoachDashboard />
   if (currentUser?.user_type === 'coach') return <CoachHome currentUser={currentUser} />
   return <AnonymousHome currentUser={currentUser} />
 }

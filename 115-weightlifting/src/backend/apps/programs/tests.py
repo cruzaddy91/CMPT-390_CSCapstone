@@ -10,6 +10,7 @@ from rest_framework.test import APIClient
 
 from apps.athletes.models import ProgramCompletion
 from .models import TrainingProgram
+from .serializers import canonical_program_name
 
 User = get_user_model()
 
@@ -334,6 +335,73 @@ class PurgeMarkupProgramNamesCommandTests(TestCase):
         call_command('purge_markup_program_names', '--apply', verbosity=0)
         self.assertFalse(TrainingProgram.objects.filter(pk=bad.pk).exists())
         self.assertTrue(TrainingProgram.objects.filter(pk=good.pk).exists())
+
+
+class ProgramNormalizationTests(TestCase):
+    def setUp(self):
+        self.coach = User.objects.create_user(username='norm_coach', password='pw', user_type='coach')
+        self.athlete = User.objects.create_user(username='norm_athlete', password='pw', user_type='athlete')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.coach)
+
+    def test_create_sets_normalized_name_and_style_tags(self):
+        payload = {
+            'name': ' Peak / Strength Block  ',
+            'description': '',
+            'athlete_id': self.athlete.id,
+            'start_date': '2026-04-21',
+            'end_date': '2026-06-21',
+            'program_data': {
+                'week_start_date': '2026-04-21',
+                'intensity_mode': 'percent_1rm',
+                'days': [
+                    {'id': 'd0', 'day': 'Monday', 'exercises': [{'name': 'Snatch', 'sets': '5', 'reps': '2', 'percent_1rm': '85%'}]},
+                ],
+            },
+        }
+        r = self.client.post(reverse('program-list-create'), payload, format='json')
+        self.assertEqual(r.status_code, 201, r.content)
+        program = TrainingProgram.objects.get(pk=r.data['id'])
+        self.assertEqual(program.normalized_name, canonical_program_name(payload['name']))
+        self.assertIn('style:olympic', program.style_tags)
+        self.assertIn('intensity_mode:percent_1rm', program.style_tags)
+
+    def test_update_recomputes_normalized_name(self):
+        program = TrainingProgram.objects.create(
+            coach=self.coach,
+            athlete=self.athlete,
+            name='Old',
+            normalized_name='old',
+            style_tags=[],
+            start_date=date(2026, 1, 1),
+        )
+        r = self.client.patch(
+            reverse('program-detail', kwargs={'program_id': program.id}),
+            {'name': 'New Name!!!'},
+            format='json',
+        )
+        self.assertEqual(r.status_code, 200, r.content)
+        program.refresh_from_db()
+        self.assertEqual(program.normalized_name, 'new name')
+
+
+class BackfillProgramNormalizationCommandTests(TestCase):
+    def setUp(self):
+        coach = User.objects.create_user(username='bf_coach', password='pw', user_type='coach')
+        athlete = User.objects.create_user(username='bf_ath', password='pw', user_type='athlete')
+        self.program = TrainingProgram.objects.create(
+            coach=coach,
+            athlete=athlete,
+            name='  Taper+Peak ',
+            normalized_name='',
+            style_tags=[],
+            start_date=date(2026, 1, 1),
+        )
+
+    def test_backfill_apply_populates_new_fields(self):
+        call_command('backfill_program_normalization', '--apply', verbosity=0)
+        self.program.refresh_from_db()
+        self.assertEqual(self.program.normalized_name, 'taper peak')
 
 
 class SettingsHardeningTests(TestCase):

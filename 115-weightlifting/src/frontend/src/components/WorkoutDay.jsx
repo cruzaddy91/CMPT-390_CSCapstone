@@ -38,6 +38,7 @@ const WorkoutDay = ({
   onResultChange,
   onDayChange,
   onRemoveDay,
+  onApplyRestDay,
   canRemoveDay = false,
   intensityMode = 'percent_1rm',
 }) => {
@@ -125,9 +126,14 @@ const WorkoutDay = ({
             <button type="button" className="icon-btn" onClick={onDuplicateDay}
                     aria-label="Duplicate day" title="Duplicate day">⎘</button>
             {canRemoveDay && (
-              <button type="button" className="text-btn day-remove-btn" onClick={onRemoveDay}>
-                Remove day
-              </button>
+              <div className="day-destructive-actions">
+                <button type="button" className="text-btn day-remove-btn" onClick={onRemoveDay}>
+                  Remove day
+                </button>
+                <button type="button" className="text-btn day-rest-btn" onClick={onApplyRestDay}>
+                  Set Rest Day
+                </button>
+              </div>
             )}
           </div>
         )}

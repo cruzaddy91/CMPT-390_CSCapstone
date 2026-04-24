@@ -258,3 +258,23 @@ export const calculateRobi = async (payload) => {
   const { data } = await apiClient.post('/api/analytics/robi/', payload)
   return data
 }
+
+export const getHeadProgramStyleOutcomes = async () => {
+  const { data } = await apiClient.get('/api/analytics/head/program-style-outcomes/')
+  return data
+}
+
+export const getHeadProgramNameOutcomes = async () => {
+  const { data } = await apiClient.get('/api/analytics/head/program-name-outcomes/')
+  return data
+}
+
+export const getHeadRecommendations = async () => {
+  const { data } = await apiClient.get('/api/analytics/head/recommendations/')
+  return data
+}
+
+export const getHeadModelStatus = async () => {
+  const { data } = await apiClient.get('/api/analytics/head/model-status/')
+  return data
+}

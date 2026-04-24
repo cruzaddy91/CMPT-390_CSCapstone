@@ -8,6 +8,8 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 
 from apps.accounts.weight_class import competitive_weight_class_label
+from apps.athletes.models import PersonalRecord, ProgramCompletion
+from apps.programs.models import TrainingProgram
 
 User = get_user_model()
 
@@ -520,4 +522,77 @@ class HeadRosterAssignmentTests(TestCase):
         )
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {t.json()['access']}")
         r = self.client.get(reverse('head-org-roster'))
+        self.assertEqual(r.status_code, 403)
+
+
+class HeadAnalyticsEndpointTests(TestCase):
+    def setUp(self):
+        self.head = User.objects.create_user(username='head_ana', password='pw', user_type='head_coach')
+        self.line = User.objects.create_user(username='line_ana', password='pw', user_type='coach')
+        self.line.reports_to = self.head
+        self.line.save(update_fields=['reports_to'])
+        self.client = APIClient()
+
+        # Create a cohort >= minimum sample size (3).
+        for i in range(3):
+            athlete = User.objects.create_user(
+                username=f'ana_ath_{i}',
+                password='pw',
+                user_type='athlete',
+                gender='F',
+                bodyweight_kg=Decimal('58.0'),
+            )
+            athlete.primary_coach = self.line
+            athlete.save(update_fields=['primary_coach'])
+            program = TrainingProgram.objects.create(
+                coach=self.line,
+                athlete=athlete,
+                name='Peak Strength',
+                normalized_name='peak strength',
+                style_tags=['style:strength', 'phase:peak'],
+                start_date='2026-01-01',
+                end_date='2026-02-01',
+            )
+            ProgramCompletion.objects.create(
+                program=program,
+                athlete=athlete,
+                completion_data={'entries': {'d0': {'0': {'completed': True}, '1': {'completed': False}}}},
+            )
+            PersonalRecord.objects.create(athlete=athlete, lift_type='total', weight=Decimal('180.0'), date='2025-12-31')
+            PersonalRecord.objects.create(athlete=athlete, lift_type='total', weight=Decimal('185.0'), date='2026-02-10')
+
+    def _auth(self, username='head_ana'):
+        t = self.client.post(
+            reverse('token_obtain_pair'),
+            {'username': username, 'password': 'pw'},
+            format='json',
+        )
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {t.json()['access']}")
+
+    def test_head_style_outcomes_returns_deidentified_aggregates(self):
+        self._auth()
+        r = self.client.get(reverse('head-program-style-outcomes'))
+        self.assertEqual(r.status_code, 200)
+        self.assertIn('groups', r.json())
+        self.assertNotIn('username', str(r.json()).lower())
+        self.assertGreaterEqual(len(r.json()['groups']), 1)
+
+    def test_head_name_outcomes_returns_grouped_rows(self):
+        self._auth()
+        r = self.client.get(reverse('head-program-name-outcomes'))
+        self.assertEqual(r.status_code, 200)
+        groups = r.json()['groups']
+        self.assertTrue(any(g['normalized_name'] == 'peak strength' for g in groups))
+
+    def test_head_recommendations_returns_rule_based_cards(self):
+        self._auth()
+        r = self.client.get(reverse('head-recommendations'))
+        self.assertEqual(r.status_code, 200)
+        recs = r.json()['recommendations']
+        self.assertGreaterEqual(len(recs), 1)
+        self.assertIn('recommended_style_tag', recs[0])
+
+    def test_line_coach_forbidden_from_head_analytics(self):
+        self._auth('line_ana')
+        r = self.client.get(reverse('head-program-style-outcomes'))
         self.assertEqual(r.status_code, 403)
