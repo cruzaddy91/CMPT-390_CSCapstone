@@ -1849,6 +1849,11 @@
   font-weight: 600;
 }
 
+.athlete-quick-glance {
+  margin-bottom: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
 .program-chip-row {
   display: flex;
   gap: 0.5rem;

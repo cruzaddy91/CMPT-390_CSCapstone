@@ -27,6 +27,7 @@ import {
   markMilestoneFired,
   todayLocalDateKey,
 } from '../utils/streaks'
+import { relativeTimeSince } from '../utils/relativeTime'
 
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -221,6 +222,26 @@ const AthleteDashboard = () => {
   // comes from every completed: true flag across every program.
   const streak = useMemo(() => computeStreak(workoutLogs), [workoutLogs])
   const lifetimeCompleted = useMemo(() => computeLifetimeCompletions(completions), [completions])
+
+  const programsAssigned = programs.length
+  const quickGlance = useMemo(() => {
+    const totalPlannedExercises = programs.reduce((sum, program) => {
+      const normalized = normalizeProgramData(program.program_data, program.start_date)
+      const days = normalized?.days || []
+      return sum + days.reduce((daySum, day) => daySum + ((day.exercises || []).length), 0)
+    }, 0)
+    const latestUpdatedAt = programs
+      .map((program) => program.updated_at)
+      .filter(Boolean)
+      .sort()
+      .at(-1)
+    return {
+      programsAssigned,
+      totalPlannedExercises,
+      activeProgramEndDate: activeProgram?.end_date || null,
+      latestUpdatedAt,
+    }
+  }, [activeProgram?.end_date, programs, programsAssigned])
 
   // Milestone crossings become one-time humor toasts. The refs are seeded on
   // first render so page-load doesn't fire a celebration for counts the athlete
@@ -522,7 +543,6 @@ const AthleteDashboard = () => {
     )
   }
 
-  const programsAssigned = programs.length
   const activeProfileSuffix = athleteProfileSuffix(activeProgram)
 
   return (
@@ -586,6 +606,27 @@ const AthleteDashboard = () => {
           </p>
         )}
       </div>
+
+      <section className="summary-grid athlete-quick-glance" aria-label="Athlete quick glance">
+        <article className="home-metric section-card">
+          <span className="label">Programs assigned</span>
+          <span className="value data">{quickGlance.programsAssigned}</span>
+        </article>
+        <article className="home-metric section-card">
+          <span className="label">Active block ends</span>
+          <span className="value data">{quickGlance.activeProgramEndDate || 'TBD'}</span>
+        </article>
+        <article className="home-metric section-card">
+          <span className="label">Planned exercises</span>
+          <span className="value data">{quickGlance.totalPlannedExercises}</span>
+        </article>
+        <article className="home-metric section-card">
+          <span className="label">Last update</span>
+          <span className="value data">
+            {quickGlance.latestUpdatedAt ? relativeTimeSince(quickGlance.latestUpdatedAt) : 'No updates yet'}
+          </span>
+        </article>
+      </section>
 
       {programsAssigned > 1 && (
         <div className="program-chip-row" role="tablist" aria-label="Programs">

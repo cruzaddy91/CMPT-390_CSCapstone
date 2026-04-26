@@ -196,7 +196,7 @@ const HeadCoachDashboard = () => {
             <span className="dashboard-kicker">Head Coach</span>
             <Link to="/coach" className="head-dashboard-link-coach">Open coach workspace</Link>
           </div>
-          <h1>Organization command center</h1>
+          <h1>Organization overview</h1>
           <p className="dashboard-description head-dashboard-lede">
             Org-wide roster health, program outcomes, and model-guided training signals in one executive view.
           </p>
