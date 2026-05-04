@@ -53,6 +53,19 @@ coverage/
 *.sqlite
 *.sqlite3
 
+# Front-facing repo cleanup: keep course/admin artifacts local-only.
+/.cursor/
+/.cursorignore
+/.guardrails.env
+/bin/
+/canvas/
+/docs/
+/*.pptx
+/*.rtf
+/*.xlsx
+/115_Weightlifting_Presentation_TalkTrack_*.md
+/PRESENTATION_RUBRIC_*.md
+
 # App-specific generated content
 115-weightlifting/var/
 115-weightlifting/src/backend/venv/
