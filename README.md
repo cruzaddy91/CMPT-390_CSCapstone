@@ -1,11 +1,15 @@
 # Computer Science Capstone (CMPT-390)
 
+| Field | Detail |
+| --- | --- |
+| **Instructor** | Dr. Hu Helen |
+
 Full-stack capstone workspace: course deliverables plus the **115 Weightlifting** coach and athlete platform.
 
 ## Repository layout
 
 | Path | Purpose |
-|------|---------|
+| --- | --- |
 | `docs/` | Assignments, proposals, reports, presentations, transcripts, and final submission artifacts |
 | `115-weightlifting/` | Application source: Django backend, React (Vite) frontend, operator CLI (`zw`), scripts, and deployment docs |
 
@@ -16,7 +20,7 @@ Full-stack capstone workspace: course deliverables plus the **115 Weightlifting*
 ## Stack (at a glance)
 
 | Layer | Technology |
-|-------|------------|
+| --- | --- |
 | Backend | Django REST-style API, SQLite-oriented local workflow |
 | Frontend | React with Vite |
 | Operations | Shell/Python tooling, `bin/zw` CLI, CI via `.github/workflows` |
@@ -33,7 +37,7 @@ cd 115-weightlifting
 ## Key paths
 
 | Path | Purpose |
-|------|---------|
+| --- | --- |
 | `115-weightlifting/bin/zw` | Primary CLI entrypoint |
 | `115-weightlifting/src/backend/` | Django project and apps |
 | `115-weightlifting/src/frontend/` | React application |
