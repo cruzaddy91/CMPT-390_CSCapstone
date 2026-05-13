@@ -79,7 +79,7 @@ d├── scripts/                   # Build and utility scripts
                 └── save-results.js
 ```
 
-All turn-in deliverables (proposals, reports, transcripts, proof of concept, etc.) live under the parent repo: **CMPT-390_CSCapstone/docs/**.
+All turn-in deliverables (proposals, reports, transcripts, proof of concept, etc.) live under the parent repo: **cmpt-390-cscapstone/docs/**.
 
 ## Deployment Strategy
 
@@ -103,4 +103,4 @@ All turn-in deliverables (proposals, reports, transcripts, proof of concept, etc
 - `config/deployment.md` – Deployment configuration
 - `README.md` – Project overview and setup instructions
 
-**Turn-in deliverables** (proposals, reports, transcripts, proof of concept, etc.) are in the parent repo under `CMPT-390_CSCapstone/docs/` (assignments, deliverables).
+**Turn-in deliverables** (proposals, reports, transcripts, proof of concept, etc.) are in the parent repo under `cmpt-390-cscapstone/docs/` (assignments, deliverables).

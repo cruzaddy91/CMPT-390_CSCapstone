@@ -115,7 +115,7 @@ Unit tests for the chart builders live in `src/frontend/src/__tests__/trainingCh
 └── assets/                 # Static assets
 ```
 
-Capstone turn-in documents live in the parent repo under `CMPT-390_CSCapstone/docs/`.
+Capstone turn-in documents live in the parent repo under `cmpt-390-cscapstone/docs/`.
 
 ## Local Setup
 

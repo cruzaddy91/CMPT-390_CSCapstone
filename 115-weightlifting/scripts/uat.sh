@@ -30,7 +30,7 @@ from pathlib import Path
 
 frontend_base = 'http://localhost:4173'
 api_base = 'http://localhost:8000'
-report_path = Path('/Users/addycruz/Workspace/CMPT-390_CSCapstone/115-weightlifting/var/reports/index.html')
+report_path = Path('/Users/addycruz/Workspace/school/cmpt-390-cscapstone/115-weightlifting/var/reports/index.html')
 
 results = []
 state = {}

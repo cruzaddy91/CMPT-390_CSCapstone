@@ -5,7 +5,7 @@ Quick reference for operating the `115 Weightlifting` app from the terminal. The
 ## Start Here
 
 ```bash
-cd /Users/addycruz/Workspace/CMPT-390_CSCapstone/115-weightlifting
+cd /Users/addycruz/Workspace/school/cmpt-390-cscapstone/115-weightlifting
 ./bin/zw help
 ```
 

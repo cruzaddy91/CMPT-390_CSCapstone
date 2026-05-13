@@ -69,7 +69,7 @@ cd 115-weightlifting
 ## Project structure
 
 ```text
-CMPT-390_CSCapstone/
+cmpt-390-cscapstone/
 ├── .github/
 ├── docs/
 │   ├── assignments/
