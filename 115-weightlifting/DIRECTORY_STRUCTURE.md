@@ -1,11 +1,12 @@
 # Project Directory Structure
 
 ## Overview
+
 115 Weightlifting. Full stack web application for Olympic weightlifting coaches and athletes.
 
 ## Root Directory Structure
 
-```
+```text
 115-weightlifting/          # current local directory name for 115 Weightlifting
 ├── .gitignore
 ├── README.md
@@ -23,7 +24,7 @@
 │       ├── SETUP_SIMPLE_APP.md
 │       └── SUPABASE_SETUP.md
 │
-d├── scripts/                   # Build and utility scripts
+├── scripts/                   # Build and utility scripts
 │   ├── setup.sh
 │   └── convert_to_pdf.py
 │
@@ -84,15 +85,18 @@ All turn-in deliverables (proposals, reports, transcripts, proof of concept, etc
 ## Deployment Strategy
 
 ### Frontend
+
 - **Primary**: Vercel (free tier)
 - **Plan B**: Netlify (free tier)
 - Both support automatic GitHub deployments
 
 ### Backend
+
 - **Render** (free tier)
 - Django REST Framework API
 
 ### Database
+
 - **Options**: Supabase or Neon (free tier PostgreSQL)
 - Development: SQLite (local)
 

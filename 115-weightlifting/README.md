@@ -176,13 +176,13 @@ See `config/self_hosting.md` for both local and public self-hosting plans.
 
 ## Environment Variables
 
-### Frontend
+### Vite (environment variables)
 
 ```text
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
-### Backend
+### Django (environment variables)
 
 ```text
 SECRET_KEY=change-me
